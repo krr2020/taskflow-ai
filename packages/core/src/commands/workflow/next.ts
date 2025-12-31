@@ -151,7 +151,7 @@ export class NextCommand extends BaseCommand {
 					"",
 					"WORKFLOW PHASES:",
 					"─────────────────",
-					"SETUP → IMPLEMENTING → VERIFYING → VALIDATING → COMMITTING → COMPLETED",
+					"SETUP → PLANNING → IMPLEMENTING → VERIFYING → VALIDATING → COMMITTING → COMPLETED",
 					"",
 					"Each phase has specific requirements and checks.",
 					"The system will guide you through each transition.",

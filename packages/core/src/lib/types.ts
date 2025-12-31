@@ -16,6 +16,7 @@ import { z } from "zod";
 export const TaskStatusSchema = z.enum([
 	"not-started",
 	"setup",
+	"planning",
 	"implementing",
 	"verifying",
 	"validating",
@@ -29,6 +30,7 @@ export type TaskStatus = z.infer<typeof TaskStatusSchema>;
 /** Status values that indicate a task is actively being worked on */
 export const ACTIVE_STATUSES = [
 	"setup",
+	"planning",
 	"implementing",
 	"verifying",
 	"validating",
@@ -43,7 +45,8 @@ export function isActiveStatus(status: string): status is ActiveStatus {
 
 /** Status transitions for workflow progression */
 export const STATUS_TRANSITIONS: Record<ActiveStatus, TaskStatus> = {
-	setup: "implementing",
+	setup: "planning",
+	planning: "implementing",
 	implementing: "verifying",
 	verifying: "validating",
 	validating: "committing",
@@ -186,6 +189,20 @@ export const TaskflowConfigSchema = z.object({
 	validation: z
 		.object({
 			commands: z.record(z.string(), z.string()).optional(),
+		})
+		.optional(),
+	ai: z
+		.object({
+			autoContinueTask: z
+				.boolean()
+				.default(false)
+				.describe(
+					"Automatically continue to next task without user confirmation",
+				),
+			clearContextOnComplete: z
+				.boolean()
+				.default(true)
+				.describe("Clear AI model context after task completion"),
 		})
 		.optional(),
 });

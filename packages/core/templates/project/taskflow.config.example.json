@@ -1,0 +1,23 @@
+{
+	"project": {
+		"name": "your-project-name",
+		"root": "."
+	},
+	"branching": {
+		"strategy": "per-story",
+		"base": "main",
+		"prefix": "story/"
+	},
+	"validation": {
+		"commands": {
+			"format": "biome check --write .",
+			"lint": "biome check .",
+			"type-check": "tsc --noEmit",
+			"test": "vitest run"
+		}
+	},
+	"ai": {
+		"autoContinueTask": false,
+		"clearContextOnComplete": true
+	}
+}

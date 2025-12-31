@@ -24,12 +24,13 @@ start    do     check      (code)     check     check    commit
 
 ### States & Transitions
 ```
-not-started → SETUP → IMPLEMENTING → VERIFYING → VALIDATING → COMMITTING → completed
+not-started → SETUP → PLANNING → IMPLEMENTING → VERIFYING → VALIDATING → COMMITTING → completed
 ```
 
 | State | What You Do | Advance |
 |-------|-------------|---------|
 | **SETUP** | Read all context | `pnpm task check` |
+| **PLANNING** | Create execution plan | `pnpm task check` |
 | **IMPLEMENTING** | Write code | `pnpm task check` |
 | **VERIFYING** | Self-review | `pnpm task check` |
 | **VALIDATING** | Auto-checks run | `pnpm task check` |
@@ -71,6 +72,7 @@ NEXT STEPS
 Run `pnpm task do` - it shows **different guidance** per state:
 
 - **SETUP**: Read AI Protocol, Architecture, Standards, Retrospective, Task details
+- **PLANNING**: Create execution plan, analyze context, search for patterns
 - **IMPLEMENTING**: Shows task checklist, context files, DO/DON'T guidance
 - **VERIFYING**: Shows verification checklist, retrospective patterns
 - **VALIDATING**: Explains auto-checks (biome, type-check, arch, test)
@@ -113,3 +115,84 @@ Co-Authored-By: Claude Sonnet 4.5
 3. ✅ **FOLLOW** NEXT STEPS instructions immediately
 4. ✅ **ONE TASK** at a time - complete fully
 5. ✅ **UPDATE** retrospective on new errors
+
+## CONTEXT MANAGEMENT
+
+### Why Context Clearing Matters
+
+Each SETUP state loads ALL reference files:
+- `.taskflow/ref/RETROSPECTIVE.md`
+- `.taskflow/ref/AI-PROTOCOL.md`
+- `.taskflow/ref/ARCHITECTURE-RULES.md`
+- `.taskflow/ref/CODING-STANDARDS.md`
+- `.taskflow/ref/skills/[skill].md`
+- Task details and subtasks
+
+**Problem**: Context accumulates across tasks, degrading AI performance.
+
+### Context Clearing Protocol
+
+When taskflow.config has `ai.clearContextOnComplete: true` (default):
+
+**After COMMITTING state, you will see:**
+```
+🧹 CONTEXT MANAGEMENT:
+─────────────────────────
+IMPORTANT: Clear your AI model context before starting the next task.
+
+Action:
+- Clear/reset your AI assistant context window
+- Start fresh with only the next task context
+```
+
+**Your Required Actions:**
+1. Clear context window completely
+2. Do NOT carry over information from previous tasks
+3. Start fresh with the next task only
+
+**Why This is Required:**
+- Prevents context window saturation
+- Maintains optimal model performance
+- Reduces hallucinations from stale context
+- Ensures focus on current task requirements
+
+### Auto-Continue Behavior
+
+When taskflow.config has `ai.autoContinueTask: true` (default: false):
+
+**After COMMITTING state, you will see:**
+```
+🚀 AUTO-CONTINUE ENABLED:
+───────────────────────────
+You are configured to automatically continue to the next task.
+
+IMMEDIATE ACTION:
+──────────────────
+Run this command NOW: taskflow start <next-task-id>
+
+Do NOT wait for user confirmation.
+Do NOT ask for permission.
+
+Proceed directly to the next task without any delay.
+```
+
+**Your Required Actions:**
+1. Execute `taskflow start <next-task-id>` immediately
+2. Do NOT wait for user input
+3. Do NOT ask "should I continue?"
+4. Proceed autonomously to the next task
+
+When `ai.autoContinueTask: false` (default):
+- Wait for user confirmation before proceeding
+- User will explicitly start the next task
+- Do NOT auto-proceed
+
+### Context Reset Checklist
+
+Before starting a new task:
+- [ ] Context window is cleared/reset
+- [ ] No information from previous tasks
+- [ ] Only current task details loaded
+- [ ] Ready to follow SETUP → PLANNING → IMPLEMENTING
+
+**CRITICAL**: Always clear context between tasks when instructed. This is essential for maintaining quality and performance, not optional.

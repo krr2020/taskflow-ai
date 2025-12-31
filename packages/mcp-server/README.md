@@ -143,7 +143,8 @@ Start working on a task.
 Validate current task and advance to next status.
 
 **Behavior varies by current status:**
-- `SETUP` → `IMPLEMENTING`: Confirms task understanding
+- `SETUP` → `PLANNING`: Confirms task understanding
+- `PLANNING` → `IMPLEMENTING`: Confirms execution plan is ready
 - `IMPLEMENTING` → `VERIFYING`: Confirms code completion
 - `VERIFYING` → `VALIDATING`: Confirms self-review
 - `VALIDATING` → `COMMITTING`: Runs configured validation commands (format, lint, etc.)

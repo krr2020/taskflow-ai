@@ -161,7 +161,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 			{
 				name: "check_task",
 				description:
-					"Validate current task and advance to next status. Behavior depends on current status (SETUP→IMPLEMENTING→VERIFYING→VALIDATING→COMMITTING).",
+					"Validate current task and advance to next status. Behavior depends on current status (SETUP→PLANNING→IMPLEMENTING→VERIFYING→VALIDATING→COMMITTING).",
 				inputSchema: {
 					type: "object",
 					properties: {},

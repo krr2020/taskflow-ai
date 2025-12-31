@@ -27,6 +27,7 @@ import { BaseCommand, type CommandResult } from "../base.js";
 export class CommitCommand extends BaseCommand {
 	async execute(bulletPoints: string): Promise<CommandResult> {
 		const configLoader = new ConfigLoader(this.context.projectRoot);
+		const config = configLoader.load();
 		const paths = configLoader.getPaths();
 
 		// Load tasks progress
@@ -123,6 +124,127 @@ export class CommitCommand extends BaseCommand {
 		// Find next available task
 		const nextTask = findNextAvailableTask(tasksProgress, taskId);
 
+		// Check AI config for context management and auto-continue
+		const autoContinue = config.ai?.autoContinueTask ?? false;
+		const clearContext = config.ai?.clearContextOnComplete ?? true;
+
+		// Build context clearing instruction
+		const contextInstruction =
+			clearContext && nextTask
+				? [
+						"",
+						"🧹 CONTEXT MANAGEMENT:",
+						"─────────────────────────",
+						"IMPORTANT: Clear your AI model context before starting the next task.",
+						"",
+						"Why? Each SETUP state loads all reference files (RETROSPECTIVE, AI PROTOCOL,",
+						"ARCHITECTURE RULES, CODING STANDARDS, SKILLS). This context accumulates",
+						"and can reduce model performance.",
+						"",
+						"Action:",
+						"- Clear/reset your AI assistant's context window",
+						"- Start fresh with only the next task's context",
+						"",
+						"This ensures optimal performance for each task.",
+					].join("\n")
+				: [];
+
+		// Build auto-continue instruction
+		const continueInstruction =
+			autoContinue && nextTask
+				? [
+						"",
+						"🚀 AUTO-CONTINUE ENABLED:",
+						"───────────────────────────",
+						"You are configured to automatically continue to the next task.",
+						"",
+						"IMMEDIATE ACTION:",
+						"──────────────────",
+						`Run this command NOW: taskflow start ${nextTask.task.id}`,
+						"",
+						"Do NOT wait for user confirmation.",
+						"Do NOT ask for permission.",
+						"",
+						"Proceed directly to the next task without any delay.",
+					].join("\n")
+				: [];
+
+		// Build next steps based on auto-continue flag
+		const nextSteps = nextTask
+			? autoContinue
+				? [
+						`🎯 AUTO-CONTINUE TO NEXT TASK:`,
+						`Run: taskflow start ${nextTask.task.id}`,
+						"",
+						`Task: ${nextTask.task.title}`,
+						`Story: ${nextTask.story.title}`,
+						`Feature: ${nextTask.feature.title}`,
+					].join("\n")
+				: [
+						`1. Start the next task:`,
+						`   taskflow start ${nextTask.task.id}`,
+						"",
+						`   Task: ${nextTask.task.title}`,
+						`   Story: ${nextTask.story.title}`,
+						`   Feature: ${nextTask.feature.title}`,
+					].join("\n")
+			: [
+					"All tasks completed! 🎉",
+					"",
+					"Options:",
+					"1. Run 'taskflow status' to see project overview",
+					"2. Generate more tasks with 'taskflow tasks generate'",
+					"3. Create a new PRD with 'taskflow prd create'",
+				].join("\n");
+
+		// Build AI guidance
+		const aiGuidance = nextTask
+			? [
+					"Task Completed Successfully!",
+					"",
+					"WHAT JUST HAPPENED:",
+					"───────────────────",
+					"1. ✓ Changes committed with proper message format",
+					"2. ✓ Pushed to remote repository",
+					"3. ✓ Task marked as completed",
+					"4. ✓ Next task identified",
+					"",
+					"NEXT TASK:",
+					"──────────",
+					`ID: ${nextTask.task.id}`,
+					`Title: ${nextTask.task.title}`,
+					`Story: ${nextTask.story.title}`,
+					`Feature: ${nextTask.feature.title}`,
+					"",
+					...contextInstruction,
+					...continueInstruction,
+					"TO START NEXT TASK:",
+					"─────────────────────",
+					`Run: taskflow start ${nextTask.task.id}`,
+					"",
+					"This will:",
+					"1. Check out the correct story branch",
+					"2. Load task requirements",
+					"3. Provide all context files",
+					"4. Set status to SETUP",
+					"",
+					"Then follow the workflow again:",
+					"SETUP → PLANNING → IMPLEMENTING → VERIFYING → VALIDATING → COMMITTING → COMPLETED",
+				].join("\n")
+			: [
+					"Task Completed Successfully!",
+					"",
+					"All Tasks Complete! 🎉",
+					"───────────────────────",
+					"You've completed all available tasks.",
+					...contextInstruction,
+					"",
+					"What's next:",
+					"1. Review project progress: taskflow status",
+					"2. Create new tasks: taskflow tasks generate",
+					"3. Start a new feature: taskflow prd create",
+				].join("\n");
+
 		return this.success(
 			[
 				`✓ Task ${taskId} completed!`,
@@ -138,67 +260,9 @@ export class CommitCommand extends BaseCommand {
 					? `NEXT TASK: ${nextTask.task.id} - ${nextTask.task.title}`
 					: "No more tasks available",
 			].join("\n"),
-			nextTask
-				? [
-						`1. Start the next task:`,
-						`   taskflow start ${nextTask.task.id}`,
-						"",
-						`   Task: ${nextTask.task.title}`,
-						`   Story: ${nextTask.story.title}`,
-						`   Feature: ${nextTask.feature.title}`,
-					].join("\n")
-				: [
-						"All tasks completed! 🎉",
-						"",
-						"Options:",
-						"1. Run 'taskflow status' to see project overview",
-						"2. Generate more tasks with 'taskflow tasks generate'",
-						"3. Create a new PRD with 'taskflow prd create'",
-					].join("\n"),
+			nextSteps,
 			{
-				aiGuidance: nextTask
-					? [
-							"Task Completed Successfully!",
-							"",
-							"WHAT JUST HAPPENED:",
-							"───────────────────",
-							"1. ✓ Changes committed with proper message format",
-							"2. ✓ Pushed to remote repository",
-							"3. ✓ Task marked as completed",
-							"4. ✓ Next task identified",
-							"",
-							"NEXT TASK:",
-							"──────────",
-							`ID: ${nextTask.task.id}`,
-							`Title: ${nextTask.task.title}`,
-							`Story: ${nextTask.story.title}`,
-							`Feature: ${nextTask.feature.title}`,
-							"",
-							"TO START:",
-							"──────────",
-							`Run: taskflow start ${nextTask.task.id}`,
-							"",
-							"This will:",
-							"1. Check out the correct story branch",
-							"2. Load task requirements",
-							"3. Provide all context files",
-							"4. Set status to SETUP",
-							"",
-							"Then follow the workflow again:",
-							"SETUP → IMPLEMENTING → VERIFYING → VALIDATING → COMMITTING → COMPLETED",
-						].join("\n")
-					: [
-							"Task Completed Successfully!",
-							"",
-							"All Tasks Complete! 🎉",
-							"───────────────────────",
-							"You've completed all available tasks.",
-							"",
-							"What's next:",
-							"1. Review project progress: taskflow status",
-							"2. Create new tasks: taskflow tasks generate",
-							"3. Start a new feature: taskflow prd create",
-						].join("\n"),
+				aiGuidance,
 				warnings: [
 					"Task is now completed and cannot be reopened",
 					"If you need to make changes, create a new task or hotfix",

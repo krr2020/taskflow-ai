@@ -40,6 +40,14 @@ export class CheckCommand extends BaseCommand {
 		// Handle each status transition
 		switch (currentStatus) {
 			case "setup":
+				return this.advanceToPlanning(
+					paths.tasksDir,
+					tasksProgress,
+					taskId,
+					content,
+				);
+
+			case "planning":
 				return this.advanceToImplementing(
 					paths.tasksDir,
 					tasksProgress,
@@ -106,6 +114,92 @@ export class CheckCommand extends BaseCommand {
 		}
 	}
 
+	private advanceToPlanning(
+		tasksDir: string,
+		tasksProgress: TasksProgress,
+		taskId: string,
+		content: TaskFileContent,
+	): CommandResult {
+		// Advance to planning
+		updateTaskStatus(tasksDir, tasksProgress, taskId, "planning");
+
+		return this.success(
+			[
+				`✓ Status advanced: setup → planning`,
+				`✓ Task ${taskId}: ${content.title}`,
+				"",
+				"Now create your execution plan before writing code.",
+			].join("\n"),
+			[
+				"1. Create execution plan:",
+				"   - Review all context files (RETROSPECTIVE, AI PROTOCOL, etc.)",
+				"   - Identify files to modify",
+				"   - Determine implementation approach",
+				"   - Plan subtask execution order",
+				"",
+				"2. Check planning checklist:",
+				"   - [ ] Reviewed RETROSPECTIVE for known issues",
+				"   - [ ] Understood task requirements",
+				"   - [ ] Identified affected files and patterns",
+				"   - [ ] Planned implementation approach",
+				"   - [ ] Considered edge cases",
+				"",
+				"3. When plan is ready, run:",
+				"   taskflow check",
+				"   This will advance you to IMPLEMENTING status",
+			].join("\n"),
+			{
+				aiGuidance: [
+					"Current Status: PLANNING",
+					"Your Goal: Create a clear execution plan",
+					"",
+					"PLANNING CHECKLIST:",
+					"─────────────────────",
+					"1. CONTEXT REVIEW:",
+					"   - Read RETROSPECTIVE - know what NOT to do",
+					"   - Read AI PROTOCOL - understand workflow rules",
+					"   - Review TASK DETAILS - understand requirements",
+					"   - Check SKILL guidelines - domain-specific rules",
+					"   - Review ARCHITECTURE/CODING STANDARDS",
+					"",
+					"2. ANALYSIS:",
+					"   - Search for similar implementations in codebase",
+					"   - Identify patterns to follow",
+					"   - List files to modify",
+					"   - Identify dependencies",
+					"",
+					"3. PLAN CREATION:",
+					"   - Define implementation approach",
+					"   - Order subtasks logically",
+					"   - Consider error handling needs",
+					"   - Note integration points",
+					"",
+					"4. RISK ASSESSMENT:",
+					"   - Check RETROSPECTIVE for known issues",
+					"   - Identify potential edge cases",
+					"   - Plan for backward compatibility",
+					"",
+					"OUTPUT DOCUMENT:",
+					"─────────────────",
+					"Create a brief plan covering:",
+					"- Files to modify",
+					"- Implementation approach",
+					"- Patterns to follow",
+					"- Subtask execution order",
+					"",
+					"WHEN READY:",
+					"────────────",
+					"Run 'taskflow check' to advance to IMPLEMENTING",
+				].join("\n"),
+				warnings: [
+					"Do NOT skip planning - it prevents costly mistakes",
+					"Do NOT start coding until plan is complete",
+					"Review RETROSPECTIVE carefully - avoid known errors",
+				],
+			},
+		);
+	}
+
 	private advanceToImplementing(
 		tasksDir: string,
 		tasksProgress: TasksProgress,
@@ -117,10 +211,10 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				`✓ Status advanced: setup → implementing`,
+				`✓ Status advanced: planning → implementing`,
 				`✓ Task ${taskId}: ${content.title}`,
 				"",
-				"You may now write code to implement this task.",
+				"You may now write code to implement this task based on your plan.",
 			].join("\n"),
 			[
 				"1. Write the code to implement the task",

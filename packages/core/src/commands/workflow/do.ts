@@ -57,6 +57,9 @@ export class DoCommand extends BaseCommand {
 			case "setup":
 				result = this.getSetupState(paths.refDir, content, taskId);
 				break;
+			case "planning":
+				result = this.getPlanningState(paths.refDir, content, taskId);
+				break;
 			case "implementing":
 				result = this.getImplementState(paths.refDir, content, taskId);
 				break;
@@ -236,12 +239,173 @@ export class DoCommand extends BaseCommand {
 		return {
 			output: outputParts.join("\n"),
 			nextSteps:
-				" When you understand the task, run 'taskflow check' to advance to IMPLEMENTING",
+				" When you understand the task, run 'taskflow check' to advance to PLANNING",
 			aiGuidance: "Read and understand. do not code yet.",
 			contextFiles: [
 				REF_FILES.aiProtocol,
 				REF_FILES.retrospective,
 				REF_FILES.taskGenerator,
+			],
+		};
+	}
+
+	private getPlanningState(
+		refDir: string,
+		taskContent: TaskFileContent,
+		taskId: string,
+	): Partial<CommandResult> {
+		const skill = taskContent.skill || "backend";
+		const outputParts: string[] = [];
+
+		outputParts.push(
+			colors.infoBold(`${icons.brain} PLANNING STATE - CREATE EXECUTION PLAN`),
+		);
+		outputParts.push(
+			colors.info("DO: Analyze context, create implementation plan"),
+		);
+		outputParts.push(
+			colors.error("DO NOT: Write code yet - planning must come first"),
+		);
+
+		// TASK DETAILS
+		outputParts.push(
+			this.formatTaskDetails(
+				taskId,
+				taskContent.title,
+				skill,
+				taskContent.description,
+				taskContent.subtasks || [],
+				taskContent.context || [],
+			),
+		);
+
+		// CRITICAL CONTEXT
+		outputParts.push(
+			this.formatReference(
+				"RETROSPECTIVE - KNOWN ERRORS TO AVOID",
+				getRefFilePath(refDir, REF_FILES.retrospective),
+				colors.error,
+			),
+		);
+		outputParts.push(
+			this.formatReference(
+				"AI PROTOCOL - WORKFLOW RULES",
+				getRefFilePath(refDir, REF_FILES.aiProtocol),
+				colors.warning,
+			),
+		);
+
+		// REFERENCE SECTION
+		outputParts.push(
+			"",
+			colors.infoBold(`${icons.memo} REFERENCE (Read as Needed)`),
+		);
+		outputParts.push(colors.info("─".repeat(50)));
+		outputParts.push(
+			this.formatReference(
+				`SKILL: ${skill.toUpperCase()}`,
+				getSkillFilePath(refDir, skill),
+				colors.command,
+			),
+		);
+		outputParts.push(
+			this.formatReference(
+				"ARCHITECTURE RULES",
+				getRefFilePath(refDir, REF_FILES.architectureRules),
+				colors.info,
+			),
+		);
+		outputParts.push(
+			this.formatReference(
+				"CODING STANDARDS",
+				getRefFilePath(refDir, REF_FILES.codingStandards),
+				colors.info,
+			),
+		);
+
+		// PLANNING CHECKLIST
+		outputParts.push(
+			"",
+			colors.warningBold(`${icons.info} PLANNING CHECKLIST`),
+		);
+		outputParts.push("□ 1. Reviewed RETROSPECTIVE - know what NOT to do");
+		outputParts.push("□ 2. Understood TASK DETAILS and requirements");
+		outputParts.push("□ 3. Identified files to modify");
+		outputParts.push("□ 4. Determined implementation approach");
+		outputParts.push("□ 5. Planned subtask execution order");
+		outputParts.push("□ 6. Considered edge cases and error handling");
+
+		// QUICK START
+		outputParts.push(
+			"",
+			colors.successBold(`${icons.rocket} PLAN CREATION STEPS`),
+		);
+		outputParts.push("1. Search for similar implementations");
+		outputParts.push("2. List files to modify and patterns to follow");
+		outputParts.push("3. Define implementation approach");
+		outputParts.push("4. Order subtasks logically");
+		outputParts.push("5. Document your plan");
+
+		return {
+			output: outputParts.join("\n"),
+			nextSteps: [
+				"1. Search codebase for similar implementations",
+				"2. Create execution plan (files, approach, order)",
+				"3. Complete all planning checklist items",
+				"4. taskflow check (When plan is ready)",
+			].join("\n"),
+			aiGuidance: [
+				"Current Status: PLANNING",
+				"Your Goal: Create a clear, documented plan before coding",
+				"",
+				"PLANNING PROCESS:",
+				"────────────────",
+				"1. SEARCH FIRST:",
+				"   - Find existing implementations to match",
+				"   - Study patterns used in similar code",
+				"   - Identify relevant files and modules",
+				"",
+				"2. CONTEXT REVIEW:",
+				"   - RETROSPECTIVE: Learn what NOT to do",
+				"   - AI PROTOCOL: Understand workflow rules",
+				"   - SKILL GUIDES: Domain-specific patterns",
+				"   - ARCHITECTURE/STANDARDS: Project conventions",
+				"",
+				"3. PLAN CREATION:",
+				"   - List files to modify",
+				"   - Define implementation approach",
+				"   - Order subtasks logically",
+				"   - Note integration points",
+				"   - Plan error handling",
+				"",
+				"4. RISK CHECK:",
+				"   - Check RETROSPECTIVE for similar issues",
+				"   - Identify edge cases",
+				"   - Consider backward compatibility",
+				"",
+				"CRITICAL RULES:",
+				"───────────────",
+				"- Search BEFORE planning",
+				"- Match existing patterns, don't invent new ones",
+				"- Consider all subtasks in your plan",
+				"- Document the approach clearly",
+				"",
+				"DO NOT:",
+				"───────",
+				"- Skip planning and start coding",
+				"- Assume patterns without searching",
+				"- Ignore RETROSPECTIVE warnings",
+				"- Create vague or incomplete plans",
+				"",
+				"WHEN READY:",
+				"────────────",
+				"Run 'taskflow check' to advance to IMPLEMENTING",
+				"Be ready to execute your plan",
+			].join("\n"),
+			warnings: [
+				"Most common AI mistake: Skipping planning and writing code immediately",
+				"Always search for existing implementations first",
+				"Your plan should be specific and actionable",
 			],
 		};
 	}

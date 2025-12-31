@@ -137,7 +137,7 @@ export class StartCommand extends BaseCommand {
 				"",
 				"3. When you've read everything and understand the task, run:",
 				"   taskflow check",
-				"   This will advance you to IMPLEMENTING status",
+				"   This will advance you to PLANNING status",
 			].join("\n"),
 			{
 				aiGuidance: [
@@ -170,8 +170,8 @@ export class StartCommand extends BaseCommand {
 					"",
 					"WHEN READY:",
 					"────────────",
-					"Run 'taskflow check' to advance to IMPLEMENTING status",
-					"Only then can you start writing code",
+					"Run 'taskflow check' to advance to PLANNING status",
+					"Then create your execution plan before writing code",
 				].join("\n"),
 				contextFiles,
 				warnings: [
