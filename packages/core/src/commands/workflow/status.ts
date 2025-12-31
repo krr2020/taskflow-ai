@@ -1,0 +1,212 @@
+/**
+ * Status command - Display project/feature/story status
+ */
+
+import { ConfigLoader } from "../../lib/config-loader.js";
+import {
+	calculateProgressStats,
+	findActiveTask,
+	findFeature,
+	findStoryLocation,
+	loadTasksProgress,
+} from "../../lib/data-access.js";
+import type {
+	Feature,
+	Story,
+	TaskRef,
+	TasksProgress,
+} from "../../lib/types.js";
+import { BaseCommand, type CommandResult } from "../base.js";
+
+export class StatusCommand extends BaseCommand {
+	async execute(id?: string): Promise<CommandResult> {
+		const configLoader = new ConfigLoader(this.context.projectRoot);
+		const paths = configLoader.getPaths();
+
+		// Load tasks progress
+		const tasksProgress = loadTasksProgress(paths.tasksDir);
+
+		if (!id) {
+			return this.showProjectOverview(paths.tasksDir, tasksProgress);
+		}
+
+		// Check if it's a feature ID (single number)
+		if (/^\d+$/.test(id)) {
+			return this.showFeatureStatus(tasksProgress, id);
+		}
+
+		// Check if it's a story ID (N.M)
+		if (/^\d+\.\d+$/.test(id)) {
+			return this.showStoryStatus(tasksProgress, id);
+		}
+
+		return this.failure(
+			"Invalid ID format",
+			[`ID ${id} is not a valid feature or story ID`],
+			[
+				"Valid formats:",
+				"- Feature: N (e.g., '1')",
+				"- Story: N.M (e.g., '1.1')",
+				"",
+				"Run 'taskflow status' for project overview",
+			].join("\n"),
+		);
+	}
+
+	private showProjectOverview(
+		tasksDir: string,
+		tasksProgress: TasksProgress,
+	): CommandResult {
+		const stats = calculateProgressStats(tasksProgress);
+		const activeTask = findActiveTask(tasksDir, tasksProgress);
+
+		const featuresList = tasksProgress.features
+			.map((f: Feature) => {
+				const statusIcon = this.getStatusIcon(f.status);
+				return `  ${statusIcon} F${f.id}: ${f.title} (${f.status})`;
+			})
+			.join("\n");
+
+		return this.success(
+			[
+				`PROJECT: ${tasksProgress.project}`,
+				"",
+				"PROGRESS:",
+				"─".repeat(60),
+				`Features: ${stats.completedFeatures}/${stats.totalFeatures} completed`,
+				`Stories:  ${stats.completedStories}/${stats.totalStories} completed`,
+				`Tasks:    ${stats.completedTasks}/${stats.totalTasks} completed`,
+				"",
+				activeTask
+					? `ACTIVE TASK: ${activeTask.taskId} (${activeTask.content.status})`
+					: "No active task",
+				"",
+				"FEATURES:",
+				"─".repeat(60),
+				featuresList || "  No features",
+			].join("\n"),
+			[
+				"View detailed status:",
+				"  taskflow status <feature-id>  (e.g., 'taskflow status 1')",
+				"  taskflow status <story-id>    (e.g., 'taskflow status 1.1')",
+				"",
+				activeTask ? "Continue working:" : "Start working:",
+				activeTask
+					? `  taskflow check  (continue task ${activeTask.taskId})`
+					: "  taskflow next   (find next available task)",
+			].join("\n"),
+			{
+				contextFiles: [
+					activeTask
+						? `Task ${activeTask.taskId} is active - run 'taskflow check' to continue`
+						: "No active task - run 'taskflow next' to find available tasks",
+				],
+			},
+		);
+	}
+
+	private showFeatureStatus(
+		tasksProgress: TasksProgress,
+		featureId: string,
+	): CommandResult {
+		const feature = findFeature(tasksProgress, featureId);
+		if (!feature) {
+			return this.failure(
+				`Feature F${featureId} not found`,
+				[],
+				"Run 'taskflow status' to see all features.",
+			);
+		}
+
+		const storiesList = feature.stories
+			.map((s: Story) => {
+				const statusIcon = this.getStatusIcon(s.status);
+				const tasksCount = s.tasks.length;
+				const completedTasks = s.tasks.filter(
+					(t: TaskRef) => t.status === "completed",
+				).length;
+				return `  ${statusIcon} S${s.id}: ${s.title} (${completedTasks}/${tasksCount} tasks ${s.status})`;
+			})
+			.join("\n");
+
+		return this.success(
+			[
+				`FEATURE F${feature.id}: ${feature.title}`,
+				`Status: ${feature.status}`,
+				"",
+				"STORIES:",
+				"─".repeat(60),
+				storiesList || "  No stories",
+			].join("\n"),
+			[
+				"View story details:",
+				`  taskflow status <story-id>  (e.g., 'taskflow status ${feature.id}.1')`,
+				"",
+				"Start a task:",
+				"  taskflow next   (find next available task)",
+			].join("\n"),
+		);
+	}
+
+	private showStoryStatus(
+		tasksProgress: TasksProgress,
+		storyId: string,
+	): CommandResult {
+		const location = findStoryLocation(tasksProgress, storyId);
+		if (!location) {
+			return this.failure(
+				`Story S${storyId} not found`,
+				[],
+				"Run 'taskflow status' to see all stories.",
+			);
+		}
+
+		const { story, feature } = location;
+
+		const tasksList = story.tasks
+			.map((t: TaskRef) => {
+				const statusIcon = this.getStatusIcon(t.status);
+				const deps =
+					t.dependencies && t.dependencies.length > 0
+						? ` [deps: ${t.dependencies.join(", ")}]`
+						: "";
+				return `  ${statusIcon} T${t.id}: ${t.title} (${t.status})${deps}`;
+			})
+			.join("\n");
+
+		return this.success(
+			[
+				`STORY S${story.id}: ${story.title}`,
+				`Feature: F${feature.id} - ${feature.title}`,
+				`Status: ${story.status}`,
+				"",
+				"TASKS:",
+				"─".repeat(60),
+				tasksList || "  No tasks",
+			].join("\n"),
+			[
+				"Start a task:",
+				`  taskflow start <task-id>  (e.g., 'taskflow start ${story.id}.0')`,
+				"",
+				"Or find next available:",
+				"  taskflow next",
+			].join("\n"),
+		);
+	}
+
+	private getStatusIcon(status: string): string {
+		const icons: Record<string, string> = {
+			"not-started": "○",
+			"in-progress": "◐",
+			setup: "◐",
+			implementing: "◐",
+			verifying: "◐",
+			validating: "◐",
+			committing: "◐",
+			completed: "●",
+			blocked: "✗",
+			"on-hold": "⊘",
+		};
+		return icons[status] || "?";
+	}
+}

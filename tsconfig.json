@@ -42,6 +42,6 @@
 		"baseUrl": ".",
 		"paths": {}
 	},
-	"include": [".taskflow/src/**/*.ts", ".taskflow/tests/**/*.ts"],
+	"include": ["packages/core/src/**/*.ts", "packages/core/tests/**/*.ts"],
 	"exclude": ["node_modules", "dist", "coverage"]
 }

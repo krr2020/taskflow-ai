@@ -2,8 +2,31 @@
 
 A structured task management CLI framework designed for AI-assisted development workflows. TaskFlow enforces a consistent workflow pattern to ensure quality, traceability, and automated validation at every step.
 
+## 🚀 Quick Start
+
+**For CLI Usage:**
+```bash
+npm install -g @krr2020/taskflow-core
+taskflow init my-project
+```
+
+**For Claude Desktop (MCP Server):**
+```bash
+npm install -g @krr2020/taskflow-mcp-server
+```
+Then configure Claude Desktop - see [USAGE.md](./USAGE.md#mcp-server-usage-claude-desktop)
+
+**📖 Complete Guide:** See [USAGE.md](./USAGE.md) for step-by-step examples and best practices.
+
+**📦 Packages:**
+- [@krr2020/taskflow-core](./packages/core/) - Core commands and CLI
+- [@krr2020/taskflow-mcp-server](./packages/mcp-server/) - MCP Server for Claude Desktop
+
+---
+
 ## Table of Contents
 
+- [Quick Start](#-quick-start)
 - [Overview](#overview)
 - [Architecture](#architecture)
 - [Workflow States](#workflow-states)
@@ -12,6 +35,7 @@ A structured task management CLI framework designed for AI-assisted development 
 - [Flow Diagrams](#flow-diagrams)
 - [Error Handling](#error-handling)
 - [Retrospective System](#retrospective-system)
+- [Documentation](#documentation)
 
 ---
 
@@ -62,21 +86,25 @@ TaskFlow provides a state-machine-based workflow for executing development tasks
 ```
 .taskflow/
 ├── src/
-│   ├── cli.ts                 # Entry point with Commander.js
+│   ├── cli/
+│   │   └── index.ts           # Entry point with Commander.js
 │   ├── commands/              # Command implementations
-│   │   ├── start.ts           # Begin task session
-│   │   ├── do.ts              # Show state-specific instructions (varies by state)
-│   │   ├── check.ts           # Validate and advance state
-│   │   ├── commit.ts          # Git commit and push (completes task)
-│   │   ├── status.ts          # View progress
-│   │   ├── next.ts            # Find next task
-│   │   ├── resume.ts          # Resume interrupted session
-│   │   ├── skip.ts            # Block a task
-│   │   ├── retro.ts           # Manage error patterns
-│   │   └── help.ts            # Display help
+│   │   ├── workflow/          # Task workflow commands
+│   │   │   ├── start.ts       # Begin task session
+│   │   │   ├── do.ts          # Show state-specific instructions
+│   │   │   ├── check.ts       # Validate and advance state
+│   │   │   ├── commit.ts      # Git commit and push
+│   │   │   ├── status.ts      # View progress
+│   │   │   ├── next.ts        # Find next task
+│   │   │   ├── resume.ts      # Resume session
+│   │   │   └── skip.ts        # Block a task
+│   │   ├── prd/               # PRD commands
+│   │   ├── tasks/             # Task generation commands
+│   │   ├── retro/             # Retrospective commands
+│   │   └── init.ts            # Project initialization
 │   └── lib/                   # Core library modules
 │       ├── types.ts           # TypeScript types & Zod schemas
-│       ├── config.ts          # Configuration constants
+│       ├── config-paths.ts    # Configuration paths
 │       ├── errors.ts          # Custom error classes
 │       ├── data-access.ts     # JSON file operations
 │       ├── git.ts             # Git operations
@@ -132,32 +160,32 @@ Tasks progress through a unified status flow:
 
 | Command | Description | Status Transition |
 |---------|-------------|-------------------|
-| `pnpm task start <id>` | Start a task session (resumes if already active) | not-started → setup |
-| `pnpm task do` | Show state-specific instructions (changes per state) | (no change) |
-| `pnpm task check` | Validate and advance to next status | Current → Next (or runs validations) |
-| `pnpm task commit "..."` | Commit and push changes with bullet points | committing → completed |
+| `taskflow start <id>` | Start a task session (resumes if already active) | not-started → setup |
+| `taskflow do` | Show state-specific instructions (changes per state) | (no change) |
+| `taskflow check` | Validate and advance to next status | Current → Next (or runs validations) |
+| `taskflow commit "..."` | Commit and push changes with bullet points | committing → completed |
 
 ### Navigation
 
 | Command | Description |
 |---------|-------------|
-| `pnpm task status` | Show project overview |
-| `pnpm task status <id>` | Show feature/story details |
-| `pnpm task next` | Find next available task |
+| `taskflow status` | Show project overview |
+| `taskflow status <id>` | Show feature/story details |
+| `taskflow next` | Find next available task |
 
 ### Recovery
 
 | Command | Description |
 |---------|-------------|
-| `pnpm task resume` | Resume an interrupted session |
-| `pnpm task skip --reason "..."` | Mark task as blocked |
+| `taskflow resume` | Resume an interrupted session |
+| `taskflow skip --reason "..."` | Mark task as blocked |
 
 ### Retrospective
 
 | Command | Description |
 |---------|-------------|
-| `pnpm task retro add` | Add new error pattern |
-| `pnpm task retro list` | List known error patterns |
+| `taskflow retro add` | Add new error pattern |
+| `taskflow retro list` | List known error patterns |
 
 ---
 
@@ -230,7 +258,7 @@ Features and Stories use a simplified status set:
 │                                                                              │
 │  Developer                          CLI                           System    │
 │     │                                │                               │       │
-│     │  pnpm task start 1.1.0         │                               │       │
+│     │  taskflow start 1.1.0         │                               │       │
 │     │───────────────────────────────▶│                               │       │
 │     │                                │  Check no active session      │       │
 │     │                                │  Verify branch                │       │
@@ -240,45 +268,45 @@ Features and Stories use a simplified status set:
 │     │◀───────────────────────────────│                               │       │
 │     │  "Task started! Run: do"       │                               │       │
 │     │                                │                               │       │
-│     │  pnpm task do                  │                               │       │
+│     │  taskflow do                  │                               │       │
 │     │───────────────────────────────▶│                               │       │
 │     │                                │  Display setup instructions   │       │
 │     │◀───────────────────────────────│                               │       │
 │     │                                │                               │       │
-│     │  pnpm task check               │                               │       │
+│     │  taskflow check               │                               │       │
 │     │───────────────────────────────▶│                               │       │
 │     │                                │  Advance to implementing      │       │
 │     │◀───────────────────────────────│                               │       │
 │     │                                │                               │       │
-│     │  pnpm task do                  │                               │       │
+│     │  taskflow do                  │                               │       │
 │     │───────────────────────────────▶│                               │       │
 │     │                                │  Show protocols & task details│       │
 │     │◀───────────────────────────────│                               │       │
 │     │                                │                               │       │
 │     │  (Developer writes code...)    │                               │       │
 │     │                                │                               │       │
-│     │  pnpm task check               │                               │       │
+│     │  taskflow check               │                               │       │
 │     │───────────────────────────────▶│                               │       │
 │     │                                │  Advance to verifying         │       │
 │     │◀───────────────────────────────│                               │       │
 │     │                                │                               │       │
-│     │  pnpm task check               │                               │       │
+│     │  taskflow check               │                               │       │
 │     │───────────────────────────────▶│                               │       │
 │     │                                │  Advance to validating        │       │
 │     │◀───────────────────────────────│                               │       │
 │     │                                │                               │       │
-│     │  pnpm task check               │                               │       │
+│     │  taskflow check               │                               │       │
 │     │───────────────────────────────▶│                               │       │
-│     │                                │  Run: biome:fix               │       │
-│     │                                │  Run: type-check              │       │
-│     │                                │  Run: biome:check             │       │
-│     │                                │  Run: arch:validate           │       │
+│     │                                │  Run: configured checks       │       │
+│     │                                │  (format, lint, tests, etc.)  │       │
+│     │                                │                               │       │
+│     │                                │                               │       │
 │     │                                │───────────────────────────────▶│      │
 │     │                                │         All passed ✓          │       │
 │     │                                │  Advance to committing        │       │
 │     │◀───────────────────────────────│                               │       │
 │     │                                │                               │       │
-│     │  pnpm task commit "..."        │                               │       │
+│     │  taskflow commit "..."        │                               │       │
 │     │───────────────────────────────▶│                               │       │
 │     │                                │  Generate commit message      │       │
 │     │                                │  git add .                    │       │
@@ -604,3 +632,39 @@ Test structure mirrors source structure:
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Documentation
+
+### Getting Started
+- **[USAGE.md](./USAGE.md)** - Complete usage guide with step-by-step examples
+  - Installation and setup
+  - Complete workflow example (PRD → Tasks → Commit)
+  - CLI reference
+  - MCP Server setup for Claude Desktop
+  - Common patterns and troubleshooting
+
+### Package Documentation
+- **[packages/core/README.md](./packages/core/README.md)** - Core package documentation
+  - 13 Command classes
+  - 8 Library modules
+  - CLI reference
+  - Programmatic usage
+  - Data structures
+
+- **[packages/mcp-server/README.md](./packages/mcp-server/README.md)** - MCP Server documentation
+  - 13 MCP tools
+  - Claude Desktop setup
+  - Tool reference with inputs/outputs
+  - Architecture overview
+
+### Reference Files
+Located in `.taskflow/ref/` after running `taskflow init`:
+- `AI-PROTOCOL.md` - AI execution guidelines
+- `TASK-GENERATOR.md` - Task generation instructions
+- `TASK-EXECUTOR.md` - Task execution instructions
+- `PRD-GENERATOR.md` - PRD creation guidelines
+- `CODING-STANDARDS.md` - Project-specific standards (generated)
+- `ARCHITECTURE-RULES.md` - Architecture patterns (generated)
+- `RETROSPECTIVE.md` - Error pattern database

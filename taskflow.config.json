@@ -1,14 +1,14 @@
 {
-  "projectType": "typescript",
-  "version": "1.0",
-  "branching": {
-    "strategy": "per-story",
-    "base": "main",
-    "storyPattern": "story/S{id}-{slug}"
-  },
-  "contextRules": [],
-  "gates": {
-    "requirePlanApproval": true,
-    "requireTestPass": true
-  }
+	"projectType": "typescript",
+	"version": "2.0",
+	"branching": {
+		"strategy": "per-story",
+		"base": "main",
+		"storyPattern": "story/S{id}-{slug}"
+	},
+	"contextRules": [],
+	"gates": {
+		"requirePlanApproval": true,
+		"requireTestPass": true
+	}
 }
