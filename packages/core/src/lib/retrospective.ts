@@ -181,7 +181,7 @@ export function addRetrospectiveEntry(
 ): number {
 	const retroFile = getRetrospectiveFilePath(refDir);
 	if (!fs.existsSync(retroFile)) {
-		throw new Error("RETROSPECTIVE.md not found");
+		throw new Error("retrospective.md not found");
 	}
 
 	const items = loadRetrospective(refDir);

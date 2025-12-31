@@ -1,7 +1,7 @@
 {
 	"name": "@krr2020/taskflow-mcp-server",
-	"version": "0.1.0-beta.2",
-	"description": "MCP Server for Taskflow 2.0",
+	"version": "0.1.0-beta.3",
+	"description": "MCP Server for Taskflow",
 	"license": "MIT",
 	"publishConfig": {
 		"access": "public"

@@ -44,10 +44,10 @@ your-project/
 ├── tasks/                     # Task files go here
 └── .taskflow/
     ├── ref/                   # Reference documentation
-    │   ├── AI-PROTOCOL.md
-    │   ├── TASK-GENERATOR.md
-    │   ├── TASK-EXECUTOR.md
-    │   └── RETROSPECTIVE.md
+    │   ├── ai-protocol.md
+    │   ├── task-generator.md
+    │   ├── task-executor.md
+    │   └── retrospective.md
     └── logs/                  # Validation logs
 ```
 
@@ -91,7 +91,7 @@ taskflow prd generate-arch 2024-01-15-user-authentication.md
 ```
 
 This analyzes your codebase and PRD to create:
-- `.taskflow/ref/CODING-STANDARDS.md` - Project-specific coding standards
+- `.taskflow/ref/coding-standards.md` - Project-specific coding standards
 - `.taskflow/ref/ARCHITECTURE-RULES.md` - Architecture patterns and constraints
 
 ### Step 3: Generate Task Breakdown

@@ -37,3 +37,31 @@ Avoid patterns that undermine mobile user experience:
 - Assuming constant network connectivity
 - Missing loading, error, or empty states for async operations
 - Hardcoded dimensions instead of responsive layouts
+
+## Testing Strategy
+
+- **Unit Tests**: Test each component, hook, and utility in isolation
+- **Integration Tests**: Verify navigation flows and component interactions
+- **End-to-End Tests**: Verify complete user journeys through mobile app
+- **Platform Tests**: Test on both iOS and Android simulators/devices
+- **Test Handling**: Implement test, run full suite, fix failures. Max 3 retry attempts. If still failing, STOP and analyze root cause.
+- **Manual Tests**: STOP and ask user to verify on actual devices. Do NOT auto-proceed.
+- **Performance Tests**: Profile with Flipper, verify 60 FPS minimum target
+
+## Security & Performance
+
+For each implementation:
+- **Security**: Consider data encryption, secure storage (Keychain/Keystore), API authentication, input validation, deep link handling
+- **Performance**: Consider memory usage, battery impact, bundle size, lazy loading, FlatList virtualization, image optimization
+- **Network**: Consider offline support, caching strategies, sync queues, retry logic
+- **Accessibility**: WCAG compliance, screen reader support, dynamic type support, color contrast, focus indicators
+- **Platform**: Test at 320px width, touch targets 44pt minimum, handle notches/safe areas
+
+## Library Verification
+
+Before suggesting new mobile libraries:
+- Verify no similar library exists in project
+- Check compatibility with React Native and target platforms (iOS/Android)
+- Consider bundle size impact
+- Evaluate maintenance status and community support
+- Check if native bridge is required (high maintenance cost)

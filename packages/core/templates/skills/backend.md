@@ -37,3 +37,28 @@ Avoid generic server patterns that undermine production systems:
 - Hardcoded values that should be configurable
 - Missing validation at trust boundaries
 - Cross-module imports that break boundaries
+
+## Testing Strategy
+
+- **Unit Tests**: Test each service, repository, and validation function in isolation
+- **Integration Tests**: Verify API endpoints work with actual database
+- **End-to-End Tests**: Verify complete user journeys through system
+- **Test Handling**: Implement test, run full suite, fix failures. Max 3 retry attempts. If still failing, STOP and analyze root cause.
+- **Manual Tests**: STOP and ask user to verify. Do NOT auto-proceed.
+- **Database Tests**: Do NOT clean up test data.
+
+## Security & Performance
+
+For each implementation:
+- **Security**: Consider authentication, authorization, data protection, input validation, SQL injection prevention
+- **Performance**: Consider latency, throughput, scalability, database indexing, query optimization, caching strategy
+- **Rate Limiting**: Implement where appropriate to prevent abuse
+- **Error Handling**: All external operations need error handling with recovery strategies
+
+## Library Verification
+
+Before suggesting new libraries:
+- Verify no similar library exists in project
+- Check compatibility with current stack
+- Consider security and maintenance status
+- Evaluate bundle size impact (if frontend)

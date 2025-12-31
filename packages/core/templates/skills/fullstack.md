@@ -37,3 +37,26 @@ Avoid patterns that undermine cross-layer work:
 - Frontend guessing API shape from examples instead of types
 - Backend changing contracts without frontend coordination
 - Missing integration tests for the actual request/response flow
+
+## Testing Strategy
+
+- **Unit Tests**: Backend services/repositories; frontend components/hooks/utils
+- **Integration Tests**: Frontend-backend contract verification
+- **End-to-End Tests**: Complete user journeys through UI to backend to DB
+- **Test Handling**: Max 3 retries, analyze root cause if still failing
+- **Manual Tests**: STOP and ask user to verify
+- **Database Tests**: Do NOT clean up test data
+
+## Security & Performance
+
+- **Security**: Auth, authorization, data protection (both sides), input validation, XSS/SQL injection
+- **Performance**: API latency, frontend rendering, bundle size, DB indexing, caching
+- **Rate Limiting**: Implement where appropriate
+- **Error Handling**: External operations need recovery strategies
+
+## Library Verification
+
+- Verify no similar library exists
+- Check stack compatibility
+- Consider security/maintenance status
+- Evaluate bundle size impact (if frontend)

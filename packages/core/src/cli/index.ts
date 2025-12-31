@@ -263,7 +263,7 @@ export async function runCLI() {
 	prdCommand
 		.command("generate-arch")
 		.description(
-			"Generate CODING-STANDARDS.md and ARCHITECTURE-RULES.md from PRD",
+			"Generate coding-standards.md and architecture-rules.md from PRD",
 		)
 		.argument("<prd-file>", "PRD filename")
 		.action(async (prdFile: string) => {

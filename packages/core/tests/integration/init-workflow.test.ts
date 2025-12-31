@@ -37,7 +37,7 @@ describe("Init Workflow Integration", () => {
 		expect(fs.existsSync(path.join(testDir, ".taskflow", "logs"))).toBe(true);
 
 		// Should copy template files
-		const aiProtocol = path.join(testDir, ".taskflow", "ref", "AI-PROTOCOL.md");
+		const aiProtocol = path.join(testDir, ".taskflow", "ref", "ai-protocol.md");
 		expect(fs.existsSync(aiProtocol)).toBe(true);
 
 		// Should provide AI guidance

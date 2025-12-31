@@ -1,5 +1,5 @@
 /**
- * PRD Generate Architecture command - Generate CODING-STANDARDS.md and ARCHITECTURE-RULES.md
+ * PRD Generate Architecture command - Generate coding-standards.md and architecture-rules.md
  */
 
 import fs from "node:fs";
@@ -64,10 +64,10 @@ export class PrdGenerateArchCommand extends BaseCommand {
 				"Architecture files already exist",
 				[
 					codingStandardsExist
-						? `CODING-STANDARDS.md exists at: ${codingStandardsPath}`
+						? `coding-standards.md exists at: ${codingStandardsPath}`
 						: "",
 					architectureRulesExist
-						? `ARCHITECTURE-RULES.md exists at: ${architectureRulesPath}`
+						? `architecture-rules.md exists at: ${architectureRulesPath}`
 						: "",
 				].filter((s) => s.length > 0),
 				[
@@ -153,7 +153,7 @@ export class PrdGenerateArchCommand extends BaseCommand {
 					"- Component patterns (HOCs, hooks, render props)",
 					"- Build and bundling setup",
 					"",
-					"STEP 3: CREATE CODING-STANDARDS.md",
+					"STEP 3: CREATE coding-standards.md",
 					"────────────────────────────────────",
 					`File to create: ${codingStandardsPath}`,
 					"",
@@ -188,7 +188,7 @@ export class PrdGenerateArchCommand extends BaseCommand {
 					"   - JSDoc requirements",
 					"   - README standards",
 					"",
-					"STEP 4: CREATE ARCHITECTURE-RULES.md",
+					"STEP 4: CREATE architecture-rules.md",
 					"──────────────────────────────────────",
 					`File to create: ${architectureRulesPath}`,
 					"",

@@ -37,3 +37,28 @@ Avoid generic UI patterns that undermine user experience:
 - Desktop-only layouts that collapse on mobile
 - Missing loading, error, or empty states
 - Hardcoded colors instead of design tokens
+
+## Testing Strategy
+
+- **Unit Tests**: Test each component, hook, and utility in isolation
+- **Integration Tests**: Verify components work together in user flows
+- **End-to-End Tests**: Verify complete user interactions through UI
+- **Test Handling**: Implement test, run full suite, fix failures. Max 3 retry attempts. If still failing, STOP and analyze root cause.
+- **Manual Tests**: STOP and ask user to verify. Do NOT auto-proceed.
+- **Visual Regression Tests**: Do NOT assume visual changes are correct.
+
+## Security & Performance
+
+For each implementation:
+- **Security**: Consider XSS prevention, input sanitization, CSRF tokens, content security policy
+- **Performance**: Consider bundle size, lazy loading, rendering performance, animation smoothness (60 FPS target), memory usage
+- **Accessibility**: WCAG compliance, screen reader support, keyboard navigation, color contrast, focus indicators
+- **Mobile-First**: Test at 320px width, touch targets 44pt minimum, no horizontal scrolling
+
+## Library Verification
+
+Before suggesting new UI libraries:
+- Verify no similar library exists in project
+- Check compatibility with current design system
+- Consider bundle size impact
+- Evaluate maintenance status and community support

@@ -1,147 +1,100 @@
 ---
 name: ai-protocol
-description: Core operating discipline for AI coding agents. Establishes thinking patterns, execution modes, and quality standards. Follow this protocol to produce code that matches team standards and avoids common AI pitfalls.
+description: Core operating discipline for AI coding agents. Establishes thinking patterns, execution modes, and quality standards.
 ---
 
 ## Operating Modes
 
-Before taking any action, determine the appropriate depth of analysis:
-
-- **REACTIVE**: Simple fixes, clear requirements, single-file changes. Brief rationale, immediate execution. No preamble, no options, just solve the problem.
-- **ANALYTICAL**: Multi-file changes, pattern matching needed, moderate complexity. State the approach in 2-3 sentences, list files to modify, execute systematically.
-- **ULTRATHINK**: Architecture decisions, security implications, new patterns, complex integrations. Full analysis—understand context, consider alternatives, plan the approach, execute carefully, verify the result.
-
-**CRITICAL**: Default to REACTIVE. Upgrade only when complexity demands it. The key is appropriate depth, not impressive analysis. Simple problems deserve simple solutions.
+Before acting, determine depth: **REACTIVE** (simple fixes), **ANALYTICAL** (multi-file changes), **ULTRATHINK** (architecture/security). Default to REACTIVE. Appropriate depth, not impressive analysis.
 
 ## Core Discipline
 
-Before writing any code, commit to a DISCOVERY-FIRST approach:
+DISCOVERY-FIRST: **Search** for existing patterns. **Check RETROSPECTIVE** for known mistakes. **Match** conventions—don't invent. **Verify** imports/types before use.
 
-- **Search First**: Your first action is always search. Find existing implementations. Study current patterns. Understand how similar problems were solved. Never invent what you can match.
-- **RETROSPECTIVE is Law**: Check `.taskflow/ref/RETROSPECTIVE.md` before every task. These are mistakes already made. Making them again is unacceptable.
-- **Match, Don't Invent**: The codebase has conventions. Your job is to follow them precisely. Your code should be indistinguishable from what the team already built.
-- **Verify Before Declaring**: Import paths exist. Types are correct. Functions are called properly. Confirm these before saying "done."
-
-**CRITICAL**: The most common AI mistake is generating plausible-looking code that doesn't match project patterns. Discovery prevents this. The key is fitting in, not standing out.
+**CRITICAL**: The most common AI mistake is plausible code that doesn't match project patterns. Discovery prevents this.
 
 ## Execution Rules
 
-Follow this sequence for every implementation:
-
-1. **Read completely** — Understand the full task before touching code
-2. **Search for similar** — Find existing implementations to match
-3. **Verify imports** — Confirm paths, packages, and types exist
-4. **Handle errors** — Every external call can fail
-5. **Run validation** — Type check, lint, test before declaring complete
-6. **Check retrospective** — Confirm you haven't repeated known mistakes
+1. Read task completely
+2. Search for similar implementations
+3. Verify imports/types exist
+4. Handle all errors (external calls fail)
+5. Run validation (type check, lint, test)
+6. Check RETROSPECTIVE for repeated mistakes
+7. Capture learnings (project-wide insights only)
+8. Report tech debt introduced
+9. Define "Done" before declaring complete
 
 ## What NOT To Do
 
-Avoid these patterns that plague AI-generated code:
-
-- Guessing import paths instead of verifying they exist
-- Declaring "done" without running validation
-- Adding features or improvements not requested
-- Skipping error handling for "simple" operations
-- Creating new patterns when existing ones work
-- Using `any` to bypass type checking
-- Ignoring linter warnings because "it works"
-- Generating code before reading existing implementations
+- Guess import paths—verify they exist
+- Skip error handling for "simple" operations
+- Use `any` to bypass type checking
+- Declare "done" without running validation
+- Add features not requested
+- Create new patterns when existing ones work
 
 ## TaskFlow Integration
 
-When working within the TaskFlow framework:
+- **Trust CLI output**—read OUTPUT + NEXT STEPS completely
+- **Never skip states** (SETUP → PLANNING → IMPLEMENTING → VERIFYING → VALIDATING → COMMITTING)
+- **Use commands** for task management (never edit `.taskflow/` or `tasks/`)
+- **Follow NEXT STEPS** exactly—don't improvise
 
-- **Trust the CLI output** — Every command shows OUTPUT and NEXT STEPS sections. Read them completely and follow exactly.
-- **Never bypass the workflow** — The state machine (SETUP → PLANNING → IMPLEMENTING → VERIFYING → VALIDATING → COMMITTING) exists for quality. Don't skip states.
-- **Use `pnpm task do` for guidance** — It provides state-specific instructions. Don't guess what to do next.
-- **Respect file boundaries** — NEVER edit files in `.taskflow/` or `tasks/`. Use `pnpm task` commands for all task management.
-- **Follow NEXT STEPS religiously** — The CLI tells you exactly what to do next. Don't improvise.
+## Requirements Syntax (EARS)
 
-**CRITICAL**: The TaskFlow CLI is your guide. Its standardized output format (OUTPUT + NEXT STEPS + AI WARNINGS) is designed to keep you on track. Read every section, follow every instruction.
+Use EARS syntax for unambiguous acceptance criteria:
+- WHEN [event] THEN [system] SHALL [response]
+- IF [precondition] THEN [system] SHALL [response]
+- WHEN [event] AND [condition] THEN [system] SHALL [response]
+
+## Approval Gates
+
+**Explicit approval required** before proceeding:
+- PLANNING: "yes/approved/LGTM?" (move to implementation)
+- TASK GENERATION: "yes/approved/LGTM?" (execute tasks)
+- PRD: "yes/approved/LGTM?" (switch to executor)
+
+**Ask ONE question at a time**—build iteratively on answers.
+
+## Definition of Done
+
+Every task must meet:
+- Functional requirements implemented
+- Tests passing (automated: implement test, run full suite, fix up to 3 times; manual: STOP and ask user)
+- Lint and type checking pass
+- Code reviewed (mandatory for code changes)
+- Documentation updated (if applicable)
+- No tech debt or explicitly reported
+
+## Learnings Tracking
+
+After each task, capture **only general, project-wide insights**:
+- Not implementation details ("I added a function")
+- Not what you did, but what you learned
+- Prevent repeated mistakes in future tasks
+
+## Tech Debt Reporting
+
+Report after implementation:
+- Tech debt introduced
+- Unfinished work
+- Most impactful next step
+- Focus on high-impact items only
+
+## Library & Security Checks
+
+Before suggesting new library: verify no similar library exists, check compatibility, consider security/maintenance.
+
+For architecture changes: consider security implications, performance impact, backward compatibility.
 
 ## Context Management
 
-### Context Overload Prevention
-
-Each SETUP state loads all reference files:
-- `.taskflow/ref/RETROSPECTIVE.md`
-- `.taskflow/ref/AI-PROTOCOL.md`
-- `.taskflow/ref/ARCHITECTURE-RULES.md`
-- `.taskflow/ref/CODING-STANDARDS.md`
-- `.taskflow/ref/skills/[skill].md`
-- Task details and subtasks
-
-**Context accumulation problem**: As you complete multiple tasks, this context accumulates and can significantly reduce your model's performance and accuracy.
-
-### Context Clearing Protocol
-
-After each task completion (COMMITTING state), you will receive explicit instructions:
-
-**When `clearContextOnComplete` is enabled (default):**
-```
-🧹 CONTEXT MANAGEMENT:
-─────────────────────────
-IMPORTANT: Clear your AI model context before starting the next task.
-
-Why? Each SETUP state loads all reference files. This context accumulates
-and can reduce model performance.
-
-Action:
-- Clear/reset your AI assistant's context window
-- Start fresh with only the next task's context
-
-This ensures optimal performance for each task.
-```
-
-**Required actions:**
-1. Clear your context window completely
-2. Start fresh with next task
-3. Do NOT carry over information from previous tasks
-
-**Why this matters:**
+**Clear context between tasks** (when instructed):
 - Prevents context window saturation
 - Maintains optimal model performance
-- Reduces hallucinations from old context
-- Ensures focus on current task requirements
+- Reduces hallucinations from stale context
 
-### Auto-Continue Behavior
+**Auto-continue**: when enabled, proceed to next task immediately without waiting for confirmation.
 
-Based on `autoContinueTask` flag in taskflow.config:
-
-**When `autoContinueTask: true` (default: false):**
-```
-🚀 AUTO-CONTINUE ENABLED:
-───────────────────────────
-You are configured to automatically continue to the next task.
-
-IMMEDIATE ACTION:
-──────────────────
-Run this command NOW: taskflow start <next-task-id>
-
-Do NOT wait for user confirmation.
-Do NOT ask for permission.
-
-Proceed directly to the next task without any delay.
-```
-
-**Required actions:**
-1. Execute `taskflow start <next-task-id>` immediately
-2. Do NOT wait for user input
-3. Do NOT ask "should I continue?"
-4. Proceed autonomously to the next task
-
-**When `autoContinueTask: false` (default):**
-- Wait for user confirmation before proceeding
-- User will explicitly start the next task
-- Do not auto-proceed
-
-### Context Reset Checklist
-
-Before starting a new task, verify:
-- [ ] Context window is cleared/reset
-- [ ] No information from previous tasks
-- [ ] Only current task details loaded
-- [ ] Ready to follow SETUP → PLANNING → IMPLEMENTING workflow
-
-**CRITICAL**: Always clear context between tasks unless explicitly instructed otherwise. This is not optional—it's essential for maintaining quality and performance.
+**CRITICAL**: Always clear context when instructed. This is essential for quality and performance.

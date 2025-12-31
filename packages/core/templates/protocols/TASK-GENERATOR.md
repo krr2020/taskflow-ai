@@ -1,21 +1,17 @@
-# 🔨 TASK GENERATOR
+# TASK GENERATOR
 
 **Purpose:** Break PRDs into Features → Stories → Tasks (JSON-based)
-
----
 
 ## Directory Structure
 
 ```
 tasks/
-├── project-index.json              # Root index
-└── F[N]-[feature-name]/            # Feature folder
-    ├── F[N]-[feature-name].json    # Stories & tasks list
-    └── S[N].[M]-[story-name]/      # Story folder
-        └── T[N].[M].[K]-[task-title].json  # Task file
+├── project-index.json
+└── F[N]-[feature-name]/
+    ├── F[N]-[feature-name].json
+    └── S[N].[M]-[story-name]/
+        └── T[N].[M].[K]-[task-title].json
 ```
-
----
 
 ## ID Conventions
 
@@ -27,8 +23,6 @@ tasks/
 
 **No leading zeros.** `1.1.0` ✓ `1.01.0` ✗
 
----
-
 ## Generation Workflow
 
 1. Parse PRD → Identify Features & Stories
@@ -37,50 +31,8 @@ tasks/
 4. Generate `F[N]-[feature-name].json` per feature
 5. Generate task JSON files
 
----
+## Task Template
 
-## Templates
-
-### project-index.json
-```json
-{
-  "project": "Project Name",
-  "features": [
-    {
-      "id": "1",
-      "title": "Feature Title",
-      "status": "not-started",
-      "path": "F1-feature-name"
-    }
-  ]
-}
-```
-
-### F[N]-[feature-name].json
-```json
-{
-  "id": "1",
-  "title": "Feature Title",
-  "status": "not-started",
-  "stories": [
-    {
-      "id": "1.1",
-      "title": "Story Title",
-      "status": "not-started",
-      "tasks": [
-        {
-          "id": "1.1.0",
-          "title": "Task Title",
-          "status": "not-started",
-          "dependencies": []
-        }
-      ]
-    }
-  ]
-}
-```
-
-### Task File (T1.1.0-setup-database-schema.json)
 ```json
 {
   "id": "1.1.0",
@@ -89,80 +41,59 @@ tasks/
   "status": "not-started",
   "skill": "backend",
   "subtasks": [
-    {
-      "id": "1",
-      "description": "Create migration file",
-      "status": "pending"
-    },
-    {
-      "id": "2",
-      "description": "Define entity in schema",
-      "status": "pending"
-    }
+    {"id": "1", "description": "Create migration file", "status": "pending"},
+    {"id": "2", "description": "Define entity in schema", "status": "pending"}
   ],
-  "context": [
-    "src/database/schema.ts",
-    "src/database/schema2.ts"
-  ]
+  "context": ["src/database/schema.ts"]
 }
 ```
 
-### Task Status Values
+## Task Status Values
 
-| Status | Description |
-|--------|-------------|
-| `not-started` | Task not yet begun |
-| `setup` | Reading context and requirements |
-| `implementing` | Writing code |
-| `verifying` | Self-review |
-| `validating` | Running automated checks |
-| `committing` | Ready to commit and push |
-| `completed` | Task finished |
-| `blocked` | Cannot proceed |
-| `on-hold` | Paused |
+`not-started`, `setup`, `implementing`, `verifying`, `validating`, `committing`, `completed`, `blocked`, `on-hold`
 
-### Skill Values
+## Skill Values
 
 | Skill | Use When |
 |-------|----------|
-| `development` | General development tasks, refactoring, utilities |
-| `backend` | API, database, server logic, handlers, repositories |
-| `frontend` | UI components, pages, forms, client-side logic |
-| `fullstack` | End-to-end features crossing frontend/backend |
-| `devops` | Docker, K8s, CI/CD, deployment, infrastructure |
+| `development` | General dev, refactoring, utilities |
+| `backend` | API, database, server logic |
+| `frontend` | UI components, pages, client logic |
+| `fullstack` | End-to-end features (frontend + backend) |
+| `devops` | Docker, K8s, CI/CD, infrastructure |
 | `docs` | Documentation, README, guides |
 
-**Rule:** Tasks MUST have single responsibility. Avoid mixing `frontend` and `backend` in one task. Use `fullstack` only for true integration work where contract definition matters.
+**Rule:** Tasks MUST have single responsibility. Avoid mixing `frontend` and `backend`. Use `fullstack` only for integration work where contract definition matters.
 
----
+## Task Granularity
 
-## Task Granularity & Scoping
+**CRITICAL:** Optimize for MINIMAL tasks (fewer, larger > many small). Good design: meaningful unit (30-60 min), touches multiple files. Anti-patterns: one task per file/function, separating simple steps (merge them).
 
-**CRITICAL:** The AI must optimize for **MINIMAL** number of tasks.
-- **Preference:** Fewer, larger tasks > Many small tasks.
-- **Metric:** A functional feature should typically be **1-2 stories**, and each story **2-4 tasks**.
+**Example:** Instead of `create migration`, `create model`, `create repo`, `create service` → DO: `T1.1.0-implement-user-persistence` (includes all).
 
-### ✅ Good Task Design
-- **Scope:** A task should complete a meaningful unit of work (e.g., "Implement entire API endpoint with tests" or "Create full UI page with components").
-- **Size:** 30-60 minutes of coding work.
-- **Files:** Touches multiple files (controller, service, types, tests).
+## Requirements & Approvals
 
-### ❌ Anti-Patterns (AVOID THESE)
-- **One task per file:** ❌ `T1.1.0-create-controller` (Too small)
-- **One task per function:** ❌ `T1.1.0-add-validation-function` (Too small)
-- **Separating simple steps:** ❌ `T1.1.0-install-package` -> `T1.1.1-config-package` (Merge these!)
+**EARS syntax** for acceptance criteria: WHEN [event] THEN [system] SHALL [response] | IF [precondition] THEN [system] SHALL [response].
 
-### Example Grouping
-**Instead of:**
-1. `Create migration`
-2. `Create model`
-3. `Create repo`
-4. `Create service`
+**Explicit approval required**: Ask "yes/approved/LGTM?" before finalizing task breakdown, executing tasks, moving from planning to implementation.
 
-**DO THIS:**
-1. `T1.1.0-implement-user-persistence` (Includes migration, model, repo, service)
+**Ask ONE question at a time**: Build iteratively, do not batch questions.
 
----
+**Alternative analysis**: When multiple approaches exist, present alternatives with pros/cons, let user choose.
+
+## Definition of Done
+
+Functional requirements implemented, tests passing (3-retry limit for automated), lint/type-check pass, documentation updated (if applicable), code reviewed (mandatory), no tech debt or explicitly reported.
+
+## Quality Checks
+
+**Library conflicts**: Before suggesting new libraries, verify no similar library exists, check compatibility, consider security/maintenance.
+**Security & performance**: For each task, consider security implications, performance impact, backward compatibility, error handling.
+**Testing strategy**: Define approach per task: unit tests (if applicable), integration tests (if applicable), manual/automated test verification.
+**Documentation updates**: For tasks requiring docs, specify what needs updating (README, API docs, guides), ensure examples included.
+**Code review**: All code changes require review (self-review in VERIFYING state, mandatory code review before commit).
+**Tech debt tracking**: Report after implementation: tech debt introduced, unfinished work, most impactful next step (focus on high-impact items).
+**Learnings capture**: After each task, capture only general, project-wide insights (not implementation details, not what you did but what you learned, prevent repeated mistakes).
 
 ## Rules
 

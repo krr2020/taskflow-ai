@@ -33,13 +33,13 @@ interface UpdatePlan {
 const CURRENT_TEMPLATE_VERSION = "0.1.0";
 
 const UPDATE_STRATEGIES = {
-	NEVER: ["RETROSPECTIVE.md"],
-	PROMPT: ["CODING-STANDARDS.md", "ARCHITECTURE-RULES.md"],
+	NEVER: ["retrospective.md"],
+	PROMPT: ["coding-standards.md", "architecture-rules.md"],
 	SUGGEST: [
-		"AI-PROTOCOL.md",
-		"TASK-GENERATOR.md",
-		"TASK-EXECUTOR.md",
-		"PRD-GENERATOR.md",
+		"ai-protocol.md",
+		"task-generator.md",
+		"task-executor.md",
+		"prd-generator.md",
 	],
 	AUTO: [".version"],
 };
@@ -139,7 +139,7 @@ export class UpgradeCommand extends BaseCommand {
 		output += `\n${colors.successBold(`${icons.success} Upgrade complete!`)}\n`;
 		output += `  Updated: ${updatedCount} files\n`;
 		output += `  Skipped: ${skippedCount} files\n`;
-		output += `  Preserved: RETROSPECTIVE.md, logs\n`;
+		output += `  Preserved: retrospective.md, logs\n`;
 
 		return {
 			success: true,
@@ -182,13 +182,13 @@ export class UpgradeCommand extends BaseCommand {
 
 		// Map file names to their template paths using the new structure
 		const fileToTemplatePath: Record<string, string> = {
-			"AI-PROTOCOL.md": TEMPLATE_FILES.protocols.aiProtocol,
-			"TASK-GENERATOR.md": TEMPLATE_FILES.protocols.taskGenerator,
-			"TASK-EXECUTOR.md": TEMPLATE_FILES.protocols.taskExecutor,
-			"PRD-GENERATOR.md": TEMPLATE_FILES.prd.prdGenerator,
-			"CODING-STANDARDS.md": TEMPLATE_FILES.project.codingStandards,
-			"ARCHITECTURE-RULES.md": TEMPLATE_FILES.project.architectureRules,
-			"RETROSPECTIVE.md": TEMPLATE_FILES.retrospective.retrospective,
+			"ai-protocol.md": TEMPLATE_FILES.protocols.aiProtocol,
+			"task-generator.md": TEMPLATE_FILES.protocols.taskGenerator,
+			"task-executor.md": TEMPLATE_FILES.protocols.taskExecutor,
+			"prd-generator.md": TEMPLATE_FILES.prd.prdGenerator,
+			"coding-standards.md": TEMPLATE_FILES.project.codingStandards,
+			"architecture-rules.md": TEMPLATE_FILES.project.architectureRules,
+			"retrospective.md": TEMPLATE_FILES.retrospective.retrospective,
 		};
 
 		// Get all template files

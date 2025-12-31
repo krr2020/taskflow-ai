@@ -661,10 +661,10 @@ Test structure mirrors source structure:
 
 ### Reference Files
 Located in `.taskflow/ref/` after running `taskflow init`:
-- `AI-PROTOCOL.md` - AI execution guidelines
-- `TASK-GENERATOR.md` - Task generation instructions
-- `TASK-EXECUTOR.md` - Task execution instructions
-- `PRD-GENERATOR.md` - PRD creation guidelines
-- `CODING-STANDARDS.md` - Project-specific standards (generated)
+- `ai-protocol.md` - AI execution guidelines
+- `task-generator.md` - Task generation instructions
+- `task-executor.md` - Task execution instructions
+- `prd-generator.md` - PRD creation guidelines
+- `coding-standards.md` - Project-specific standards (generated)
 - `ARCHITECTURE-RULES.md` - Architecture patterns (generated)
-- `RETROSPECTIVE.md` - Error pattern database
+- `retrospective.md` - Error pattern database

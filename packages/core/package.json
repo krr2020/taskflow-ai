@@ -1,7 +1,7 @@
 {
 	"name": "@krr2020/taskflow-core",
-	"version": "0.1.0-beta.2",
-	"description": "Core logic for Taskflow 2.0 - AI-first task management and workflow system",
+	"version": "0.1.0-beta.3",
+	"description": "Core logic for Taskflow - AI-first task management and workflow system",
 	"license": "MIT",
 	"publishConfig": {
 		"access": "public"

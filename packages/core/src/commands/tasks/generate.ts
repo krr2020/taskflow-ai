@@ -69,8 +69,8 @@ export class TasksGenerateCommand extends BaseCommand {
 			return this.failure(
 				"Architecture files missing",
 				[
-					!codingStandardsExist ? "CODING-STANDARDS.md not found" : "",
-					!architectureRulesExist ? "ARCHITECTURE-RULES.md not found" : "",
+					!codingStandardsExist ? "coding-standards.md not found" : "",
+					!architectureRulesExist ? "architecture-rules.md not found" : "",
 					"",
 					"These files must exist before generating tasks.",
 				].filter((s) => s.length > 0),
@@ -79,8 +79,8 @@ export class TasksGenerateCommand extends BaseCommand {
 					`  taskflow prd generate-arch ${prdFile}`,
 					"",
 					"This will create:",
-					"  - CODING-STANDARDS.md",
-					"  - ARCHITECTURE-RULES.md",
+					"  - coding-standards.md",
+					"  - architecture-rules.md",
 					"",
 					"Then you can generate tasks.",
 				].join("\n"),
@@ -125,8 +125,8 @@ export class TasksGenerateCommand extends BaseCommand {
 		return this.success(
 			[
 				`PRD loaded: ${prdFile}`,
-				"✓ CODING-STANDARDS.md found",
-				"✓ ARCHITECTURE-RULES.md found",
+				"✓ coding-standards.md found",
+				"✓ architecture-rules.md found",
 				"",
 				"TASK:",
 				"─".repeat(60),
@@ -379,7 +379,7 @@ export class TasksGenerateCommand extends BaseCommand {
 					"",
 					"CRITICAL RULES:",
 					"────────────────",
-					"1. DO read TASK-GENERATOR.md completely",
+					"1. DO read task-generator.md completely",
 					"2. DO analyze the codebase before generating tasks",
 					"3. DO make tasks atomic and independently testable",
 					"4. DO assign realistic skill types",
@@ -409,7 +409,7 @@ export class TasksGenerateCommand extends BaseCommand {
 				],
 				warnings: [
 					"DO NOT create overly broad tasks - break them down",
-					"DO NOT skip reading TASK-GENERATOR.md",
+					"DO NOT skip reading task-generator.md",
 					"DO NOT invent context files - reference actual codebase files",
 					"DO ensure every task has clear acceptance criteria",
 					"DO make sure task IDs follow the N.M.K format exactly",

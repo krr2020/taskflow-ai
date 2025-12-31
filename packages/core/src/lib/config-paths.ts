@@ -31,7 +31,7 @@ export function getProjectPaths(projectRoot: string) {
 // ============================================================================
 
 export const PROJECT_INDEX_FILE = "project-index.json";
-export const RETROSPECTIVE_FILE = "RETROSPECTIVE.md";
+export const RETROSPECTIVE_FILE = "retrospective.md";
 export const CONFIG_FILE = "taskflow.config.json";
 
 // ============================================================================
@@ -40,19 +40,19 @@ export const CONFIG_FILE = "taskflow.config.json";
 
 export const TEMPLATE_FILES = {
 	protocols: {
-		aiProtocol: "protocols/AI-PROTOCOL.md",
-		taskGenerator: "protocols/TASK-GENERATOR.md",
-		taskExecutor: "protocols/TASK-EXECUTOR.md",
+		aiProtocol: "protocols/ai-protocol.md",
+		taskGenerator: "protocols/task-generator.md",
+		taskExecutor: "protocols/task-executor.md",
 	},
 	prd: {
-		prdGenerator: "prd/PRD-GENERATOR.md",
+		prdGenerator: "prd/prd-generator.md",
 	},
 	project: {
-		codingStandards: "project/CODING-STANDARDS.md",
-		architectureRules: "project/ARCHITECTURE-RULES.md",
+		codingStandards: "project/coding-standards.md",
+		architectureRules: "project/architecture-rules.md",
 	},
 	retrospective: {
-		retrospective: "retrospective/RETROSPECTIVE.md",
+		retrospective: "retrospective/retrospective.md",
 	},
 	skills: {
 		backend: "skills/backend.md",
@@ -69,12 +69,12 @@ export const TEMPLATE_FILES = {
 // ============================================================================
 
 export const REF_FILES = {
-	aiProtocol: "AI-PROTOCOL.md",
-	taskGenerator: "TASK-GENERATOR.md",
-	taskExecutor: "TASK-EXECUTOR.md",
-	prdGenerator: "PRD-GENERATOR.md",
-	codingStandards: "CODING-STANDARDS.md",
-	architectureRules: "ARCHITECTURE-RULES.md",
+	aiProtocol: "ai-protocol.md",
+	taskGenerator: "task-generator.md",
+	taskExecutor: "task-executor.md",
+	prdGenerator: "prd-generator.md",
+	codingStandards: "coding-standards.md",
+	architectureRules: "architecture-rules.md",
 	retrospective: RETROSPECTIVE_FILE,
 } as const;
 

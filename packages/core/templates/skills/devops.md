@@ -37,3 +37,28 @@ Avoid generic infrastructure patterns that cause production incidents:
 - Secrets committed to version control, even "temporarily"
 - Configuration that only works with "that one manual step"
 - Missing resource limits that allow runaway processes
+
+## Testing Strategy
+
+- **Unit Tests**: Test configuration parsing, validation logic, and deployment scripts in isolation
+- **Integration Tests**: Verify infrastructure works with actual services
+- **End-to-End Tests**: Verify complete deployment workflows from local to production
+- **Test Handling**: Implement test, run full suite, fix failures. Max 3 retry attempts. If still failing, STOP and analyze root cause.
+- **Manual Tests**: STOP and ask user to verify. Do NOT auto-proceed.
+- **Smoke Tests**: Run deployment verification checks after each deployment
+
+## Security & Performance
+
+For each infrastructure change:
+- **Security**: Consider secret encryption, access controls, network policies, container security scans, vulnerability scanning
+- **Performance**: Consider resource limits, autoscaling thresholds, caching strategies, CDN configuration, database optimization
+- **Reliability**: Consider high availability, disaster recovery, backup strategies, monitoring coverage
+- **Failover**: Implement graceful degradation and failover mechanisms
+
+## Library Verification
+
+Before suggesting new infrastructure tools:
+- Verify no similar tool exists in project
+- Check compatibility with current stack (Docker, Kubernetes, CI/CD)
+- Consider security and maintenance status
+- Evaluate operational overhead

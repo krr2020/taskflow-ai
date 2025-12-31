@@ -49,7 +49,7 @@ Initialize Taskflow in the current project.
 **Actions:**
 - Creates `taskflow.config.json`
 - Creates `.taskflow` directory structure
-- Copies template files (AI-PROTOCOL.md, TASK-GENERATOR.md, etc.)
+- Copies template files (ai-protocol.md, task-generator.md, etc.)
 - Creates `tasks/` directory
 
 ---
@@ -90,7 +90,7 @@ Create a new PRD template for defining features.
 - Includes sections: Overview, User Stories, Technical Requirements, etc.
 
 #### `prd_generate_arch`
-Generate CODING-STANDARDS.md and ARCHITECTURE-RULES.md from a PRD.
+Generate coding-standards.md and ARCHITECTURE-RULES.md from a PRD.
 
 **Inputs:**
 - `prdFile` (required): PRD filename (e.g., "2024-01-15-user-auth.md")
@@ -211,7 +211,7 @@ Add a new error pattern to the retrospective.
 - `criticality` (optional): Criticality level (low, medium, high) - defaults to medium
 
 **Actions:**
-- Adds entry to `RETROSPECTIVE.md`
+- Adds entry to `retrospective.md`
 - Pattern will be matched against future validation failures
 - Solution will be displayed when pattern matches
 

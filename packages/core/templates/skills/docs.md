@@ -38,3 +38,25 @@ Avoid patterns that undermine documentation:
 - TODOs in published documentation
 - Duplicate content that will drift out of sync
 - Explaining obvious things, skipping non-obvious things
+
+## Testing Strategy
+
+- **Content Tests**: Verify documentation is accurate and follows project structure
+- **Link Tests**: Verify all internal and external links work
+- **Instruction Tests**: Follow documentation on clean machine to verify steps work
+- **Test Handling**: Implement test, run verification, fix failures. Max 3 retry attempts. If still failing, STOP and analyze root cause.
+- **Manual Tests**: STOP and ask user to verify. Do NOT auto-proceed.
+
+## Security & Performance
+
+For each documentation update:
+- **Security**: Consider if documentation exposes sensitive information (secrets, internal URLs, etc.)
+- **Performance**: Consider documentation size, rendering performance, search indexability
+- **Accessibility**: Ensure documentation is screen reader friendly, keyboard navigable, color contrast compliant
+
+## Library Verification
+
+Before suggesting new documentation tools:
+- Verify no similar tool exists in project
+- Check compatibility with current documentation format (Markdown, etc.)
+- Consider maintenance and community support

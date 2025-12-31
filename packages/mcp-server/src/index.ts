@@ -112,7 +112,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 			{
 				name: "prd_generate_arch",
 				description:
-					"Generate CODING-STANDARDS.md and ARCHITECTURE-RULES.md from a PRD. Analyzes codebase and PRD to create project-specific standards.",
+					"Generate coding-standards.md and ARCHITECTURE-RULES.md from a PRD. Analyzes codebase and PRD to create project-specific standards.",
 				inputSchema: {
 					type: "object",
 					properties: {

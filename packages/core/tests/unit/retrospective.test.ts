@@ -60,7 +60,7 @@ describe("retrospective", () => {
 |---|---|---|---|---|---|
 | 1 | Type Error | module not found | Check path | 1 | High |`;
 
-			fs.writeFileSync(path.join(refDir, "RETROSPECTIVE.md"), content);
+			fs.writeFileSync(path.join(refDir, "retrospective.md"), content);
 
 			const items = loadRetrospective(refDir);
 
