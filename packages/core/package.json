@@ -1,0 +1,35 @@
+{
+  "name": "@krr2020/taskflow-core",
+  "version": "0.1.0-beta.2",
+  "description": "Core logic for Taskflow 2.0 State Machine and Context Broker",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./config": {
+      "import": "./dist/config.js",
+      "types": "./dist/config.d.ts"
+    }
+  },
+  "dependencies": {
+    "zod": "^3.22.4",
+    "execa": "^8.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0",
+    "@types/node": "^20.11.0"
+  }
+}

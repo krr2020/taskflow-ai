@@ -1,0 +1,47 @@
+{
+	"$schema": "https://json.schemastore.org/tsconfig",
+	"compilerOptions": {
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"noImplicitReturns": true,
+		"noImplicitOverride": true,
+		"allowUnusedLabels": false,
+		"allowUnreachableCode": false,
+
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		"allowImportingTsExtensions": false,
+
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true,
+		"removeComments": false,
+		"importHelpers": true,
+		"downlevelIteration": true,
+
+		"allowJs": true,
+		"checkJs": false,
+
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"useDefineForClassFields": true,
+
+		"incremental": true,
+		"composite": false,
+		"skipLibCheck": true,
+		"baseUrl": ".",
+		"paths": {}
+	},
+	"include": [".taskflow/src/**/*.ts", ".taskflow/tests/**/*.ts"],
+	"exclude": ["node_modules", "dist", "coverage"]
+}
