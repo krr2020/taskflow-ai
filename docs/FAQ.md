@@ -52,7 +52,7 @@ source ~/.bashrc  # or ~/.zshrc
 
 **Solution 2: Use npx (works without global install)**
 ```bash
-npx @krr2020/taskflow-core init my-project
+npx @krr2020/taskflow-core init
 npx @krr2020/taskflow-core status
 ```
 
@@ -170,8 +170,10 @@ rm -rf .taskflow tasks
 taskflow init
 ```
 
-**Solution 2: Initialize with explicit project name**
+**Solution 2: Initialize (project name auto-detected from package.json)**
 ```bash
+taskflow init
+# Or with explicit name:
 taskflow init my-project-name
 ```
 

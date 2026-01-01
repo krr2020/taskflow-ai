@@ -189,7 +189,8 @@ describe("Types and Schemas", () => {
 
 	describe("STATUS_TRANSITIONS", () => {
 		it("should define correct status transitions", () => {
-			expect(STATUS_TRANSITIONS.setup).toBe("implementing");
+			expect(STATUS_TRANSITIONS.setup).toBe("planning");
+			expect(STATUS_TRANSITIONS.planning).toBe("implementing");
 			expect(STATUS_TRANSITIONS.implementing).toBe("verifying");
 			expect(STATUS_TRANSITIONS.verifying).toBe("validating");
 			expect(STATUS_TRANSITIONS.validating).toBe("committing");

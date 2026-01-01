@@ -9,14 +9,14 @@ Tasks progress through a unified status flow:
 │                           TASK STATUS FLOW                               │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  ┌───────────┐  ┌───────┐  ┌─────────────┐  ┌──────────┐  ┌──────────┐ │
-│  │not-started│─▶│ setup │─▶│implementing │─▶│verifying │─▶│validating│ │
-│  └───────────┘  └───────┘  └─────────────┘  └──────────┘  └──────────┘ │
-│                                                                │         │
-│                                                                ▼         │
-│                     ┌───────────┐    ┌──────────┐                       │
-│                     │ completed │◀───│committing│                       │
-│                     └───────────┘    └──────────┘                       │
+│  ┌───────────┐  ┌───────┐  ┌──────────┐  ┌─────────────┐  ┌──────────┐  │
+│  │not-started│─▶│ setup │─▶│planning │─▶│implementing │─▶│verifying │  │
+│  └───────────┘  └───────┘  └──────────┘  └─────────────┘  └──────────┘  │
+│                                                                     │      │
+│                                                                     ▼      │
+│  ┌──────────┐  ┌───────────┐    ┌──────────┐                          │
+│  │validating│─▶│committing │◀───│ completed │                          │
+│  └──────────┘  └───────────┘    └──────────┘                          │
 │                                                                          │
 │  Other states: blocked, on-hold                                          │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -25,7 +25,8 @@ Tasks progress through a unified status flow:
 | Status | Description | Transition |
 |--------|-------------|------------|
 | **not-started** | Task has not been started | → setup (via `start`) |
-| **setup** | Reading task requirements, understanding context | → implementing (via `check`) |
+| **setup** | Reading task requirements, understanding context | → planning (via `check`) |
+| **planning** | Planning the implementation approach | → implementing (via `check`) |
 | **implementing** | Writing code, implementing the feature | → verifying (via `check`) |
 | **verifying** | Self-reviewing the implementation | → validating (via `check`) |
 | **validating** | Running automated checks (lint, type-check, arch) | → committing (via `check`) |

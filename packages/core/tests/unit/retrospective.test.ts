@@ -5,11 +5,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { ParsedError } from "../../src/lib/log-parser.js";
 import {
+	appendNewPatternsToRetrospective,
+	extractNewPatterns,
 	isValidCategory,
 	isValidCriticality,
 	loadRetrospective,
 	parseRetrospectiveContent,
+	readRetrospectiveBeforeWork,
 	VALID_CATEGORIES,
 	VALID_CRITICALITIES,
 } from "../../src/lib/retrospective.js";
@@ -98,6 +102,196 @@ describe("retrospective", () => {
 		it("should reject invalid criticality levels", () => {
 			expect(isValidCriticality("invalid")).toBe(false);
 			expect(isValidCriticality("")).toBe(false);
+		});
+	});
+
+	// ============================================================================
+	// Auto-Update Tests
+	// ============================================================================
+
+	describe("auto-update functionality", () => {
+		describe("readRetrospectiveBeforeWork", () => {
+			it("should return content if file exists", () => {
+				const content = "test content";
+				fs.writeFileSync(path.join(refDir, "retrospective.md"), content);
+
+				const result = readRetrospectiveBeforeWork(refDir);
+				expect(result).toBe(content);
+			});
+
+			it("should return empty string if file missing", () => {
+				const result = readRetrospectiveBeforeWork(refDir);
+				expect(result).toBe("");
+			});
+		});
+
+		describe("extractNewPatterns", () => {
+			it("should extract new patterns from errors", () => {
+				const errors: ParsedError[] = [
+					{
+						message: "Cannot find module './foo'",
+						severity: "error",
+						file: "src/index.ts",
+						line: 1,
+						column: 1,
+						code: "TS2307",
+						raw: "src/index.ts:1:1 - error TS2307: Cannot find module './foo'",
+					},
+				];
+
+				const patterns = extractNewPatterns(errors, refDir);
+
+				expect(patterns).toHaveLength(1);
+				expect(patterns[0]?.category).toBe("Type Error");
+				expect(patterns[0]?.pattern).toBe("TS2307");
+				expect(patterns[0]?.criticality).toBe("High");
+				expect(patterns[0]?.errorCode).toBe("TS2307");
+			});
+
+			it("should ignore errors that match existing retrospective items", () => {
+				// Create existing retro with TS2307
+				const content = `# Retrospective
+
+| ID | Category | Pattern | Solution | Count | Criticality |
+|---|---|---|---|---|---|
+| 1 | Type Error | TS2307 | Fix path | 1 | High |`;
+				fs.writeFileSync(path.join(refDir, "retrospective.md"), content);
+
+				const errors: ParsedError[] = [
+					{
+						message: "Cannot find module './foo'",
+						severity: "error",
+						file: "src/index.ts",
+						line: 1,
+						column: 1,
+						code: "TS2307",
+						raw: "src/index.ts:1:1 - error TS2307: Cannot find module './foo'",
+					},
+				];
+
+				const patterns = extractNewPatterns(errors, refDir);
+
+				expect(patterns).toHaveLength(0);
+			});
+
+			it("should group similar errors", () => {
+				const errors: ParsedError[] = [
+					{
+						message: "Error one",
+						severity: "error",
+						code: "TS1234",
+						file: "file1.ts",
+						line: 1,
+						column: 1,
+						raw: "file1.ts:1:1 - error TS1234: Error one",
+					},
+					{
+						message: "Error two",
+						severity: "error",
+						code: "TS1234", // Same code
+						file: "file2.ts",
+						line: 1,
+						column: 1,
+						raw: "file2.ts:1:1 - error TS1234: Error two",
+					},
+				];
+
+				const patterns = extractNewPatterns(errors, refDir);
+
+				expect(patterns).toHaveLength(1);
+				expect(patterns[0]?.pattern).toBe("TS1234");
+			});
+
+			it("should infer category from message if no code", () => {
+				const errors: ParsedError[] = [
+					{
+						message: "Missing semicolon (eslint)",
+						severity: "warning",
+						file: "src/index.ts",
+						line: 1,
+						column: 1,
+						code: "eslint",
+						raw: "src/index.ts:1:1 - warning: Missing semicolon (eslint)",
+					},
+				];
+
+				const patterns = extractNewPatterns(errors, refDir);
+
+				expect(patterns).toHaveLength(1);
+				expect(patterns[0]?.category).toBe("Lint");
+				expect(patterns[0]?.criticality).toBe("Low");
+			});
+		});
+
+		describe("appendNewPatternsToRetrospective", () => {
+			it("should append patterns to retrospective file", () => {
+				// Initialize empty file
+				fs.writeFileSync(
+					path.join(refDir, "retrospective.md"),
+					"# Retrospective\n\n| ID | Category | Pattern | Solution | Count | Criticality |\n|---|---|---|---|---|---|\n",
+				);
+
+				const patterns = [
+					{
+						category: "Type Error",
+						pattern: "TS2307",
+						solution: "Fix import",
+						criticality: "High",
+						affectedFiles: [],
+					},
+				];
+
+				const ids = appendNewPatternsToRetrospective(refDir, patterns);
+
+				expect(ids).toHaveLength(1);
+				expect(ids[0]).toBe(1);
+
+				const content = fs.readFileSync(
+					path.join(refDir, "retrospective.md"),
+					"utf-8",
+				);
+				expect(content).toContain(
+					"| 1 | Type Error | TS2307 | Fix import | 1 | High |",
+				);
+			});
+
+			it("should handle multiple patterns", () => {
+				// Initialize empty file
+				fs.writeFileSync(
+					path.join(refDir, "retrospective.md"),
+					"# Retrospective\n\n| ID | Category | Pattern | Solution | Count | Criticality |\n|---|---|---|---|---|---|\n",
+				);
+
+				const patterns = [
+					{
+						category: "Type Error",
+						pattern: "TS1111",
+						solution: "Fix 1",
+						criticality: "High",
+						affectedFiles: [],
+					},
+					{
+						category: "Lint",
+						pattern: "no-console",
+						solution: "Remove console",
+						criticality: "Low",
+						affectedFiles: [],
+					},
+				];
+
+				const ids = appendNewPatternsToRetrospective(refDir, patterns);
+
+				expect(ids).toHaveLength(2);
+				expect(ids[0]).toBe(1);
+				expect(ids[1]).toBe(2);
+
+				const content = fs.readFileSync(
+					path.join(refDir, "retrospective.md"),
+					"utf-8",
+				);
+				expect(content).toContain("| 1 | Type Error | TS1111");
+				expect(content).toContain("| 2 | Lint | no-console");
+			});
 		});
 	});
 });

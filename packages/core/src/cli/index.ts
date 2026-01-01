@@ -6,6 +6,7 @@ import process from "node:process";
 import { Command } from "commander";
 import type { CommandContext, CommandResult } from "../commands/base.js";
 // Import commands
+import { ConfigureAICommand } from "../commands/configure.js";
 import { InitCommand } from "../commands/init.js";
 import { PrdCreateCommand } from "../commands/prd/create.js";
 import { PrdGenerateArchCommand } from "../commands/prd/generate-arch.js";
@@ -54,6 +55,67 @@ export async function runCLI() {
 			try {
 				const cmd = new InitCommand(context);
 				const result = await cmd.execute(projectName);
+				console.log(formatSuccess(result));
+				process.exit(0);
+			} catch (error) {
+				handleError(error);
+			}
+		});
+
+	// ========================================
+	// CONFIGURE COMMAND
+	// ========================================
+	const configureCommand = program
+		.command("configure")
+		.description("Configure taskflow settings");
+
+	configureCommand
+		.command("ai")
+		.description("Configure AI/LLM provider for manual command execution")
+		.option(
+			"--provider <provider>",
+			"Provider type (openai-compatible, anthropic, ollama)",
+		)
+		.option(
+			"--apiKey <key>",
+			"API key for the provider (can use $${ENV_VAR} format)",
+		)
+		.option("--model <model>", "Default model to use")
+		.option(
+			"--planning <model>",
+			"Model for planning phase (e.g., claude-opus-4)",
+		)
+		.option(
+			"--execution <model>",
+			"Model for execution phase (e.g., gemini-pro-2.0)",
+		)
+		.option(
+			"--analysis <model>",
+			"Model for analysis phase (e.g., claude-sonnet-4)",
+		)
+		.option("--planningProvider <provider>", "Different provider for planning")
+		.option("--planningApiKey <key>", "API key for planning provider")
+		.option(
+			"--executionProvider <provider>",
+			"Different provider for execution",
+		)
+		.option("--executionApiKey <key>", "API key for execution provider")
+		.option("--analysisProvider <provider>", "Different provider for analysis")
+		.option("--analysisApiKey <key>", "API key for analysis provider")
+		.option(
+			"--ollamaBaseUrl <url>",
+			"Ollama base URL (default: http://localhost:11434)",
+		)
+		.option(
+			"--openaiBaseUrl <url>",
+			"OpenAI-compatible base URL (default: https://api.openai.com/v1)",
+		)
+		.option("--enable", "Enable AI features")
+		.option("--disable", "Disable AI features")
+		.action(async (options) => {
+			try {
+				const cmd = new ConfigureAICommand(context);
+				const result = await cmd.execute(options);
 				console.log(formatSuccess(result));
 				process.exit(0);
 			} catch (error) {
@@ -249,10 +311,14 @@ export async function runCLI() {
 		.command("create")
 		.description("Create a new PRD")
 		.argument("<feature-name>", "Name of the feature")
-		.action(async (featureName: string) => {
+		.option(
+			"--description <desc>",
+			"Feature description/requirements (optional)",
+		)
+		.action(async (featureName: string, options: { description?: string }) => {
 			try {
 				const cmd = new PrdCreateCommand(context);
-				const result = await cmd.execute(featureName);
+				const result = await cmd.execute(featureName, options.description);
 				console.log(formatSuccess(result));
 				process.exit(0);
 			} catch (error) {
@@ -287,8 +353,11 @@ export async function runCLI() {
 	tasksCommand
 		.command("generate")
 		.description("Generate task breakdown from PRD")
-		.argument("<prd-file>", "PRD filename")
-		.action(async (prdFile: string) => {
+		.argument(
+			"[prd-file]",
+			"PRD filename (optional - shows selection if not provided)",
+		)
+		.action(async (prdFile?: string) => {
 			try {
 				const cmd = new TasksGenerateCommand(context);
 				const result = await cmd.execute(prdFile);

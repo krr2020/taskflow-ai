@@ -55,19 +55,19 @@ export class DoCommand extends BaseCommand {
 
 		switch (status) {
 			case "setup":
-				result = this.getSetupState(paths.refDir, content, taskId);
+				result = await this.getSetupState(paths.refDir, content, taskId);
 				break;
 			case "planning":
-				result = this.getPlanningState(paths.refDir, content, taskId);
+				result = await this.getPlanningState(paths.refDir, content, taskId);
 				break;
 			case "implementing":
-				result = this.getImplementState(paths.refDir, content, taskId);
+				result = await this.getImplementState(paths.refDir, content, taskId);
 				break;
 			case "verifying":
-				result = this.getVerifyState(paths.refDir, content, taskId);
+				result = await this.getVerifyState(paths.refDir, content, taskId);
 				break;
 			case "validating":
-				result = this.getValidateState();
+				result = await this.getValidateState();
 				break;
 			case "committing":
 				result = this.getCommitState(feature.id, taskId, task.title);
@@ -148,11 +148,11 @@ export class DoCommand extends BaseCommand {
 		return parts.join("\n");
 	}
 
-	private getSetupState(
+	private async getSetupState(
 		refDir: string,
 		taskContent: TaskFileContent,
 		taskId: string,
-	): Partial<CommandResult> {
+	): Promise<Partial<CommandResult>> {
 		const skill = taskContent.skill || "backend";
 		parseTaskId(taskId);
 
@@ -236,11 +236,30 @@ export class DoCommand extends BaseCommand {
 		outputParts.push("2. Read AI PROTOCOL to understand workflow rules");
 		outputParts.push("3. Review TASK DETAILS and subtasks");
 
+		// Get LLM guidance if available
+		let llmGuidance = "Read and understand. Do not code yet.";
+		if (this.isLLMAvailable()) {
+			try {
+				const enhancedGuidance = await this.getLLMGuidance({
+					task: taskContent.title,
+					status: "setup",
+					files: taskContent.context,
+					instructions:
+						"Focus on understanding the task context, not on implementation. Emphasize files to read and patterns to learn.",
+				});
+				if (enhancedGuidance) {
+					llmGuidance = enhancedGuidance;
+				}
+			} catch {
+				// Use default guidance if LLM call fails
+			}
+		}
+
 		return {
 			output: outputParts.join("\n"),
 			nextSteps:
 				" When you understand the task, run 'taskflow check' to advance to PLANNING",
-			aiGuidance: "Read and understand. do not code yet.",
+			aiGuidance: llmGuidance,
 			contextFiles: [
 				REF_FILES.aiProtocol,
 				REF_FILES.retrospective,
@@ -249,11 +268,11 @@ export class DoCommand extends BaseCommand {
 		};
 	}
 
-	private getPlanningState(
+	private async getPlanningState(
 		refDir: string,
 		taskContent: TaskFileContent,
 		taskId: string,
-	): Partial<CommandResult> {
+	): Promise<Partial<CommandResult>> {
 		const skill = taskContent.skill || "backend";
 		const outputParts: string[] = [];
 
@@ -346,6 +365,87 @@ export class DoCommand extends BaseCommand {
 		outputParts.push("4. Order subtasks logically");
 		outputParts.push("5. Document your plan");
 
+		// Get LLM guidance if available
+		let llmGuidance = [
+			"Current Status: PLANNING",
+			"Your Goal: Create a clear, documented plan before coding",
+			"",
+			"PLANNING PROCESS:",
+			"────────────────",
+			"1. SEARCH FIRST:",
+			"   - Find existing implementations to match",
+			"   - Study patterns used in similar code",
+			"   - Identify relevant files and modules",
+			"",
+			"2. CONTEXT REVIEW:",
+			"   - RETROSPECTIVE: Learn what NOT to do",
+			"   - AI PROTOCOL: Understand workflow rules",
+			"   - SKILL GUIDES: Domain-specific patterns",
+			"   - ARCHITECTURE/STANDARDS: Project conventions",
+			"",
+			"3. PLAN CREATION:",
+			"   - List files to modify",
+			"   - Define implementation approach",
+			"   - Order subtasks logically",
+			"   - Note integration points",
+			"   - Plan error handling",
+			"",
+			"4. RISK CHECK:",
+			"   - Check RETROSPECTIVE for similar issues",
+			"   - Identify edge cases",
+			"   - Consider backward compatibility",
+			"",
+			"CRITICAL RULES:",
+			"───────────────",
+			"- Search BEFORE planning",
+			"- Match existing patterns, don't invent new ones",
+			"- Consider all subtasks in your plan",
+			"- Document the approach clearly",
+			"",
+			"DO NOT:",
+			"───────",
+			"- Skip planning and start coding",
+			"- Assume patterns without searching",
+			"- Ignore RETROSPECTIVE warnings",
+			"- Create vague or incomplete plans",
+			"",
+			"WHEN READY:",
+			"────────────",
+			"Run 'taskflow check' to advance to IMPLEMENTING",
+			"Be ready to execute your plan",
+		].join("\n");
+
+		if (this.isLLMAvailable()) {
+			try {
+				// Read retrospective to include known error patterns in LLM guidance
+				const retrospectivePath = getRefFilePath(
+					refDir,
+					REF_FILES.retrospective,
+				);
+				const retrospectiveContent = loadReferenceFile(retrospectivePath);
+
+				// Build instructions with retrospective context
+				let instructions =
+					"Focus on planning guidance: files to modify, patterns to follow, subtask order, potential pitfalls. Keep under 200 words.";
+
+				if (retrospectiveContent) {
+					instructions += `\n\nIMPORTANT - Learn from known errors in this project:\n${retrospectiveContent}\n\nAvoid repeating these mistakes in your plan.`;
+				}
+
+				const enhancedGuidance = await this.getLLMGuidance({
+					task: taskContent.title,
+					status: "planning",
+					files: taskContent.context,
+					instructions,
+				});
+				if (enhancedGuidance) {
+					llmGuidance = enhancedGuidance;
+				}
+			} catch {
+				// Use default guidance if LLM call fails
+			}
+		}
+
 		return {
 			output: outputParts.join("\n"),
 			nextSteps: [
@@ -354,54 +454,7 @@ export class DoCommand extends BaseCommand {
 				"3. Complete all planning checklist items",
 				"4. taskflow check (When plan is ready)",
 			].join("\n"),
-			aiGuidance: [
-				"Current Status: PLANNING",
-				"Your Goal: Create a clear, documented plan before coding",
-				"",
-				"PLANNING PROCESS:",
-				"────────────────",
-				"1. SEARCH FIRST:",
-				"   - Find existing implementations to match",
-				"   - Study patterns used in similar code",
-				"   - Identify relevant files and modules",
-				"",
-				"2. CONTEXT REVIEW:",
-				"   - RETROSPECTIVE: Learn what NOT to do",
-				"   - AI PROTOCOL: Understand workflow rules",
-				"   - SKILL GUIDES: Domain-specific patterns",
-				"   - ARCHITECTURE/STANDARDS: Project conventions",
-				"",
-				"3. PLAN CREATION:",
-				"   - List files to modify",
-				"   - Define implementation approach",
-				"   - Order subtasks logically",
-				"   - Note integration points",
-				"   - Plan error handling",
-				"",
-				"4. RISK CHECK:",
-				"   - Check RETROSPECTIVE for similar issues",
-				"   - Identify edge cases",
-				"   - Consider backward compatibility",
-				"",
-				"CRITICAL RULES:",
-				"───────────────",
-				"- Search BEFORE planning",
-				"- Match existing patterns, don't invent new ones",
-				"- Consider all subtasks in your plan",
-				"- Document the approach clearly",
-				"",
-				"DO NOT:",
-				"───────",
-				"- Skip planning and start coding",
-				"- Assume patterns without searching",
-				"- Ignore RETROSPECTIVE warnings",
-				"- Create vague or incomplete plans",
-				"",
-				"WHEN READY:",
-				"────────────",
-				"Run 'taskflow check' to advance to IMPLEMENTING",
-				"Be ready to execute your plan",
-			].join("\n"),
+			aiGuidance: llmGuidance,
 			warnings: [
 				"Most common AI mistake: Skipping planning and writing code immediately",
 				"Always search for existing implementations first",
@@ -410,11 +463,11 @@ export class DoCommand extends BaseCommand {
 		};
 	}
 
-	private getImplementState(
+	private async getImplementState(
 		refDir: string,
 		taskContent: TaskFileContent,
 		taskId: string,
-	): Partial<CommandResult> {
+	): Promise<Partial<CommandResult>> {
 		const skill = taskContent.skill || "backend";
 		const outputParts: string[] = [];
 
@@ -449,6 +502,26 @@ export class DoCommand extends BaseCommand {
 			),
 		);
 
+		// Get LLM guidance if available
+		let llmGuidance =
+			"Implement subtasks one by one. Check off subtasks mostly mentally or via subtask command if available.";
+		if (this.isLLMAvailable()) {
+			try {
+				const enhancedGuidance = await this.getLLMGuidance({
+					task: taskContent.title,
+					status: "implementing",
+					files: taskContent.context,
+					instructions:
+						"Focus on implementation guidance: files to modify, patterns to follow, subtask execution order. Keep under 200 words.",
+				});
+				if (enhancedGuidance) {
+					llmGuidance = enhancedGuidance;
+				}
+			} catch {
+				// Use default guidance if LLM call fails
+			}
+		}
+
 		return {
 			output: outputParts.join("\n"),
 			nextSteps: [
@@ -456,16 +529,15 @@ export class DoCommand extends BaseCommand {
 				"2. Test your changes locally",
 				"3. taskflow check  (When ALL subtasks are complete)",
 			].join("\n"),
-			aiGuidance:
-				"Implement subtasks one by one. Check off subtasks mostly mentally or via subtask command if available.",
+			aiGuidance: llmGuidance,
 		};
 	}
 
-	private getVerifyState(
+	private async getVerifyState(
 		refDir: string,
 		taskContent: TaskFileContent,
 		_taskId: string,
-	): Partial<CommandResult> {
+	): Promise<Partial<CommandResult>> {
 		const outputParts: string[] = [];
 		outputParts.push(
 			colors.infoBold(
@@ -499,6 +571,24 @@ export class DoCommand extends BaseCommand {
 			),
 		);
 
+		// Get LLM guidance if available
+		let llmGuidance = "Self-review strictly. Don't skip this step.";
+		if (this.isLLMAvailable()) {
+			try {
+				const enhancedGuidance = await this.getLLMGuidance({
+					task: taskContent.title,
+					status: "verifying",
+					instructions:
+						"Focus on self-review guidance: common mistakes to check, patterns to verify. Keep under 200 words.",
+				});
+				if (enhancedGuidance) {
+					llmGuidance = enhancedGuidance;
+				}
+			} catch {
+				// Use default guidance if LLM call fails
+			}
+		}
+
 		return {
 			output: outputParts.join("\n"),
 			nextSteps: [
@@ -506,11 +596,11 @@ export class DoCommand extends BaseCommand {
 				"2. Fix any issues found",
 				"3. taskflow check (When self-review is complete)",
 			].join("\n"),
-			aiGuidance: "Self-review strictly. Don't skip this step.",
+			aiGuidance: llmGuidance,
 		};
 	}
 
-	private getValidateState(): Partial<CommandResult> {
+	private async getValidateState(): Promise<Partial<CommandResult>> {
 		const outputParts: string[] = [];
 		outputParts.push(
 			colors.infoBold(`${icons.test} VALIDATING STATE - AUTOMATED CHECKS`),
@@ -521,10 +611,27 @@ export class DoCommand extends BaseCommand {
 		outputParts.push("", "ON SUCCESS: Advances to COMMITTING");
 		outputParts.push("ON FAILURE: Stay in VALIDATING details, fix errors.");
 
+		// Get LLM guidance if available
+		let llmGuidance = "Run validation. If fails, fix and retry.";
+		if (this.isLLMAvailable()) {
+			try {
+				const enhancedGuidance = await this.getLLMGuidance({
+					status: "validating",
+					instructions:
+						"Focus on validation guidance: how to fix errors, error analysis approach. Keep under 200 words.",
+				});
+				if (enhancedGuidance) {
+					llmGuidance = enhancedGuidance;
+				}
+			} catch {
+				// Use default guidance if LLM call fails
+			}
+		}
+
 		return {
 			output: outputParts.join("\n"),
 			nextSteps: "Run 'taskflow check' to run validations",
-			aiGuidance: "Run validation. If fails, fix and retry.",
+			aiGuidance: llmGuidance,
 		};
 	}
 

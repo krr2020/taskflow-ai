@@ -31,11 +31,13 @@ npm install -g @krr2020/taskflow-mcp-server
 
 ```bash
 cd your-project
-taskflow init my-project
+taskflow init
 
 # Or using npx
-npx @krr2020/taskflow-core init my-project
+npx @krr2020/taskflow-core init
 ```
+
+💡 **Note:** Project name is auto-detected from `package.json`, or falls back to directory name. You can optionally specify `taskflow init my-project`.
 
 This creates:
 ```
@@ -163,12 +165,25 @@ taskflow do
 # 1. Read context files
 # 2. Run: taskflow check
 
-# 2. Move to IMPLEMENTING
+# 2. Move to PLANNING
 taskflow check
 
 
 # Output:
-# ✓ Status advanced: setup → implementing
+# ✓ Status advanced: setup → planning
+#
+# GOAL: Plan your implementation approach
+# ...
+#
+# NEXT STEPS:
+# 1. Think through the implementation
+# 2. Run: taskflow check
+
+# 3. Move to IMPLEMENTING
+taskflow check
+
+# Output:
+# ✓ Status advanced: planning → implementing
 #
 # TASK: T1.1.0 - Create auth endpoints
 #
@@ -189,7 +204,7 @@ taskflow check
 Now write your code...
 
 ```bash
-# 2. Move to VERIFYING (self-review phase)
+# 4. Move to VERIFYING (self-review phase)
 taskflow check
 
 # Output:

@@ -9,7 +9,10 @@ import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class PrdCreateCommand extends BaseCommand {
-	async execute(featureName: string): Promise<CommandResult> {
+	async execute(
+		featureName: string,
+		description?: string,
+	): Promise<CommandResult> {
 		const configLoader = new ConfigLoader(this.context.projectRoot);
 		const paths = configLoader.getPaths();
 
@@ -60,25 +63,44 @@ export class PrdCreateCommand extends BaseCommand {
 		}
 
 		// Create PRD template
-		const prdTemplate = this.generatePrdTemplate(featureName);
+		const prdTemplate = this.generatePrdTemplate(featureName, description);
 
 		// Write PRD file
 		fs.writeFileSync(prdFilePath, prdTemplate, "utf-8");
 
+		const initialRequirements = description
+			? [
+					"",
+					"INITIAL REQUIREMENTS PROVIDED:",
+					"───────────────────────────────",
+					description,
+					"",
+					"Use this as a starting point for the PRD.",
+				]
+			: [];
+
+		const nextStepsBase = [
+			`✓ PRD created: ${prdFilename}`,
+			`✓ Location: ${prdFilePath}`,
+			"",
+			"NEXT:",
+			"─".repeat(60),
+			"1. Fill out the PRD document with feature requirements",
+		];
+
+		if (description) {
+			nextStepsBase.push("   (Initial requirements already provided)");
+		}
+
+		nextStepsBase.push("2. Generate coding standards and architecture rules");
+		nextStepsBase.push("3. Generate task breakdown from PRD");
+
 		return this.success(
-			[
-				`✓ PRD created: ${prdFilename}`,
-				`✓ Location: ${prdFilePath}`,
-				"",
-				"NEXT:",
-				"─".repeat(60),
-				"1. Fill out the PRD document with feature requirements",
-				"2. Generate coding standards and architecture rules",
-				"3. Generate task breakdown from PRD",
-			].join("\n"),
+			nextStepsBase.join("\n"),
 			[
 				"1. Edit the PRD file to add feature details:",
 				`   Open: ${prdFilePath}`,
+				...initialRequirements,
 				"",
 				"2. Use AI to help fill out the PRD:",
 				"   - Read .taskflow/ref/prd-generator.md for guidance",
@@ -157,7 +179,14 @@ export class PrdCreateCommand extends BaseCommand {
 		);
 	}
 
-	private generatePrdTemplate(featureName: string): string {
+	private generatePrdTemplate(
+		featureName: string,
+		description?: string,
+	): string {
+		const problemStatement = description
+			? description.trim()
+			: "<!-- What problem does this feature solve? -->";
+
 		return `# PRD: ${featureName}
 
 **Created:** ${new Date().toISOString().split("T")[0]}
@@ -169,7 +198,7 @@ export class PrdCreateCommand extends BaseCommand {
 ## 1. Overview
 
 ### Problem Statement
-<!-- What problem does this feature solve? -->
+${problemStatement}
 
 ### Goals
 <!-- What are we trying to achieve? -->

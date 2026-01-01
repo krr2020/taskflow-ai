@@ -4,8 +4,22 @@
 
 import fs from "node:fs";
 import { getRefFilePath, REF_FILES } from "./config-paths.js";
+import type { ParsedError } from "./log-parser.js";
 import { colors, icons } from "./output.js";
 import type { Criticality, ErrorCategory, RetrospectiveItem } from "./types.js";
+
+// ============================================================================
+// Types for Auto-Update
+// ============================================================================
+
+export interface NewPattern {
+	category: ErrorCategory | string;
+	pattern: string;
+	solution: string;
+	criticality: Criticality | string;
+	errorCode?: string;
+	affectedFiles: string[];
+}
 
 // ============================================================================
 // File Path
@@ -261,4 +275,141 @@ export function printRetroAddUsage(): void {
 	console.log(
 		`${colors.muted('taskflow retro add --category "Type Error" --pattern "Cannot find module" --solution "Check import path exists" --criticality "High"')}`,
 	);
+}
+
+// ============================================================================
+// Auto-Update Functions
+// ============================================================================
+
+/**
+ * Read retrospective file content
+ */
+export function readRetrospectiveBeforeWork(refDir: string): string {
+	const retroFile = getRetrospectiveFilePath(refDir);
+	if (!fs.existsSync(retroFile)) {
+		return "";
+	}
+	return fs.readFileSync(retroFile, "utf-8");
+}
+
+/**
+ * Extract NEW error patterns from parsed errors
+ * Compares against existing retrospective to avoid duplicates
+ */
+export function extractNewPatterns(
+	errors: ParsedError[],
+	refDir: string,
+): NewPattern[] {
+	const existingItems = loadRetrospective(refDir);
+	const newPatterns: NewPattern[] = [];
+
+	// Group errors by error code and message pattern
+	const errorGroups = new Map<string, ParsedError[]>();
+
+	for (const error of errors) {
+		const key = error.code || error.message.substring(0, 50);
+		if (!errorGroups.has(key)) {
+			errorGroups.set(key, []);
+		}
+		errorGroups.get(key)?.push(error);
+	}
+
+	// For each group, check if it's a new pattern
+	for (const [, groupErrors] of errorGroups) {
+		const firstError = groupErrors[0];
+		if (!firstError) continue;
+
+		// Create pattern from error message
+		const pattern = firstError.code || firstError.message;
+
+		// Check if this pattern already exists in retrospective
+		const alreadyExists = existingItems.some((item) => {
+			try {
+				const itemPattern = item.pattern.replace(/\\\|/g, "|");
+				const regex = new RegExp(itemPattern, "i");
+				return regex.test(pattern);
+			} catch {
+				return item.pattern.toLowerCase().includes(pattern.toLowerCase());
+			}
+		});
+
+		if (!alreadyExists) {
+			// Determine category from error
+			let category: ErrorCategory | string = "Runtime";
+			if (firstError.code?.startsWith("TS")) {
+				category = "Type Error";
+			} else if (
+				firstError.message.includes("eslint") ||
+				firstError.message.includes("lint")
+			) {
+				category = "Lint";
+			} else if (firstError.message.includes("test")) {
+				category = "Test";
+			}
+
+			// Determine criticality based on severity
+			let criticality: Criticality | string = "Medium";
+			if (firstError.severity === "error") {
+				criticality = "High";
+			} else if (firstError.severity === "warning") {
+				criticality = "Low";
+			}
+
+			newPatterns.push({
+				category,
+				pattern,
+				solution: "Review error message and fix the underlying issue",
+				criticality,
+				errorCode: firstError.code,
+				affectedFiles: groupErrors.map((e) => e.file).filter(Boolean),
+			});
+		}
+	}
+
+	return newPatterns;
+}
+
+/**
+ * Append new patterns to retrospective file
+ * Uses existing addRetrospectiveEntry for each pattern
+ */
+export function appendNewPatternsToRetrospective(
+	refDir: string,
+	patterns: NewPattern[],
+): number[] {
+	const addedIds: number[] = [];
+
+	for (const pattern of patterns) {
+		const id = addRetrospectiveEntry(
+			refDir,
+			pattern.category,
+			pattern.pattern,
+			pattern.solution,
+			pattern.criticality,
+		);
+		addedIds.push(id);
+	}
+
+	return addedIds;
+}
+
+/**
+ * Format a new pattern for display (before adding to retrospective)
+ */
+export function formatNewPatternForDisplay(pattern: NewPattern): string {
+	const lines: string[] = [];
+	lines.push(`${colors.highlight("New Error Pattern Detected:")}`);
+	lines.push(`  Category: ${colors.muted(pattern.category)}`);
+	lines.push(`  Pattern: ${colors.warning(pattern.pattern)}`);
+	if (pattern.errorCode) {
+		lines.push(`  Code: ${colors.error(pattern.errorCode)}`);
+	}
+	lines.push(`  Suggested Solution: ${colors.success(pattern.solution)}`);
+	lines.push(`  Criticality: ${colors.state(pattern.criticality)}`);
+	if (pattern.affectedFiles.length > 0) {
+		lines.push(
+			`  Affected Files: ${colors.muted(pattern.affectedFiles.slice(0, 3).join(", "))}${pattern.affectedFiles.length > 3 ? "..." : ""}`,
+		);
+	}
+	return lines.join("\n");
 }

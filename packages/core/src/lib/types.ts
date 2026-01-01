@@ -193,16 +193,18 @@ export const TaskflowConfigSchema = z.object({
 		.optional(),
 	ai: z
 		.object({
-			autoContinueTask: z
-				.boolean()
-				.default(false)
-				.describe(
-					"Automatically continue to next task without user confirmation",
-				),
-			clearContextOnComplete: z
-				.boolean()
-				.default(true)
-				.describe("Clear AI model context after task completion"),
+			enabled: z.boolean().default(false),
+			provider: z.string().optional(),
+			models: z
+				.object({
+					planning: z.string().optional(),
+					execution: z.string().optional(),
+					analysis: z.string().optional(),
+					default: z.string().optional(),
+				})
+				.optional(),
+			autoContinueTask: z.boolean().default(false),
+			clearContextOnComplete: z.boolean().default(true),
 		})
 		.optional(),
 });

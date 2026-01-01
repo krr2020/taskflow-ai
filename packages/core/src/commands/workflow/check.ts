@@ -2,6 +2,9 @@
  * Check command - Validate and advance task state
  */
 
+import { execSync } from "node:child_process";
+import { readdir } from "node:fs/promises";
+import path from "node:path";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
 import {
@@ -10,13 +13,24 @@ import {
 	updateTaskStatus,
 } from "../../lib/data-access.js";
 import { NoActiveSessionError } from "../../lib/errors.js";
-import { processValidationOutput } from "../../lib/retrospective.js";
+import {
+	FileValidator,
+	type ValidationResult,
+} from "../../lib/file-validator.js";
+import { LogParser, type ParsedError } from "../../lib/log-parser.js";
+import {
+	extractNewPatterns,
+	formatNewPatternForDisplay,
+	processValidationOutput,
+} from "../../lib/retrospective.js";
 import type {
 	Subtask,
 	TaskFileContent,
 	TasksProgress,
 } from "../../lib/types.js";
 import { runValidations } from "../../lib/validation.js";
+import { Phase } from "../../llm/base.js";
+import { ProviderFactory } from "../../llm/factory.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class CheckCommand extends BaseCommand {
@@ -353,7 +367,7 @@ export class CheckCommand extends BaseCommand {
 					"",
 					"LEARNINGS TRACKING:",
 					"────────────────────",
-					"Capture only general, project-wide insights: not implementation details (\"I added a function\"), not what you did but what you learned, prevent repeated mistakes in future tasks.",
+					"Capture only general, project-wide insights: not implementation details ('I added a function'), not what you did but what you learned, prevent repeated mistakes in future tasks.",
 					"",
 					"TECH DEBT REPORTING:",
 					"────────────────────────",
@@ -473,7 +487,23 @@ export class CheckCommand extends BaseCommand {
 		content: TaskFileContent,
 		validationCommands?: Record<string, string>,
 	): Promise<CommandResult> {
-		// Run validations
+		// Check if AI validation is enabled
+		const configLoader = new ConfigLoader(this.context.projectRoot);
+		const config = configLoader.load();
+
+		// Run AI-powered validation if configured
+		if (config.ai?.enabled && config.ai.provider) {
+			const aiResult = await this.runAIValidation(
+				logsDir,
+				Phase.Analysis, // Use analysis model for validation
+			);
+
+			if (!aiResult.passed) {
+				return aiResult.result;
+			}
+		}
+
+		// Run traditional validations
 		console.log("\n🧪 Running validations...\n");
 
 		const summary = runValidations(logsDir, taskId, validationCommands);
@@ -482,6 +512,120 @@ export class CheckCommand extends BaseCommand {
 		const retroCheck = processValidationOutput(refDir, summary.allOutput);
 
 		if (!summary.passed) {
+			// Get LLM error analysis if available
+			let llmGuidance = [
+				"Validation Failed - Fix Required",
+				"",
+				retroCheck.knownErrors.length > 0
+					? "KNOWN ERRORS DETECTED:"
+					: "Errors found in validation.",
+				retroCheck.knownErrors.length > 0
+					? "You have made mistakes that are already documented."
+					: "",
+				retroCheck.knownErrors.length > 0
+					? "Check the output above for solutions."
+					: "",
+				retroCheck.knownErrors.length > 0
+					? "STOP REPEATING THESE MISTAKES."
+					: "",
+				"",
+				"How to fix:",
+				"1. Read error messages carefully",
+				"2. Apply solutions from retrospective (if shown)",
+				"3. Fix the code",
+				"4. Re-run: taskflow check",
+				"",
+				"DO NOT bypass validations",
+				"DO NOT use 'any' types to suppress errors",
+				"DO fix the root cause",
+			].join("\n");
+
+			// Parse logs and detect new error patterns
+			const logParser = new LogParser();
+			const logFiles = await readdir(logsDir);
+			const parsedErrors: ParsedError[] = [];
+
+			for (const logFile of logFiles) {
+				if (logFile.endsWith(".log")) {
+					try {
+						const logPath = path.join(logsDir, logFile);
+						const parseResult = await logParser.parseFile(logPath);
+						parsedErrors.push(...parseResult.errors);
+					} catch {
+						// Ignore log parsing errors
+					}
+				}
+			}
+
+			// Detect NEW error patterns for retrospective
+			let newPatternsDetected: string[] = [];
+			if (parsedErrors.length > 0) {
+				const newPatterns = extractNewPatterns(parsedErrors, refDir);
+				if (newPatterns.length > 0) {
+					newPatternsDetected = newPatterns.map((pattern) =>
+						formatNewPatternForDisplay(pattern),
+					);
+				}
+			}
+
+			// Get AI error analysis if LLM available
+			if (this.isLLMAvailable() && parsedErrors.length > 0) {
+				try {
+					const errors = parsedErrors.map((error) => ({
+						file: error.file,
+						message: error.message,
+						line: error.line ?? undefined,
+						code: error.code ?? undefined,
+					}));
+
+					const errorAnalysis = await this.getErrorAnalysis(errors);
+					if (errorAnalysis) {
+						llmGuidance = [
+							"AI Error Analysis:",
+							"───────────────────",
+							errorAnalysis,
+							"",
+							"How to fix:",
+							"1. Review the AI analysis above",
+							"2. Apply suggested fixes file-by-file",
+							"3. Re-run: taskflow check",
+							"",
+							retroCheck.knownErrors.length > 0
+								? "⚠️  Known errors also detected - see solutions above"
+								: "",
+							"",
+							newPatternsDetected.length > 0
+								? "📝 NEW error patterns detected (see warnings below)"
+								: "",
+						].join("\n");
+					}
+				} catch {
+					// Fall back to standard guidance
+				}
+			}
+
+			// Build warnings with new patterns
+			const warnings: string[] = [];
+			if (newPatternsDetected.length > 0) {
+				warnings.push("📝 NEW Error Patterns Detected:");
+				warnings.push("");
+				for (const patternDisplay of newPatternsDetected) {
+					warnings.push(patternDisplay);
+					warnings.push("");
+				}
+				warnings.push(
+					"💡 Consider adding these to retrospective: taskflow retro add",
+				);
+				warnings.push("");
+			}
+
+			const failureOptions: { aiGuidance?: string; warnings?: string[] } = {
+				aiGuidance: llmGuidance,
+			};
+			if (warnings.length > 0) {
+				failureOptions.warnings = warnings;
+			}
+
 			return this.failure(
 				"Validation failed",
 				summary.failedChecks.map((check) => `${check} failed`),
@@ -491,40 +635,13 @@ export class CheckCommand extends BaseCommand {
 					retroCheck.knownErrors.length > 0
 						? "⚠️  Known errors detected - see solutions above"
 						: "",
-					retroCheck.hasNewErrors
+					retroCheck.hasNewErrors && newPatternsDetected.length === 0
 						? "⚠️  New error detected - consider adding to retrospective: taskflow retro add"
 						: "",
 					"",
 					`Full logs: ${logsDir}`,
 				].join("\n"),
-				{
-					aiGuidance: [
-						"Validation Failed - Fix Required",
-						"",
-						retroCheck.knownErrors.length > 0
-							? "KNOWN ERRORS DETECTED:"
-							: "Errors found in validation.",
-						retroCheck.knownErrors.length > 0
-							? "You have made mistakes that are already documented."
-							: "",
-						retroCheck.knownErrors.length > 0
-							? "Check the output above for solutions."
-							: "",
-						retroCheck.knownErrors.length > 0
-							? "STOP REPEATING THESE MISTAKES."
-							: "",
-						"",
-						"How to fix:",
-						"1. Read error messages carefully",
-						"2. Apply solutions from retrospective (if shown)",
-						"3. Fix the code",
-						"4. Re-run: taskflow check",
-						"",
-						"DO NOT bypass validations",
-						"DO NOT use 'any' types to suppress errors",
-						"DO fix the root cause",
-					].join("\n"),
-				},
+				failureOptions,
 			);
 		}
 
@@ -599,5 +716,291 @@ export class CheckCommand extends BaseCommand {
 				],
 			},
 		);
+	}
+
+	/**
+	 * Run AI-powered validation on changed files
+	 */
+	private async runAIValidation(
+		logsDir: string,
+		phase: Phase,
+	): Promise<{ passed: boolean; result: CommandResult }> {
+		console.log("\n🤖 Running AI-powered file validation...\n");
+
+		try {
+			// Get AI config to create provider with correct settings
+			const config = this.configLoader.load();
+			if (!config?.ai || !config.ai.enabled) {
+				throw new Error("AI configuration not enabled");
+			}
+			if (!config.ai.provider) {
+				throw new Error("AI provider not configured");
+			}
+
+			// Create provider using actual config (cast to AIConfig)
+			const provider = ProviderFactory.createSelector(
+				config.ai as unknown as import("../../llm/factory.js").AIConfig,
+			);
+
+			const analysisProvider = provider.getProvider(phase);
+
+			// Find modified files (git status, recent changes, etc.)
+			const modifiedFiles = await this.findModifiedFiles();
+
+			if (modifiedFiles.length === 0) {
+				console.log("No modified files found for validation");
+				return {
+					passed: true,
+					result: this.success("No files to validate", ""),
+				};
+			}
+
+			console.log(
+				`Validating ${modifiedFiles.length} file${modifiedFiles.length > 1 ? "s" : ""}...\n`,
+			);
+
+			// Create file validator
+			const validator = new FileValidator({
+				provider: analysisProvider,
+				includeContext: true,
+				provideFixes: true,
+				maxIssues: 10,
+			});
+
+			// Validate each file
+			const results: ValidationResult[] = [];
+			for (const filePath of modifiedFiles) {
+				try {
+					const result = await validator.validate(filePath);
+					results.push(result);
+				} catch (error) {
+					console.warn(
+						`Failed to validate ${filePath}: ${(error as Error).message}`,
+					);
+				}
+			}
+
+			// Check if all files passed
+			const allPassed = results.every((r) => r.passed);
+
+			// Format and display results
+			const output = this.formatValidationResults(results);
+
+			console.log(output);
+
+			if (allPassed) {
+				return {
+					passed: true,
+					result: this.success(
+						"All files passed AI validation",
+						"Ready to proceed with standard validation",
+					),
+				};
+			}
+
+			// Parse logs for errors to provide context
+			const logParser = new LogParser();
+			const logFiles = await readdir(logsDir);
+			const errors: ParsedError[] = [];
+
+			for (const logFile of logFiles) {
+				if (logFile.endsWith(".log")) {
+					try {
+						const logPath = path.join(logsDir, logFile);
+						const parseResult = await logParser.parseFile(logPath);
+						errors.push(...parseResult.errors);
+					} catch {
+						// Ignore log parsing errors
+					}
+				}
+			}
+
+			// Create AI guidance with error context
+			const errorSummary = this.createErrorSummary(errors);
+
+			const messages = [
+				"Fix issues shown above and re-run: taskflow check",
+				"",
+				errorSummary,
+				"",
+				"AI-Powered Validation Benefits:",
+				"- Early error detection before compilation",
+				"- Context-aware fix suggestions",
+				"- Pattern-based issue identification",
+				"- Code quality analysis",
+			];
+
+			const guidance = [
+				"AI Validation Results",
+				"────────────────────",
+				`Files validated: ${results.length}`,
+				`Files passed: ${results.filter((r) => r.passed).length}`,
+				`Files failed: ${results.filter((r) => !r.passed).length}`,
+				"",
+				"Fix Instructions:",
+				"1. Review issues shown above for each file",
+				"2. Apply suggested fixes",
+				"3. Re-run: taskflow check",
+				"",
+				"If errors persist, check for:",
+				"- Incorrect imports or types",
+				"- Missing dependencies",
+				"- Logic errors or bugs",
+				"- Known patterns in retrospective",
+			];
+
+			return {
+				passed: false,
+				result: this.failure(
+					"AI validation failed",
+					results.flatMap((r) => r.issues.map((i) => i.message)),
+					messages.join("\n"),
+					{
+						aiGuidance: guidance.join("\n"),
+					},
+				),
+			};
+		} catch (error) {
+			console.warn(`AI validation failed: ${(error as Error).message}`);
+			console.log("Falling back to standard validation\n");
+
+			// Return passed to fall back to standard validation
+			return {
+				passed: true,
+				result: this.success(
+					"AI validation skipped",
+					"Proceeding with standard validation",
+				),
+			};
+		}
+	}
+
+	/**
+	 * Find modified files for validation
+	 */
+	private async findModifiedFiles(): Promise<string[]> {
+		try {
+			// Get modified, added, and untracked files from git
+			const output = execSync("git status --porcelain --untracked-files=all", {
+				cwd: this.context.projectRoot,
+				encoding: "utf-8",
+			}).trim();
+
+			if (!output) {
+				return [];
+			}
+
+			const files: string[] = [];
+			const lines = output.split("\n");
+
+			for (const line of lines) {
+				// Parse git status output format:
+				// XY FILENAME
+				// X = status in index, Y = status in working tree
+				// Status codes: M (modified), A (added), D (deleted), ?? (untracked), etc.
+				const match = line.match(/^(.{2})\s+(.+)$/);
+				if (!match) continue;
+
+				const [, status, filePath] = match;
+				if (!status || !filePath) continue;
+
+				// Skip deleted files
+				if (status.includes("D")) continue;
+
+				// Only validate source files (ts, tsx, js, jsx) but not test files
+				const isSourceFile = /\.(ts|tsx|js|jsx|mjs|cjs)$/.test(filePath);
+				const isTestFile = /\.(test|spec)\.(ts|tsx|js|jsx)$/.test(filePath);
+
+				if (isSourceFile && !isTestFile) {
+					// Convert to absolute path
+					const absolutePath = path.join(this.context.projectRoot, filePath);
+					files.push(absolutePath);
+				}
+			}
+
+			return files;
+		} catch (error) {
+			console.warn(`Failed to get modified files: ${(error as Error).message}`);
+			return [];
+		}
+	}
+
+	/**
+	 * Create error summary from logs and validation results
+	 */
+	private createErrorSummary(errors: ParsedError[]): string {
+		if (errors.length === 0) {
+			return "No errors found in logs.";
+		}
+
+		const grouped = new Map<string, ParsedError[]>();
+		for (const error of errors) {
+			if (error.file) {
+				const existing = grouped.get(error.file) || [];
+				existing.push(error);
+				grouped.set(error.file, existing);
+			}
+		}
+
+		const lines: string[] = ["Error Summary:", ""];
+
+		for (const [file, fileErrors] of grouped) {
+			lines.push(
+				`${file}: ${fileErrors.length} error${fileErrors.length > 1 ? "s" : ""}`,
+			);
+		}
+
+		return lines.join("\n");
+	}
+
+	/**
+	 * Format validation results
+	 */
+	private formatValidationResults(results: ValidationResult[]): string {
+		const lines: string[] = [];
+
+		lines.push("=".repeat(80));
+		lines.push("AI-Powered Validation Results");
+		lines.push("=".repeat(80));
+
+		for (const result of results) {
+			lines.push("");
+			lines.push(`File: ${result.file}`);
+			lines.push(`Status: ${result.passed ? "✓ PASSED" : "✗ FAILED"}`);
+			lines.push(`Summary: ${result.summary}`);
+
+			if (result.issues.length > 0) {
+				lines.push("");
+				lines.push("Issues:");
+				for (const issue of result.issues) {
+					const icon =
+						issue.severity === "error"
+							? "✗"
+							: issue.severity === "warning"
+								? "⚠"
+								: "ℹ";
+					lines.push(`  ${icon} ${issue.message}`);
+					if (issue.line) {
+						lines.push(`    Line: ${issue.line}`);
+					}
+					if (issue.suggestedFix) {
+						lines.push(`    Suggested: ${issue.suggestedFix}`);
+					}
+				}
+			}
+
+			if (result.suggestions.length > 0) {
+				lines.push("");
+				lines.push("Suggestions:");
+				for (const suggestion of result.suggestions) {
+					lines.push(`  • ${suggestion}`);
+				}
+			}
+		}
+
+		lines.push("");
+		lines.push("=".repeat(80));
+
+		return lines.join("\n");
 	}
 }

@@ -144,7 +144,12 @@ export function getFeatureFilePath(
 	tasksDir: string,
 	featurePath: string,
 ): string {
-	return path.join(tasksDir, featurePath, `${featurePath}.json`);
+	// If the path ends in .json, return it as is (relative to tasksDir)
+	if (featurePath.endsWith(".json")) {
+		return path.join(tasksDir, featurePath);
+	}
+	// Otherwise assume it's a directory and look for a json file with the same name as the directory
+	return path.join(tasksDir, featurePath, `${path.basename(featurePath)}.json`);
 }
 
 export function getRefFilePath(refDir: string, filename: string): string {

@@ -1,0 +1,134 @@
+/**
+ * OpenAI-compatible LLM Provider
+ * Supports: OpenAI, Azure OpenAI, Together AI, Groq, DeepSeek, and any OpenAI-compatible API
+ */
+
+import {
+	type LLMGenerationOptions,
+	type LLMGenerationResult,
+	type LLMMessage,
+	LLMProvider,
+	LLMProviderType,
+} from "../base.js";
+
+export interface OpenAICompatibleConfig {
+	baseUrl: string;
+	apiKey: string;
+	model: string;
+}
+
+export class OpenAICompatibleProvider extends LLMProvider {
+	private config: OpenAICompatibleConfig;
+
+	constructor(config: OpenAICompatibleConfig) {
+		super(LLMProviderType.OpenAICompatible, config.model);
+		this.config = config;
+	}
+
+	/**
+	 * Generate text using OpenAI-compatible API
+	 */
+	async generate(
+		messages: LLMMessage[],
+		options?: LLMGenerationOptions,
+	): Promise<LLMGenerationResult> {
+		if (!this.isConfigured()) {
+			throw new Error("OpenAI-compatible provider is not configured properly");
+		}
+
+		const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Authorization: `Bearer ${this.config.apiKey}`,
+			},
+			body: JSON.stringify({
+				model: this.config.model,
+				messages,
+				max_tokens: options?.maxTokens,
+				temperature: options?.temperature,
+				top_p: options?.topP,
+				stream: false,
+			}),
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(
+				`OpenAI-compatible API error: ${response.status} - ${error}`,
+			);
+		}
+
+		const data = (await response.json()) as {
+			choices: Array<{ message: { content: string }; finish_reason: string }>;
+			model: string;
+			usage?: { total_tokens: number };
+		};
+		const choice = data.choices[0];
+
+		if (!choice) {
+			throw new Error("No choice returned from OpenAI API");
+		}
+
+		return {
+			content: choice.message.content,
+			model: data.model,
+			tokensUsed: data.usage?.total_tokens ?? 0,
+			finishReason: choice.finish_reason,
+		};
+	}
+
+	/**
+	 * Check if provider is configured
+	 */
+	isConfigured(): boolean {
+		return !!(this.config.apiKey && this.config.baseUrl);
+	}
+
+	/**
+	 * Create provider from environment variables
+	 */
+	static fromEnv(config: {
+		baseUrl?: string;
+		apiKey?: string;
+		model?: string;
+	}): OpenAICompatibleProvider {
+		const baseUrl =
+			config.baseUrl ||
+			process.env.OPENAI_BASE_URL ||
+			process.env.AI_BASE_URL ||
+			"https://api.openai.com/v1";
+		const apiKey =
+			config.apiKey ||
+			process.env.OPENAI_API_KEY ||
+			process.env.AI_API_KEY ||
+			"";
+		const model = config.model || process.env.AI_MODEL || "gpt-4o-mini";
+
+		if (!apiKey) {
+			console.warn("Warning: OpenAI-compatible provider missing API key");
+		}
+
+		return new OpenAICompatibleProvider({
+			baseUrl,
+			apiKey: expandEnvVar(apiKey),
+			model,
+		});
+	}
+}
+
+/**
+ * Expand environment variable in string (e.g., "${VAR_NAME}" -> actual value)
+ */
+function expandEnvVar(value: string): string {
+	if (!value) {
+		return value;
+	}
+	const envVarMatch = value.match(/^\$\{([^}]+)\}$/);
+	if (envVarMatch?.[1]) {
+		const envVar = envVarMatch[1];
+		const envValue = process.env[envVar];
+		return envValue ?? value;
+	}
+	return value;
+}

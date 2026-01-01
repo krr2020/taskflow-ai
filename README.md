@@ -59,7 +59,7 @@ npm install -D @krr2020/taskflow-core
 
 **Example:**
 ```bash
-npx @krr2020/taskflow-core init my-project
+npx @krr2020/taskflow-core init
 npx @krr2020/taskflow-core status
 ```
 
@@ -73,49 +73,24 @@ npx @krr2020/taskflow-core status
 
 ```bash
 cd your-project-directory
-# If installed globally
-taskflow init my-project
+```
 
-# If installed as dev dependency
-npx @krr2020/taskflow-core init my-project
-# If installed globally
-taskflow init my-project
+---
 
-# If installed as dev dependency
-npx @krr2020/taskflow-core init my-project
-# If installed globally
-taskflow init my-project
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core init my-project
-# If installed globally
-taskflow init my-project
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core init my-project
-# If installed globally
-taskflow init my-project
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core init my-project
-# If installed globally
-taskflow init my-project
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core init my-project
-> ⚠️ **Important:** Installation only downloads the package. You MUST initialize it to set up your project.
+### Step 2️⃣: Initialize Taskflow
 
 ```bash
 # If installed globally
-taskflow init my-project
+taskflow init
 
 # If installed as dev dependency AND added "task" script to package.json
-pnpm task init my-project
+pnpm task init
 
 # OR if installed as dev dependency WITHOUT adding script (using npx)
-npx @krr2020/taskflow-core init my-project
-pnpm task init my-project
+npx @krr2020/taskflow-core init
 ```
+
+💡 **Note:** Project name is auto-detected from `package.json`, or falls back to directory name. You can optionally override with `taskflow init my-project`.
 
 **What happens:** Creates these files and directories:
 ```
@@ -136,38 +111,6 @@ your-project/
 taskflow prd create user-authentication
 
 # If installed as dev dependency
-npx @krr2020/taskflow-core prd create user-authentication
-# If installed globally
-taskflow prd create user-authentication
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core prd create user-authentication
-# If installed globally
-taskflow prd create user-authentication
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core prd create user-authentication
-# If installed globally
-taskflow prd create user-authentication
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core prd create user-authentication
-# If installed globally
-taskflow prd create user-authentication
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core prd create user-authentication
-# If installed globally
-taskflow prd create user-authentication
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core prd create user-authentication
-# If installed globally
-taskflow prd create user-authentication
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core prd create user-authentication
-npx @krr2020/taskflow-core init my-project
 pnpm task prd create user-authentication
 ```
 
@@ -188,38 +131,6 @@ Edit this file to define your feature:
 taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
 
 # If installed as dev dependency
-npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-# If installed globally
-taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-# If installed globally
-taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-# If installed globally
-taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-# If installed globally
-taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-# If installed globally
-taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-# If installed globally
-taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
-npx @krr2020/taskflow-core init my-project
 pnpm task tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
 ```
 
@@ -238,38 +149,6 @@ pnpm task tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
 taskflow start 1.1.0
 
 # If installed as dev dependency
-npx @krr2020/taskflow-core start 1.1.0
-# If installed globally
-taskflow start 1.1.0
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core start 1.1.0
-# If installed globally
-taskflow start 1.1.0
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core start 1.1.0
-# If installed globally
-taskflow start 1.1.0
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core start 1.1.0
-# If installed globally
-taskflow start 1.1.0
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core start 1.1.0
-# If installed globally
-taskflow start 1.1.0
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core start 1.1.0
-# If installed globally
-taskflow start 1.1.0
-
-# If installed as dev dependency
-npx @krr2020/taskflow-core start 1.1.0
-npx @krr2020/taskflow-core init my-project
 pnpm task start 1.1.0
 ```
 
@@ -312,17 +191,17 @@ Each task goes through these states:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                                                     │
-│   setup     →   implementing   →   verifying      │
-│      ↓              ↓                ↓              │
-│   (understand)  (write code)   (self-review)      │
-│                                ↓                ↓              │
-│                           validating   →   committing        │
-│                              ↓              ↓              │
-│                         (run checks)   (git commit)        │
-│                                                     │
-│                           completed ✓                    │
-│                                                     │
+│                                                             │
+│   setup     →   implementing   →   verifying                │
+│      ↓              ↓                ↓                      │
+│   (understand)  (write code)   (self-review)                │
+│                                ↓                ↓           │
+│                           validating   →   committing       │
+│                              ↓              ↓               │
+│                         (run checks)   (git commit)         │
+│                                                             │
+│                           completed ✓                       │
+│                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -336,6 +215,8 @@ Each task goes through these states:
 | **completed** | Done! Move to next task | (start next task) |
 
 ---
+
+<a id="mcp-server-setup"></a>
 
 ## 🤖 Using with AI Agents
 
@@ -401,7 +282,7 @@ Want shorter commands (`pnpm task` instead of `npx @krr2020/taskflow-core`)? Add
 ```
 Then use:
 ```bash
-pnpm task init my-project
+pnpm task init
 pnpm task status
 pnpm task start 1.1.0
 ```
@@ -410,7 +291,118 @@ pnpm task start 1.1.0
 
 - **Pros:** Shorter commands (`pnpm task` vs `npx @krr2020/taskflow-core`)
 - **Cons:** Must manually add script to package.json
-- **Recommendation:** Use `npx` if you prefer zero-setup workflow. Use manual script if you type commands frequently and want brevity.## 📚 Reference
+- **Recommendation:** Use `npx` if you prefer zero-setup workflow. Use manual script if you type commands frequently and want brevity.## 🤖 LLM Configuration (Optional)
+
+Taskflow supports optional LLM integration for enhanced task generation, error analysis, and automated validation fixing.
+
+### When LLM is Used
+
+With LLM configured, Taskflow can:
+- **Auto-generate tasks** from PRDs (`tasks generate`)
+- **Generate architecture** documentation (`prd generate-arch`)
+- **Analyze and fix validation errors** file-by-file (`check`)
+- **Provide context-aware guidance** when working on tasks (`do`, `start`)
+
+**Without LLM**, Taskflow still works perfectly:
+- All commands remain functional
+- Manual task generation from templates
+- Manual error fixing
+- No breaking changes
+
+### Supported Providers
+
+| Provider | Type | Cost | Speed | Quality | Offline |
+|----------|------|------|-------|---------|---------|
+| OpenAI | Paid | Fast | High | No |
+| Azure OpenAI | Paid | Fast | High | No |
+| Together AI | Paid | Medium | High | No |
+| Groq | Paid | Very Fast | Medium | No |
+| DeepSeek | Paid | Medium | High | No |
+| Anthropic | Paid | Medium | Very High | No |
+| Ollama | Free | Slow | Medium | **Yes** |
+
+### Quick Setup
+
+```bash
+# Configure LLM (one command)
+taskflow configure ai \
+  --provider anthropic \
+  --model claude-sonnet-4-20250514 \
+  --apiKey ${ANTHROPIC_API_KEY}
+
+# Or configure different models for different phases
+taskflow configure ai \
+  --provider anthropic \
+  --planning claude-opus-4 \
+  --execution gemini-pro-2.0 \
+  --analysis claude-sonnet-4-20250514
+```
+
+### Configuration Example
+
+Add to `taskflow.config.json`:
+
+```json
+{
+  "version": "2.0",
+  "ai": {
+    "enabled": true,
+    "provider": "anthropic",
+    "apiKey": "${ANTHROPIC_API_KEY}",
+    "models": {
+      "default": "claude-sonnet-4-20250514",
+      "planning": "claude-opus-4",
+      "execution": "gemini-pro-2.0",
+      "analysis": "claude-sonnet-4-20250514"
+    }
+  }
+}
+```
+
+**Note**: The entire `ai` section is optional. Without it, Taskflow works as before (show guidance only).
+
+### Per-Phase Models
+
+You can configure different models for different phases of work:
+
+| Phase | Purpose | Recommended Models |
+|-------|---------|-------------------|
+| **planning** | Task generation, architecture analysis | claude-opus-4, gpt-4o, gemini-2.0 |
+| **execution** | Error analysis, code suggestions | claude-sonnet-4, gpt-4o-mini, gemini-1.5-flash |
+| **analysis** | Validation fixing, retrospective updates | claude-sonnet-4, gpt-4o, gemini-1.5-pro |
+
+### Environment Variables
+
+Use environment variables for API keys (recommended):
+
+```bash
+# Anthropic
+export ANTHROPIC_API_KEY=your-key-here
+taskflow configure ai --provider anthropic --model claude-sonnet-4-20250514
+
+# OpenAI
+export OPENAI_API_KEY=your-key-here
+taskflow configure ai --provider openai --model gpt-4o
+
+# Custom provider
+export CUSTOM_API_KEY=your-key-here
+taskflow configure ai --provider custom --apiEndpoint https://api.example.com/v1
+```
+
+### Retrospective-Driven Workflow
+
+When LLM is configured:
+1. **Before work**: LLM reads `.taskflow/ref/protocols/retrospective.md` to learn from past errors
+2. **During work**: LLM provides context-aware guidance and error fixes
+3. **After errors**: LLM updates retrospective with new error patterns
+
+This prevents repeated mistakes and continuously improves error resolution.
+
+**See [CONFIG.md](./docs/CONFIG.md) for complete configuration options.**
+
+---
+
+## 📚 Reference
 
 ### Core Commands
 
@@ -486,7 +478,7 @@ pnpm task init
 **Solution:**
 ```bash
 # Initialize first
-pnpm task init my-project
+pnpm task init
 ```
 
 ---
@@ -538,7 +530,10 @@ taskflow-ai/
     ├── ARCHITECTURE.md
     ├── WORKFLOW.md
     ├── COMMANDS.md
-    └── FAQ.md
+    ├── CONFIG.md
+    ├── TROUBLESHOOTING.md
+    ├── FAQ.md
+    └── MIGRATION.md
 ```
 
 ---
@@ -550,8 +545,11 @@ taskflow-ai/
 | **[USAGE.md](./docs/USAGE.md)** | Step-by-step usage guide with examples |
 | **[WORKFLOW.md](./docs/WORKFLOW.md)** | Detailed workflow diagrams and state flows |
 | **[COMMANDS.md](./docs/COMMANDS.md)** | Complete command reference |
+| **[CONFIG.md](./docs/CONFIG.md)** | Complete configuration guide including AI/LLM setup |
+| **[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** | Common issues and solutions |
 | **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** | Technical architecture and module details |
 | **[FAQ.md](./docs/FAQ.md)** | Frequently asked questions |
+| **[MIGRATION.md](./docs/MIGRATION.md)** | AI enhancement migration guide |
 
 ---
 

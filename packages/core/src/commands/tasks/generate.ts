@@ -14,43 +14,57 @@ import {
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class TasksGenerateCommand extends BaseCommand {
-	async execute(prdFile: string): Promise<CommandResult> {
+	async execute(prdFile?: string): Promise<CommandResult> {
 		const configLoader = new ConfigLoader(this.context.projectRoot);
 		const config = configLoader.load();
 		const paths = configLoader.getPaths();
 
-		// Validate PRD file parameter
-		if (!prdFile || prdFile.trim().length === 0) {
-			return this.failure(
-				"PRD file is required",
-				["You must specify the PRD file to generate tasks from"],
-				[
-					"Generate tasks from a PRD:",
-					"  taskflow tasks generate <prd-filename>",
-					"",
-					"Example:",
-					"  taskflow tasks generate 2024-01-15-user-auth.md",
-				].join("\n"),
-			);
-		}
-
 		// Resolve PRD file path
 		const prdsDir = path.join(paths.tasksDir, "prds");
-		const prdFilePath = path.join(prdsDir, prdFile);
+		const prdFilePath = prdFile ? path.join(prdsDir, prdFile) : null;
 
-		// Check if PRD file exists
-		if (!fs.existsSync(prdFilePath)) {
+		// Scan for all PRDs if no file specified
+		let availablePrds: string[] = [];
+		if (fs.existsSync(prdsDir)) {
+			availablePrds = fs.readdirSync(prdsDir).filter((f) => f.endsWith(".md"));
+		}
+
+		// Validate PRD file parameter
+		if (
+			prdFile &&
+			availablePrds.length > 0 &&
+			!availablePrds.includes(prdFile)
+		) {
 			return this.failure(
 				"PRD file not found",
 				[`PRD file does not exist: ${prdFilePath}`],
 				[
-					"Available options:",
+					"Available PRDs:",
+					...availablePrds.map((p) => `  - ${p}`),
+					"",
+					"Options:",
 					"1. Check the filename and try again",
-					"2. List PRD files in tasks/prds/",
+					"2. Run without arguments to see all PRDs",
 					"3. Create a new PRD: taskflow prd create <feature-name>",
 				].join("\n"),
 			);
 		}
+
+		if (availablePrds.length === 0) {
+			return this.failure(
+				"No PRDs found",
+				["No PRD files found in tasks/prds/"],
+				[
+					"Create a PRD first:",
+					"  taskflow prd create <feature-name>",
+					"",
+					"Then generate tasks from it.",
+				].join("\n"),
+			);
+		}
+
+		// Check if tasks already exist (don't block, just inform AI)
+		const progressFilePath = path.join(paths.tasksDir, "tasks-progress.json");
 
 		// Check if architecture files exist
 		const codingStandardsPath = getRefFilePath(
@@ -65,49 +79,81 @@ export class TasksGenerateCommand extends BaseCommand {
 		const codingStandardsExist = fs.existsSync(codingStandardsPath);
 		const architectureRulesExist = fs.existsSync(architectureRulesPath);
 
-		if (!codingStandardsExist || !architectureRulesExist) {
-			return this.failure(
-				"Architecture files missing",
+		// Build output messages
+		const outputParts: string[] = [];
+
+		if (availablePrds.length > 1 && !prdFile) {
+			outputParts.push(
 				[
-					!codingStandardsExist ? "coding-standards.md not found" : "",
-					!architectureRulesExist ? "architecture-rules.md not found" : "",
+					"AVAILABLE PRDs:",
+					"─────────────────",
+					...availablePrds.map(
+						(p, i) =>
+							`  [${i + 1}] ${p} ${fs.existsSync(progressFilePath) ? "(tasks generated ✓)" : ""}`,
+					),
 					"",
-					"These files must exist before generating tasks.",
-				].filter((s) => s.length > 0),
-				[
-					"Generate architecture files first:",
-					`  taskflow prd generate-arch ${prdFile}`,
+					"DECISION NEEDED:",
+					"─────────────────",
+					"AI Agent should:",
+					"  1. Analyze project context",
+					"  2. Determine which PRD(s) to generate tasks for",
+					"  3. Consider: Is this adding features to existing project?",
+					"  4. Select appropriate PRD or combine multiple PRDs",
 					"",
-					"This will create:",
-					"  - coding-standards.md",
-					"  - architecture-rules.md",
-					"",
-					"Then you can generate tasks.",
+					"OPTIONS:",
+					"─────────",
+					"  - Generate tasks for specific PRD: taskflow tasks generate <filename>",
+					"  - Generate for all ready PRDs (if appropriate)",
+					"  - Combine related PRDs into one feature set",
 				].join("\n"),
+			);
+		} else if (prdFile) {
+			outputParts.push(`PRD loaded: ${prdFile}`);
+			if (!codingStandardsExist || !architectureRulesExist) {
+				outputParts.push(
+					"⚠️  Architecture files missing - Run: taskflow prd generate-arch",
+				);
+			}
+			outputParts.push(
+				[
+					codingStandardsExist
+						? "✓ coding-standards.md found"
+						: "⚠️  coding-standards.md missing",
+					architectureRulesExist
+						? "✓ architecture-rules.md found"
+						: "⚠️  architecture-rules.md missing",
+				].join("\n"),
+			);
+			outputParts.push("");
+			outputParts.push("TASK:");
+			outputParts.push("─".repeat(60));
+			outputParts.push(
+				"Generate a complete task breakdown from PRD.",
+				"Create features, stories, and tasks with proper dependencies.",
 			);
 		}
 
-		// Check if tasks already exist
-		const progressFilePath = path.join(paths.tasksDir, "tasks-progress.json");
-		if (fs.existsSync(progressFilePath)) {
-			return this.failure(
-				"Tasks already exist",
-				[
-					"Task breakdown already exists in this project",
-					`File: ${progressFilePath}`,
-				],
-				[
-					"Options:",
-					"1. Review existing tasks: taskflow status",
-					"2. Delete tasks-progress.json to regenerate (CAUTION: loses all progress)",
-					"3. Manually add new features to the existing structure",
-				].join("\n"),
+		// Add existing tasks warning if applicable
+		const existingTasks = fs.existsSync(progressFilePath);
+		if (existingTasks) {
+			outputParts.push("");
+			outputParts.push("⚠️  EXISTING TASKS DETECTED:");
+			outputParts.push("───────────────────────────────");
+			outputParts.push(`File: ${progressFilePath} exists`);
+			outputParts.push("");
+			outputParts.push("OPTIONS:");
+			outputParts.push("────────");
+			outputParts.push("1. APPEND: Add new PRDs to existing structure");
+			outputParts.push("2. MERGE: Combine new PRDs with existing tasks");
+			outputParts.push(
+				"3. RESET: Delete existing and regenerate (CAUTION: loses progress)",
+			);
+			outputParts.push("4. SELECTIVE: Generate only specific PRDs");
+			outputParts.push("");
+			outputParts.push(
+				"AI Agent should decide based on project state and user intent.",
 			);
 		}
-
-		// Read PRD content
-		const _prdContent = fs.readFileSync(prdFilePath, "utf-8");
-		void _prdContent; // Intentionally unused - PRD content is loaded for reference
 
 		// Get all available skill files
 		const availableSkills = Object.values(SKILL_FILES)
@@ -123,16 +169,7 @@ export class TasksGenerateCommand extends BaseCommand {
 			.filter(Boolean);
 
 		return this.success(
-			[
-				`PRD loaded: ${prdFile}`,
-				"✓ coding-standards.md found",
-				"✓ architecture-rules.md found",
-				"",
-				"TASK:",
-				"─".repeat(60),
-				"Generate a complete task breakdown from the PRD.",
-				"Create features, stories, and tasks with proper dependencies.",
-			].join("\n"),
+			outputParts.join("\n"),
 			[
 				"This is an AI-assisted task. The breakdown will be created as:",
 				`  ${progressFilePath}`,
@@ -400,7 +437,7 @@ export class TasksGenerateCommand extends BaseCommand {
 					"3. Run: taskflow start <task-id> (start working)",
 				].join("\n"),
 				contextFiles: [
-					`${prdFilePath} - PRD with requirements`,
+					...(prdFilePath ? [`${prdFilePath} - PRD with requirements`] : []),
 					`${codingStandardsPath} - Project coding standards`,
 					`${architectureRulesPath} - Project architecture rules`,
 					`${getRefFilePath(paths.refDir, REF_FILES.taskGenerator)} - Task generation guidelines`,

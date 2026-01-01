@@ -97,13 +97,17 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 			{
 				name: "prd_create",
 				description:
-					"Create a new PRD (Product Requirements Document) template. Generates a structured markdown template for defining features.",
+					"Create a new PRD (Product Requirements Document) template. If description provided, AI will use it as starting point for requirement gathering.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						featureName: {
 							type: "string",
 							description: "Name of the feature (e.g., 'user-authentication')",
+						},
+						description: {
+							type: "string",
+							description: "Feature description/requirements (optional)",
 						},
 					},
 					required: ["featureName"],
@@ -129,16 +133,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 			{
 				name: "tasks_generate",
 				description:
-					"Generate complete task breakdown from a PRD. Creates features, stories, and tasks with dependencies.",
+					"Generate complete task breakdown from a PRD. Creates features, stories, and tasks with dependencies. If no PRD specified, shows all available PRDs.",
 				inputSchema: {
 					type: "object",
 					properties: {
 						prdFile: {
 							type: "string",
-							description: "PRD filename to generate tasks from",
+							description:
+								"Optional PRD filename. If not provided, lists available PRDs and AI decides.",
 						},
 					},
-					required: ["prdFile"],
 				},
 			},
 
@@ -361,11 +365,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 			case "prd_create": {
 				const schema = z.object({
 					featureName: z.string(),
+					description: z.string().optional(),
 				});
-				const { featureName } = schema.parse(args);
+				const { featureName, description } = schema.parse(args);
 
 				const cmd = new PrdCreateCommand(context);
-				const result = await cmd.execute(featureName);
+				const result = await cmd.execute(featureName, description);
 				return formatCommandResult(result);
 			}
 
@@ -382,7 +387,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 			case "tasks_generate": {
 				const schema = z.object({
-					prdFile: z.string(),
+					prdFile: z.string().optional(),
 				});
 				const { prdFile } = schema.parse(args);
 

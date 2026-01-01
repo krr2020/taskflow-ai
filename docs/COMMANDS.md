@@ -5,6 +5,7 @@ Complete reference for all Taskflow CLI commands.
 ## Table of Contents
 
 - [Initialization Commands](#initialization-commands)
+- [Configuration Commands](#configuration-commands)
 - [PRD Commands](#prd-commands)
 - [Task Workflow Commands](#task-workflow-commands)
 - [Navigation Commands](#navigation-commands)
@@ -57,6 +58,132 @@ NEXT STEPS:
 2. Generate tasks: taskflow tasks generate your-prd.md
 3. Start working: taskflow start <task-id>
 ```
+
+---
+
+## Configuration Commands
+
+### `taskflow configure ai [options]`
+
+Configure AI/LLM integration for Taskflow.
+
+**Usage:**
+```bash
+# Quick setup with default model
+taskflow configure ai \
+  --provider anthropic \
+  --model claude-sonnet-4-20250514 \
+  --apiKey ${ANTHROPIC_API_KEY}
+
+# Set different models for different phases
+taskflow configure ai \
+  --provider anthropic \
+  --planning claude-opus-4 \
+  --execution gemini-pro-2.0 \
+  --analysis claude-sonnet-4-20250514
+
+# Use environment variable (recommended)
+export ANTHROPIC_API_KEY=your-key-here
+taskflow configure ai --provider anthropic --model claude-sonnet-4-20250514
+
+# Show current configuration
+taskflow configure ai --show
+
+# Disable AI while keeping config
+taskflow configure ai --disable
+```
+
+**Options:**
+
+| Option | Description | Required |
+|--------|-------------|----------|
+| `--provider <name>` | LLM provider name | Yes |
+| `--model <name>` | Model name (for all phases) | No* |
+| `--planning <name>` | Model for planning phase | No* |
+| `--execution <name>` | Model for execution phase | No* |
+| `--analysis <name>` | Model for analysis phase | No* |
+| `--apiKey <key>` | API key (or use env var) | No** |
+| `--executionApiKey <key>` | API key for execution phase | No** |
+| `--apiEndpoint <url>` | Custom API endpoint | No |
+| `--apiVersion <version>` | API version (Azure) | No |
+| `--show` | Show current configuration | No |
+| `--disable` | Disable AI features | No |
+
+*At least one model option required (`--model` or per-phase models)
+**Required if environment variable not set
+
+**Providers:**
+- `openai` - OpenAI API
+- `azure` - Azure OpenAI
+- `anthropic` - Anthropic Claude
+- `ollama` - Local Ollama
+- `together` - Together AI
+- `groq` - Groq API
+- `deepseek` - DeepSeek API
+- `custom` - Custom OpenAI-compatible endpoint
+
+**Example output:**
+```
+✓ AI configuration updated
+✓ Provider: anthropic
+✓ Default model: claude-sonnet-4-20250514
+✓ Planning model: claude-opus-4
+✓ Execution model: gemini-pro-2.0
+✓ Analysis model: claude-sonnet-4-20250514
+
+NEXT STEPS:
+1. Test: taskflow tasks generate your-prd.md
+2. Or run: taskflow start <task-id>
+
+Learn more: taskflow configure ai --help
+```
+
+**Per-phase model usage:**
+- **Planning**: `tasks generate`, `prd generate-arch` - Task generation and architecture
+- **Execution**: Error analysis, code suggestions during implementation
+- **Analysis**: Validation fixing, retrospective updates
+
+**Environment variables (recommended):**
+```bash
+export ANTHROPIC_API_KEY=sk-ant-your-key-here
+export OPENAI_API_KEY=sk-your-key-here
+export AZURE_OPENAI_API_KEY=your-key-here
+export GROQ_API_KEY=gsk-your-key-here
+```
+
+**Ollama setup (no API key required):**
+```bash
+# Install Ollama
+# https://ollama.ai
+
+# Pull a model
+ollama pull llama3.1
+
+# Configure
+taskflow configure ai --provider ollama --model llama3.1
+```
+
+**Configuration file update:**
+After running `taskflow configure ai`, `taskflow.config.json` is updated:
+
+```json
+{
+  "version": "2.0",
+  "ai": {
+    "enabled": true,
+    "provider": "anthropic",
+    "apiKey": "${ANTHROPIC_API_KEY}",
+    "models": {
+      "default": "claude-sonnet-4-20250514",
+      "planning": "claude-opus-4",
+      "execution": "gemini-pro-2.0",
+      "analysis": "claude-sonnet-4-20250514"
+    }
+  }
+}
+```
+
+**See [CONFIG.md](./CONFIG.md) for complete configuration reference.**
 
 ---
 
@@ -368,9 +495,20 @@ taskflow check
 
 **Behavior varies by current state:**
 
-**Setup → Implementing:**
+**Setup → Planning:**
 ```
-✓ Status advanced: setup → implementing
+✓ Status advanced: setup → planning
+
+GOAL: Plan your implementation approach
+
+NEXT STEPS:
+1. Think through the implementation
+2. Run: taskflow check
+```
+
+**Planning → Implementing:**
+```
+✓ Status advanced: planning → implementing
 
 TASK: T1.1.0 - Create auth endpoints
 

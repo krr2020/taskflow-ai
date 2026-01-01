@@ -24,8 +24,25 @@ export class InitCommand extends BaseCommand {
 			);
 		}
 
+		// Try to get project name from package.json, then use provided name, then fallback to directory name
+		let detectedProjectName: string | undefined;
+
+		const packageJsonPath = path.join(this.context.projectRoot, "package.json");
+		if (fs.existsSync(packageJsonPath)) {
+			try {
+				const packageJson = JSON.parse(
+					fs.readFileSync(packageJsonPath, "utf-8"),
+				);
+				detectedProjectName = packageJson.name;
+			} catch (_error) {
+				// If package.json is invalid, continue to fallback
+			}
+		}
+
 		const finalProjectName =
-			projectName || path.basename(this.context.projectRoot);
+			projectName ||
+			detectedProjectName ||
+			path.basename(this.context.projectRoot);
 
 		// Create default configuration
 		const config = ConfigLoader.createDefaultConfig(finalProjectName);
