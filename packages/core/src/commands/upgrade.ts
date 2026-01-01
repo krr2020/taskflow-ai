@@ -21,6 +21,7 @@ interface FileUpdate {
 	currentPath: string;
 	templatePath: string;
 	exists: boolean;
+	isCustomized?: boolean;
 	skipped?: boolean;
 }
 
@@ -95,15 +96,40 @@ export class UpgradeCommand extends BaseCommand {
 			};
 		}
 
+		// Check for customized files that will be overwritten
+		const customizedFiles = updatePlan.files.filter(
+			(f) => f.isCustomized && f.strategy !== "NEVER",
+		);
+
+		if (customizedFiles.length > 0 && !options?.force) {
+			output += `${colors.errorBold("⚠️  WARNING: Customized files detected!")}\n\n`;
+			output += `The following files have been modified and will be overwritten:\n`;
+			for (const file of customizedFiles) {
+				output += `  ${colors.error(`- ${file.name}`)}\n`;
+			}
+			output += `\n${colors.warning("Your customizations will be LOST!")}\n\n`;
+			output += `${colors.highlight("To proceed anyway, use:")}\n`;
+			output += `  ${colors.command("taskflow upgrade --force")}\n\n`;
+			return {
+				success: false,
+				output,
+				nextSteps: "Review your customizations, then run with --force if you want to proceed",
+			};
+		}
+
 		// Show files to update
 		output += `${colors.highlight("Files to update:")}\n`;
 		for (const file of updatePlan.files) {
 			if (file.strategy === "NEVER") {
 				output += `  ${colors.muted(`${icons.success} ${file.name} (never touched)`)}\n`;
 			} else if (file.strategy === "PROMPT") {
-				output += `  ${colors.warning(`⚠️  ${file.name} (user-generated, will prompt)`)}\n`;
+				output += `  ${colors.warning(`⚠️  ${file.name} (user-generated, will skip)`)}\n`;
 			} else if (file.strategy === "SUGGEST") {
-				output += `  ${colors.info(`📝 ${file.name} (will update)`)}\n`;
+				if (file.isCustomized) {
+					output += `  ${colors.warning(`⚠️  ${file.name} (customized, will be overwritten)`)}\n`;
+				} else {
+					output += `  ${colors.info(`📝 ${file.name} (will update)`)}\n`;
+				}
 			}
 		}
 
@@ -111,6 +137,9 @@ export class UpgradeCommand extends BaseCommand {
 		output += `\n${colors.highlight("Creating backup...")}\n`;
 		const backupDir = this.createBackup(refDir, currentVersion || "unknown");
 		output += `${colors.success(`${icons.success} Backup created:`)} ${backupDir}\n\n`;
+		output += `${colors.warning("⚠️  IMPORTANT: Backup location saved above")}\n`;
+		output += `You can restore your files if needed:\n`;
+		output += `  ${colors.command(`cp ${backupDir}/* ${refDir}/`)}\n\n`;
 
 		// Update files
 		let updatedCount = 0;
@@ -214,12 +243,21 @@ export class UpgradeCommand extends BaseCommand {
 				? path.join(templateDir, templateRelativePath)
 				: path.join(templateDir, fileName);
 
+			// Check if file is customized (exists and differs from template)
+			let isCustomized = false;
+			if (fs.existsSync(currentPath) && fs.existsSync(templatePath)) {
+				const currentContent = fs.readFileSync(currentPath, "utf-8");
+				const templateContent = fs.readFileSync(templatePath, "utf-8");
+				isCustomized = currentContent !== templateContent;
+			}
+
 			files.push({
 				name: fileName,
 				strategy,
 				currentPath,
 				templatePath,
 				exists: fs.existsSync(currentPath),
+				isCustomized,
 			});
 		}
 

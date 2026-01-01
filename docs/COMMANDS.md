@@ -6,6 +6,7 @@ Complete reference for all Taskflow CLI commands.
 
 - [Initialization Commands](#initialization-commands)
 - [Configuration Commands](#configuration-commands)
+- [Upgrade Command](#upgrade-command)
 - [PRD Commands](#prd-commands)
 - [Task Workflow Commands](#task-workflow-commands)
 - [Navigation Commands](#navigation-commands)
@@ -69,22 +70,20 @@ Configure AI/LLM integration for Taskflow.
 
 **Usage:**
 ```bash
-# Quick setup with default model
+# New format: Add model definitions
+taskflow configure ai --addModel '{"claude-sonnet":{"provider":"anthropic","model":"claude-3-5-sonnet-20241022","apiKey":"${ANTHROPIC_API_KEY}"}}'
+
+# New format: Set usage mapping for phases
+taskflow configure ai --setPlanning claude-sonnet
+taskflow configure ai --setExecution gpt-4o-mini
+taskflow configure ai --setAnalysis claude-sonnet
+taskflow configure ai --setDefault claude-sonnet
+
+# Legacy format: Single provider (still supported)
 taskflow configure ai \
   --provider anthropic \
-  --model claude-sonnet-4-20250514 \
+  --model claude-3-5-sonnet-20241022 \
   --apiKey ${ANTHROPIC_API_KEY}
-
-# Set different models for different phases
-taskflow configure ai \
-  --provider anthropic \
-  --planning claude-opus-4 \
-  --execution gemini-pro-2.0 \
-  --analysis claude-sonnet-4-20250514
-
-# Use environment variable (recommended)
-export ANTHROPIC_API_KEY=your-key-here
-taskflow configure ai --provider anthropic --model claude-sonnet-4-20250514
 
 # Show current configuration
 taskflow configure ai --show
@@ -97,45 +96,80 @@ taskflow configure ai --disable
 
 | Option | Description | Required |
 |--------|-------------|----------|
-| `--provider <name>` | LLM provider name | Yes |
-| `--model <name>` | Model name (for all phases) | No* |
-| `--planning <name>` | Model for planning phase | No* |
-| `--execution <name>` | Model for execution phase | No* |
-| `--analysis <name>` | Model for analysis phase | No* |
+| `--addModel <json>` | Add new model definition (JSON format) | No |
+| `--removeModel <name>` | Remove a model definition | No |
+| `--setDefault <name>` | Set default model for all phases | No |
+| `--setPlanning <name>` | Set model for planning phase | No |
+| `--setExecution <name>` | Set model for execution phase | No |
+| `--setAnalysis <name>` | Set model for analysis phase | No |
+| `--provider <name>` | LLM provider name (legacy format) | No* |
+| `--model <name>` | Model name (legacy format) | No* |
+| `--planning <name>` | Model for planning phase (legacy) | No* |
+| `--execution <name>` | Model for execution phase (legacy) | No* |
+| `--analysis <name>` | Model for analysis phase (legacy) | No* |
 | `--apiKey <key>` | API key (or use env var) | No** |
-| `--executionApiKey <key>` | API key for execution phase | No** |
+| `--executionApiKey <key>` | API key for execution phase (legacy) | No** |
 | `--apiEndpoint <url>` | Custom API endpoint | No |
 | `--apiVersion <version>` | API version (Azure) | No |
 | `--show` | Show current configuration | No |
 | `--disable` | Disable AI features | No |
 
-*At least one model option required (`--model` or per-phase models)
+*Legacy format options (single provider)
 **Required if environment variable not set
 
 **Providers:**
-- `openai` - OpenAI API
-- `azure` - Azure OpenAI
-- `anthropic` - Anthropic Claude
+- `anthropic` - Anthropic Claude API
+- `openai-compatible` - OpenAI, Azure, Together, Groq, DeepSeek, or any OpenAI-compatible API
 - `ollama` - Local Ollama
-- `together` - Together AI
-- `groq` - Groq API
-- `deepseek` - DeepSeek API
-- `custom` - Custom OpenAI-compatible endpoint
+
+**New format examples:**
+```bash
+# Add multiple models
+taskflow configure ai --addModel '{"claude-sonnet":{"provider":"anthropic","model":"claude-3-5-sonnet-20241022","apiKey":"${ANTHROPIC_API_KEY}"}}'
+taskflow configure ai --addModel '{"openai-gpt4":{"provider":"openai-compatible","model":"gpt-4o-mini","apiKey":"${OPENAI_API_KEY}"}}'
+taskflow configure ai --addModel '{"ollama-local":{"provider":"ollama","model":"llama2","baseUrl":"http://localhost:11434"}}'
+
+# Set usage mapping
+taskflow configure ai --setPlanning claude-sonnet
+taskflow configure ai --setExecution openai-gpt4
+taskflow configure ai --setAnalysis claude-sonnet
+```
+
+**Legacy format examples:**
+```bash
+# Simple single-provider setup
+taskflow configure ai \
+  --provider anthropic \
+  --model claude-3-5-sonnet-20241022
+```
 
 **Example output:**
 ```
 ✓ AI configuration updated
-✓ Provider: anthropic
-✓ Default model: claude-sonnet-4-20250514
-✓ Planning model: claude-opus-4
-✓ Execution model: gemini-pro-2.0
-✓ Analysis model: claude-sonnet-4-20250514
+
+AI Configuration:
+──────────────────────────────────────────────────────────────────────────
+Enabled: ✓
+Model Definitions:
+  claude-sonnet:
+    Provider: anthropic
+    Model: claude-3-5-sonnet-20241022
+    API Key: ***configured***
+  openai-gpt4:
+    Provider: openai-compatible
+    Model: gpt-4o-mini
+    Base URL: https://api.openai.com/v1
+    API Key: ***configured***
+
+Usage Mapping:
+  Default: claude-sonnet
+  Planning: claude-sonnet
+  Execution: openai-gpt4
+  Analysis: claude-sonnet
 
 NEXT STEPS:
 1. Test: taskflow tasks generate your-prd.md
 2. Or run: taskflow start <task-id>
-
-Learn more: taskflow configure ai --help
 ```
 
 **Per-phase model usage:**
@@ -166,22 +200,148 @@ taskflow configure ai --provider ollama --model llama3.1
 **Configuration file update:**
 After running `taskflow configure ai`, `taskflow.config.json` is updated:
 
+**New format:**
+```json
+{
+  "version": "2.0",
+  "ai": {
+    "enabled": true,
+    "models": {
+      "claude-sonnet": {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      },
+      "openai-gpt4": {
+        "provider": "openai-compatible",
+        "model": "gpt-4o-mini",
+        "apiKey": "${OPENAI_API_KEY}"
+      }
+    },
+    "usage": {
+      "default": "claude-sonnet",
+      "planning": "claude-sonnet",
+      "execution": "openai-gpt4",
+      "analysis": "claude-sonnet"
+    }
+  }
+}
+```
+
+**Legacy format:**
 ```json
 {
   "version": "2.0",
   "ai": {
     "enabled": true,
     "provider": "anthropic",
-    "apiKey": "${ANTHROPIC_API_KEY}",
-    "models": {
-      "default": "claude-sonnet-4-20250514",
-      "planning": "claude-opus-4",
-      "execution": "gemini-pro-2.0",
-      "analysis": "claude-sonnet-4-20250514"
-    }
+    "model": "claude-3-5-sonnet-20241022",
+    "apiKey": "${ANTHROPIC_API_KEY}"
   }
 }
 ```
+
+**See [CONFIG.md](./CONFIG.md) for complete configuration reference.**
+
+---
+
+## Upgrade Command
+
+### `taskflow upgrade [options]`
+
+Upgrade `.taskflow` reference files to the latest version.
+
+**Usage:**
+```bash
+# Check if upgrade available (shows diff)
+taskflow upgrade --diff
+
+# Upgrade with prompts for user-generated files
+taskflow upgrade
+
+# Force upgrade (overwrite all files)
+taskflow upgrade --force
+
+# Auto upgrade (skip all prompts)
+taskflow upgrade --auto
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--diff` | Show diff summary without upgrading |
+| `--auto` | Skip prompts for user-generated files |
+| `--force` | Force upgrade even if customized files will be overwritten |
+
+**What it does:**
+1. Checks current version vs latest template version
+2. Shows which files will be updated
+3. Warns about customized files that will be overwritten
+4. Creates backup of existing files
+5. Updates reference files to latest templates
+
+**Update Strategies:**
+
+| Strategy | Files | Description |
+|-----------|--------|-------------|
+| **NEVER** | `retrospective.md` | Never touched (preserves your data) |
+| **PROMPT** | `coding-standards.md`, `architecture-rules.md` | User-generated, preserved with prompt |
+| **SUGGEST** | `ai-protocol.md`, `task-generator.md`, `task-executor.md`, `prd-generator.md` | Updated (overwrites if customized) |
+| **AUTO** | `.version` | Always updated |
+
+**Example output:**
+```
+📦 TaskFlow Template Upgrade
+
+Current version: unknown
+Latest version: 0.1.0
+
+Files to update:
+  ✓ ai-protocol.md (will update)
+  ✓ task-generator.md (will update)
+  ✓ task-executor.md (will update)
+  ✓ prd-generator.md (will update)
+  ✓ coding-standards.md (will update)
+  ✓ architecture-rules.md (will update)
+  📝 retrospective.md (never touched)
+
+Creating backup...
+✓ Backup created: .taskflow/backups/vunknown-2026-01-01
+
+⚠️  IMPORTANT: Backup location saved above
+You can restore your files if needed:
+  cp .taskflow/backups/vunknown-2026-01-01/* .taskflow/ref/
+
+  ✓ Updated ai-protocol.md
+  ✓ Updated task-generator.md
+  ✓ Updated task-executor.md
+  ✓ Updated prd-generator.md
+  ✓ Updated coding-standards.md
+  ✓ Updated architecture-rules.md
+
+✅ Upgrade complete!
+  Updated: 6 files
+  Skipped: 0 files
+  Preserved: retrospective.md, logs
+```
+
+**Warning for customized files:**
+```
+⚠️  WARNING: Customized files detected!
+
+The following files have been modified and will be overwritten:
+  - coding-standards.md
+
+Your customizations will be LOST!
+
+To proceed anyway, use:
+  taskflow upgrade --force
+```
+
+**Backup location:**
+- Backups are saved to: `.taskflow/backups/v{version}-{date}/`
+- To restore: `cp .taskflow/backups/v{version}-{date}/* .taskflow/ref/`
 
 **See [CONFIG.md](./CONFIG.md) for complete configuration reference.**
 
@@ -364,7 +524,7 @@ Complete dependencies first.
 
 ### `taskflow do`
 
-Display state-specific instructions for the current active task.
+Execute the next step of the current active task.
 
 **Usage:**
 ```bash
@@ -722,19 +882,30 @@ Context:
 
 ## Recovery Commands
 
-### `taskflow resume`
+### `taskflow resume [status]`
 
-Resume an interrupted session.
+Resume a blocked or on-hold task to a specific status.
 
 **Usage:**
 ```bash
+# Resume to current status
 taskflow resume
+
+# Resume to specific status
+taskflow resume implementing
 ```
+
+**Arguments:**
+
+| Argument | Description |
+|-----------|-------------|
+| `[status]` | Status to resume to (setup, implementing, verifying, validating). Optional. |
 
 **What it does:**
 - Finds the task with `active` flag
+- Changes task status to specified status (or current if not specified)
 - Restores the session
-- Displays current state
+- Displays current state and next steps
 
 **Example output:**
 ```
@@ -875,12 +1046,20 @@ Total patterns: 8 across 4 categories
 │                           QUICK REFERENCE                                    │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
+│  Initialization:                                                             │
+│  ─────────────────                                                              │
+│  taskflow init           # Initialize project                                   │
+│  taskflow upgrade         # Upgrade reference files to latest version      │
+│                                                                              │
+│  Configuration:                                                              │
+│  ───────────────────                                                              │
+│  taskflow configure ai    # Configure LLM provider                        │
+│                                                                              │
 │  Standard Workflow:                                                          │
 │  ──────────────────                                                          │
 │  taskflow start <id>     # Start task                                       │
-│  taskflow do             # Read SETUP instructions                           │
-│  taskflow check          # Advance to IMPLEMENTING                          │
-│  taskflow do             # Read implementation details                      │
+│  taskflow do             # Execute next step of current task          │
+│  taskflow check          # Advance to next state                          │
 │  (write code)                                                                │
 │  taskflow check          # Advance through: VERIFYING → VALIDATING          │
 │  taskflow commit "..."   # Commit and complete (auto-marks completed)       │
@@ -892,7 +1071,7 @@ Total patterns: 8 across 4 categories
 │                                                                              │
 │  Recovery:                                                                   │
 │  ─────────                                                                   │
-│  taskflow resume         # Resume interrupted session                       │
+│  taskflow resume [status] # Resume to specific status or current           │
 │  taskflow skip           # Block current task                               │
 │                                                                              │
 │  Retrospective:                                                              │

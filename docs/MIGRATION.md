@@ -57,18 +57,48 @@ packages/core/src/
 ```
 
 **New Configuration Concept**:
+
+**New Format (Recommended)**:
+```json
+{
+  "ai": {
+    "enabled": true,
+    "models": {
+      "claude-sonnet": {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      },
+      "openai-gpt4": {
+        "provider": "openai-compatible",
+        "model": "gpt-4o-mini",
+        "apiKey": "${OPENAI_API_KEY}",
+        "baseUrl": "https://api.openai.com/v1"
+      },
+      "ollama-local": {
+        "provider": "ollama",
+        "model": "llama2",
+        "baseUrl": "http://localhost:11434"
+      }
+    },
+    "usage": {
+      "default": "claude-sonnet",
+      "planning": "claude-sonnet",
+      "execution": "openai-gpt4",
+      "analysis": "claude-sonnet"
+    }
+  }
+}
+```
+
+**Legacy Format (Still Supported)**:
 ```json
 {
   "ai": {
     "enabled": true,
     "provider": "anthropic",
-    "apiKey": "${ANTHROPIC_API_KEY}",
-    "models": {
-      "default": "claude-sonnet-4-20250514",
-      "planning": "claude-opus-4",              // User's choice for planning
-      "execution": "gemini-pro-2.0",           // User's choice for execution
-      "analysis": "claude-sonnet-4-20250514"     // User's choice for analysis
-    }
+    "model": "claude-3-5-sonnet-20241022",
+    "apiKey": "${ANTHROPIC_API_KEY}"
   }
 }
 ```

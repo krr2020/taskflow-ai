@@ -176,6 +176,28 @@ export type ProjectIndex = z.infer<typeof ProjectIndexSchema>;
 // Taskflow Config Schema
 // ============================================================================
 
+/**
+ * Model definition for a single AI model
+ */
+export const ModelDefinitionSchema = z.object({
+	provider: z.enum(["anthropic", "openai-compatible", "ollama"]),
+	model: z.string().min(1),
+	apiKey: z.string().optional(),
+	baseUrl: z.string().optional(),
+});
+export type ModelDefinition = z.infer<typeof ModelDefinitionSchema>;
+
+/**
+ * Model usage mapping for different phases
+ */
+export const ModelUsageSchema = z.object({
+	default: z.string().min(1),
+	planning: z.string().optional(),
+	execution: z.string().optional(),
+	analysis: z.string().optional(),
+});
+export type ModelUsage = z.infer<typeof ModelUsageSchema>;
+
 export const TaskflowConfigSchema = z.object({
 	project: z.object({
 		name: z.string().min(1),
@@ -194,15 +216,18 @@ export const TaskflowConfigSchema = z.object({
 	ai: z
 		.object({
 			enabled: z.boolean().default(false),
+			models: z.record(z.string(), ModelDefinitionSchema).optional(),
+			usage: ModelUsageSchema.optional(),
 			provider: z.string().optional(),
-			models: z
-				.object({
-					planning: z.string().optional(),
-					execution: z.string().optional(),
-					analysis: z.string().optional(),
-					default: z.string().optional(),
-				})
-				.optional(),
+			apiKey: z.string().optional(),
+			planningProvider: z.string().optional(),
+			planningApiKey: z.string().optional(),
+			executionProvider: z.string().optional(),
+			executionApiKey: z.string().optional(),
+			analysisProvider: z.string().optional(),
+			analysisApiKey: z.string().optional(),
+			ollamaBaseUrl: z.string().optional(),
+			openaiBaseUrl: z.string().optional(),
 			autoContinueTask: z.boolean().default(false),
 			clearContextOnComplete: z.boolean().default(true),
 		})

@@ -323,19 +323,20 @@ With LLM configured, Taskflow can:
 
 ### Quick Setup
 
+**Using CLI (recommended):**
 ```bash
-# Configure LLM (one command)
-taskflow configure ai \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
-  --apiKey ${ANTHROPIC_API_KEY}
+# Add model definitions and set usage
+taskflow configure ai --addModel '{"claude-sonnet":{"provider":"anthropic","model":"claude-3-5-sonnet-20241022","apiKey":"${ANTHROPIC_API_KEY}"}}'
 
-# Or configure different models for different phases
+# Set usage mapping for phases
+taskflow configure ai --setPlanning claude-sonnet
+taskflow configure ai --setExecution gpt-4o-mini
+taskflow configure ai --setAnalysis claude-sonnet
+
+# Or use legacy single-provider format
 taskflow configure ai \
   --provider anthropic \
-  --planning claude-opus-4 \
-  --execution gemini-pro-2.0 \
-  --analysis claude-sonnet-4-20250514
+  --model claude-3-5-sonnet-20241022
 ```
 
 ### Configuration Example
@@ -347,13 +348,23 @@ Add to `taskflow.config.json`:
   "version": "2.0",
   "ai": {
     "enabled": true,
-    "provider": "anthropic",
-    "apiKey": "${ANTHROPIC_API_KEY}",
     "models": {
-      "default": "claude-sonnet-4-20250514",
-      "planning": "claude-opus-4",
-      "execution": "gemini-pro-2.0",
-      "analysis": "claude-sonnet-4-20250514"
+      "claude-sonnet": {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      },
+      "openai-gpt4": {
+        "provider": "openai-compatible",
+        "model": "gpt-4o-mini",
+        "apiKey": "${OPENAI_API_KEY}"
+      }
+    },
+    "usage": {
+      "default": "claude-sonnet",
+      "planning": "claude-sonnet",
+      "execution": "openai-gpt4",
+      "analysis": "claude-sonnet"
     }
   }
 }
@@ -407,9 +418,16 @@ This prevents repeated mistakes and continuously improves error resolution.
 ### Core Commands
 
 ```bash
+# Initialization
+taskflow init           # Initialize project
+taskflow upgrade         # Upgrade reference files to latest version
+
+# Configuration
+taskflow configure ai    # Configure LLM provider
+
 # Task Management
 taskflow start <id>     # Begin working on a task
-taskflow do             # Show instructions for current state
+taskflow do             # Execute next step of current task
 taskflow check          # Advance to next state / run validations
 taskflow commit "..."    # Commit and complete task
 

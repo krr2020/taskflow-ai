@@ -17,6 +17,31 @@
 		}
 	},
 	"ai": {
+		"enabled": true,
+		"models": {
+			"claude-sonnet": {
+				"provider": "anthropic",
+				"model": "claude-3-5-sonnet-20241022",
+				"apiKey": "${ANTHROPIC_API_KEY}"
+			},
+			"openai-gpt4": {
+				"provider": "openai-compatible",
+				"model": "gpt-4o-mini",
+				"apiKey": "${OPENAI_API_KEY}",
+				"baseUrl": "https://api.openai.com/v1"
+			},
+			"ollama-local": {
+				"provider": "ollama",
+				"model": "llama2",
+				"baseUrl": "http://localhost:11434"
+			}
+		},
+		"usage": {
+			"default": "claude-sonnet",
+			"planning": "claude-sonnet",
+			"execution": "openai-gpt4",
+			"analysis": "claude-sonnet"
+		},
 		"autoContinueTask": false,
 		"clearContextOnComplete": true
 	}

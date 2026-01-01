@@ -3,7 +3,7 @@
  * Comprehensive test coverage for build/test log parsing
  */
 
-import { writeFileSync } from "node:fs";
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LogParser, type ParsedError } from "../../src/lib/log-parser.js";
@@ -18,6 +18,9 @@ describe("LogParser", () => {
 
 	afterEach(() => {
 		// Clean up test files if they exist
+		if (existsSync(testLogPath)) {
+			unlinkSync(testLogPath);
+		}
 	});
 
 	// ============================================================================

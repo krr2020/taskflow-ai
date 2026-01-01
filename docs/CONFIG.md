@@ -67,16 +67,47 @@ Current configuration schema version. Always `"2.0"`.
 
 The `ai` section is **optional**. Taskflow works perfectly without it.
 
-### Basic AI Configuration
+### Configuration Structure
+
+Taskflow supports two configuration approaches:
+
+1. **Legacy Format** (single provider, per-phase model names)
+2. **New Format** (multiple named model definitions with usage mapping) - **Recommended**
+
+---
+
+### New Configuration Format (Recommended)
+
+The new format allows you to define multiple models with different providers and API keys, then map them to specific phases.
 
 ```json
 {
-  "version": "2.0",
   "ai": {
     "enabled": true,
-    "provider": "anthropic",
-    "model": "claude-sonnet-4-20250514",
-    "apiKey": "${ANTHROPIC_API_KEY}"
+    "models": {
+      "claude-sonnet": {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      },
+      "openai-gpt4": {
+        "provider": "openai-compatible",
+        "model": "gpt-4o-mini",
+        "apiKey": "${OPENAI_API_KEY}",
+        "baseUrl": "https://api.openai.com/v1"
+      },
+      "ollama-local": {
+        "provider": "ollama",
+        "model": "llama2",
+        "baseUrl": "http://localhost:11434"
+      }
+    },
+    "usage": {
+      "default": "claude-sonnet",
+      "planning": "claude-sonnet",
+      "execution": "openai-gpt4",
+      "analysis": "claude-sonnet"
+    }
   }
 }
 ```
@@ -86,24 +117,64 @@ The `ai` section is **optional**. Taskflow works perfectly without it.
 #### `enabled` (optional)
 Enable or disable AI features. Default: `false`
 
-#### `provider` (required if `ai` section exists)
-LLM provider to use. Options:
-- `"openai"` - OpenAI API
-- `"azure"` - Azure OpenAI
-- `"anthropic"` - Anthropic Claude
-- `"ollama"` - Local Ollama
-- `"together"` - Together AI
-- `"groq"` - Groq API
-- `"deepseek"` - DeepSeek API
-- `"custom"` - Custom OpenAI-compatible endpoint
+#### `models` (recommended)
+Dictionary of named model definitions. Each model has:
 
-#### `apiKey` (required for most providers)
+- `provider` (required): Provider type
+  - `"anthropic"` - Anthropic Claude API
+  - `"openai-compatible"` - OpenAI, Azure, Together, Groq, DeepSeek, or any OpenAI-compatible API
+  - `"ollama"` - Local Ollama
+
+- `model` (required): Model name for the provider
+
+- `apiKey` (optional, required for most providers): API key for the provider. Can use environment variables with `${VAR_NAME}` syntax.
+
+- `baseUrl` (optional): Custom base URL for the provider
+  - Anthropic: Not configurable (uses `https://api.anthropic.com/v1/`)
+  - OpenAI-compatible: Customizable (default: `https://api.openai.com/v1`)
+  - Ollama: Customizable (default: `http://localhost:11434`)
+
+#### `usage` (optional, recommended when using `models`)
+Maps phases to model definitions. Each phase can use a different model:
+
+- `default` (required): Fallback model for any phase not explicitly specified
+- `planning` (optional): Model for `tasks generate` and `prd generate-arch`
+- `execution` (optional): Model for error analysis and code suggestions
+- `analysis` (optional): Model for validation fixing and retrospective updates
+
+**Note:** If a phase is not specified, it falls back to the `default` model.
+
+---
+
+### Legacy Configuration Format
+
+The legacy format is still supported for backward compatibility:
+
+```json
+{
+  "ai": {
+    "enabled": true,
+    "provider": "anthropic",
+    "model": "claude-sonnet-4-20250514",
+    "apiKey": "${ANTHROPIC_API_KEY}"
+  }
+}
+```
+
+### Legacy AI Configuration Fields
+
+#### `provider` (required in legacy format)
+LLM provider to use. Options:
+- `"anthropic"` - Anthropic Claude
+- `"openai-compatible"` - OpenAI-compatible API
+
+#### `apiKey` (required in legacy format)
 API key for the provider. Can use environment variables with `${VAR_NAME}` syntax.
 
 #### `model` (optional, default varies by provider)
 Model to use. If not specified, uses provider's default model.
 
-#### `models` (optional, for per-phase model selection)
+#### Legacy per-phase model selection
 Configure different models for different phases:
 ```json
 {

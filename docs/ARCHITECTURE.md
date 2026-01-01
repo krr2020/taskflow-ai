@@ -54,7 +54,9 @@ Taskflow provides a state-machine-based workflow for executing development tasks
 │   │   ├── prd/               # PRD commands
 │   │   ├── tasks/             # Task generation commands
 │   │   ├── retro/             # Retrospective commands
-│   │   └── init.ts            # Project initialization
+│   │   ├── init.ts            # Project initialization
+│   │   ├── configure.ts       # AI/LLM configuration
+│   │   └── upgrade.ts         # Reference file upgrades
 │   └── lib/                   # Core library modules
 │       ├── types.ts           # TypeScript types & Zod schemas
 │       ├── config-paths.ts    # Configuration paths

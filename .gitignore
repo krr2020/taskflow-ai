@@ -40,3 +40,8 @@ pnpm-debug.log*
 # Taskflow
 # We typically WANT to commit tasks/ folder, but ignoring temp files is good
 *.tmp
+
+# Test artifacts
+test-file.ts
+empty.ts
+test-log.txt

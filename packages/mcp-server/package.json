@@ -1,6 +1,6 @@
 {
 	"name": "@krr2020/taskflow-mcp-server",
-	"version": "0.1.0-beta.3",
+	"version": "0.1.0-beta.4",
 	"description": "MCP Server for Taskflow",
 	"license": "MIT",
 	"publishConfig": {

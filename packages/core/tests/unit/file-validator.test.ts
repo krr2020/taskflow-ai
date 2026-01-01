@@ -3,7 +3,7 @@
  * Comprehensive test coverage for AI-powered file validation
  */
 
-import { existsSync, writeFileSync } from "node:fs";
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -49,9 +49,15 @@ describe("FileValidator", () => {
 	afterEach(() => {
 		// Clean up test file
 		if (existsSync(testFilePath)) {
-			// Delete test file after each test
-			// Note: Using fs.unlinkSync is typically used here
+			unlinkSync(testFilePath);
 		}
+
+		// Clean up empty.ts file if exists
+		const emptyFile = join(process.cwd(), "empty.ts");
+		if (existsSync(emptyFile)) {
+			unlinkSync(emptyFile);
+		}
+
 		vi.clearAllMocks();
 	});
 
