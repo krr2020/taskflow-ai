@@ -172,7 +172,7 @@ Most users should use this package via:
 - **[@krr2020/taskflow-mcp-server](https://www.npmjs.com/package/@krr2020/taskflow-mcp-server)** - MCP Server for Claude Desktop
 - **CLI** - Direct command-line usage via `npx @krr2020/taskflow-core`
 
-See the main [Taskflow documentation](../../README.md) for complete usage examples.
+See the main [Taskflow documentation](../README.md) for complete usage examples.
 
 ## 📄 License
 

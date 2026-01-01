@@ -1,670 +1,239 @@
-# TaskFlow - AI Task Management Framework
+# Taskflow - AI Task Management Framework
 
-A structured task management CLI framework designed for AI-assisted development workflows. TaskFlow enforces a consistent workflow pattern to ensure quality, traceability, and automated validation at every step.
-
-## 🚀 Quick Start
-
-**For CLI Usage:**
-```bash
-npm install -g @krr2020/taskflow-core
-taskflow init my-project
-```
-
-**For Claude Desktop (MCP Server):**
-```bash
-npm install -g @krr2020/taskflow-mcp-server
-```
-Then configure Claude Desktop - see [USAGE.md](./USAGE.md#mcp-server-usage-claude-desktop)
-
-**📖 Complete Guide:** See [USAGE.md](./USAGE.md) for step-by-step examples and best practices.
-
-**📦 Packages:**
-- [@krr2020/taskflow-core](./packages/core/) - Core commands and CLI
-- [@krr2020/taskflow-mcp-server](./packages/mcp-server/) - MCP Server for Claude Desktop
-
----
-
-## Table of Contents
-
-- [Quick Start](#-quick-start)
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Workflow States](#workflow-states)
-- [Commands](#commands)
-- [Task Structure](#task-structure)
-- [Flow Diagrams](#flow-diagrams)
-- [Error Handling](#error-handling)
-- [Retrospective System](#retrospective-system)
-- [Documentation](#documentation)
-
----
+A structured task management CLI framework designed for AI-assisted development workflows. Taskflow enforces a consistent workflow pattern to ensure quality, traceability, and automated validation at every step.
 
 ## Overview
 
-TaskFlow provides a state-machine-based workflow for executing development tasks. Each task progresses through defined states with validation gates, ensuring:
+Taskflow provides a state-machine-based workflow for executing development tasks. Each task progresses through defined states with validation gates, ensuring:
 
-- **Consistency**: Every task follows the same execution pattern with standardized OUTPUT/NEXT STEPS format
+- **Consistency**: Every task follows the same execution pattern
 - **Traceability**: Git commits are linked to specific tasks
-- **Quality**: Automated validation before commits with state-specific guidance
-- **Learning**: Error patterns are tracked for prevention via retrospective system
-- **AI-Friendly**: Clear DO/DON'T instructions at each workflow state
+- **Quality**: Automated validation before commits
+- **Learning**: Error patterns are tracked for prevention
 
----
+## Quick Start
 
-## Architecture
+### Installation Options
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           TASKFLOW ARCHITECTURE                         │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐               │
-│  │   CLI Layer  │───▶│   Commands   │───▶│  Lib Modules │               │
-│  │   (cli.ts)   │    │  (10 files)  │    │  (8 files)   │               │
-│  └──────────────┘    └──────────────┘    └──────────────┘               │
-│         │                   │                   │                       │
-│         ▼                   ▼                   ▼                       │
-│  ┌─────────────────────────────────────────────────────────┐            │
-│  │            STANDARDIZED OUTPUT FORMAT                   │            │
-│  │  Every command outputs: OUTPUT + NEXT STEPS + WARNINGS  │            │
-│  └─────────────────────────────────────────────────────────┘            │
-│         │                   │                   │                       │
-│         ▼                   ▼                   ▼                       │
-│  ┌─────────────────────────────────────────────────────────┐            │
-│  │                     DATA LAYER                          │            │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐      │            │
-│  │  │project-index│  │  Features   │  │   Tasks     │      │            │
-│  │  │   .json     │  │  (F*.json)  │  │  (T*.json)  │      │            │
-│  │  └─────────────┘  └─────────────┘  └─────────────┘      │            │
-│  └─────────────────────────────────────────────────────────┘            │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
+**Option 1: Global CLI (Recommended for most users)**
+```bash
+npm install -g @krr2020/taskflow-core
 ```
 
-### Module Structure
-
-```
-.taskflow/
-├── src/
-│   ├── cli/
-│   │   └── index.ts           # Entry point with Commander.js
-│   ├── commands/              # Command implementations
-│   │   ├── workflow/          # Task workflow commands
-│   │   │   ├── start.ts       # Begin task session
-│   │   │   ├── do.ts          # Show state-specific instructions
-│   │   │   ├── check.ts       # Validate and advance state
-│   │   │   ├── commit.ts      # Git commit and push
-│   │   │   ├── status.ts      # View progress
-│   │   │   ├── next.ts        # Find next task
-│   │   │   ├── resume.ts      # Resume session
-│   │   │   └── skip.ts        # Block a task
-│   │   ├── prd/               # PRD commands
-│   │   ├── tasks/             # Task generation commands
-│   │   ├── retro/             # Retrospective commands
-│   │   └── init.ts            # Project initialization
-│   └── lib/                   # Core library modules
-│       ├── types.ts           # TypeScript types & Zod schemas
-│       ├── config-paths.ts    # Configuration paths
-│       ├── errors.ts          # Custom error classes
-│       ├── data-access.ts     # JSON file operations
-│       ├── git.ts             # Git operations
-│       ├── validation.ts      # Validation runner
-│       ├── output.ts          # Terminal output utilities
-│       └── retrospective.ts   # Error pattern tracking
-├── tests/                     # 340 unit tests
-├── ref/                       # Reference documentation
-└── README.md                  # This file
+**Option 2: MCP Server for Claude Desktop**
+```bash
+npm install -g @krr2020/taskflow-mcp-server
 ```
 
----
-
-## Task Status Flow
-
-Tasks progress through a unified status flow:
-
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           TASK STATUS FLOW                               │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌───────────┐  ┌───────┐  ┌─────────────┐  ┌──────────┐  ┌──────────┐ │
-│  │not-started│─▶│ setup │─▶│implementing │─▶│verifying │─▶│validating│ │
-│  └───────────┘  └───────┘  └─────────────┘  └──────────┘  └──────────┘ │
-│                                                                │         │
-│                                                                ▼         │
-│                     ┌───────────┐    ┌──────────┐                       │
-│                     │ completed │◀───│committing│                       │
-│                     └───────────┘    └──────────┘                       │
-│                                                                          │
-│  Other states: blocked, on-hold                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+**Option 3: As Dev Dependency (for local development)**
+```bash
+cd your-project
+npm install -D @krr2020/taskflow-core
 ```
 
-| Status | Description | Transition |
-|--------|-------------|------------|
-| **not-started** | Task has not been started | → setup (via `start`) |
-| **setup** | Reading task requirements, understanding context | → implementing (via `check`) |
-| **implementing** | Writing code, implementing the feature | → verifying (via `check`) |
-| **verifying** | Self-reviewing the implementation | → validating (via `check`) |
-| **validating** | Running automated checks (lint, type-check, arch) | → committing (via `check`) |
-| **committing** | Ready to commit and push | → completed (via `commit`) |
-| **completed** | Task finished | Terminal state |
-| **blocked** | Task blocked by external issue | Via `skip` command |
-| **on-hold** | Task paused | Manual update |
+### Which Command to Use?
 
----
+After installation, you have two ways to run Taskflow:
 
-## Commands
+| If You Installed... | Use This Command... | Example |
+|-------------------|---------------------|-----------|
+| **Globally** (`npm install -g`) | `taskflow` | `taskflow start 1.1.0` |
+| **As Dev Dependency** (`npm install -D`) | `pnpm task` | `pnpm task start 1.1.0` |
+| **npx (without install)** | `npx @krr2020/taskflow-core` | `npx @krr2020/taskflow-core start 1.1.0` |
 
-### Primary Workflow
+**Note:** Throughout this documentation, we use `taskflow` for simplicity. Replace with `pnpm task` if using as dev dependency.
 
-| Command | Description | Status Transition |
-|---------|-------------|-------------------|
-| `taskflow start <id>` | Start a task session (resumes if already active) | not-started → setup |
-| `taskflow do` | Show state-specific instructions (changes per state) | (no change) |
-| `taskflow check` | Validate and advance to next status | Current → Next (or runs validations) |
-| `taskflow commit "..."` | Commit and push changes with bullet points | committing → completed |
+### After Installation
 
-### Navigation
+Once Taskflow is installed, follow these steps in your project:
 
-| Command | Description |
-|---------|-------------|
-| `taskflow status` | Show project overview |
-| `taskflow status <id>` | Show feature/story details |
-| `taskflow next` | Find next available task |
-
-### Recovery
-
-| Command | Description |
-|---------|-------------|
-| `taskflow resume` | Resume an interrupted session |
-| `taskflow skip --reason "..."` | Mark task as blocked |
-
-### Retrospective
-
-| Command | Description |
-|---------|-------------|
-| `taskflow retro add` | Add new error pattern |
-| `taskflow retro list` | List known error patterns |
-
----
-
-## Task Structure
-
-### Hierarchy
-
-```
-Project
-└── Features (F1, F2, ...)
-    └── Stories (S1.1, S1.2, ...)
-        └── Tasks (T1.1.0, T1.1.1, ...)
+#### 1. Initialize Your Project
+```bash
+cd your-project
+taskflow init your-project-name
 ```
 
-### Task File Schema
+This creates:
+```
+your-project/
+├── taskflow.config.json      # Configuration
+├── tasks/                     # Task files (empty initially)
+└── .taskflow/
+    ├── ref/                   # Reference documentation
+    └── logs/                  # Validation logs (empty initially)
+```
 
+#### 2. Create Your First PRD
+```bash
+taskflow prd create user-authentication
+```
+
+Edit the generated PRD to define your feature requirements.
+
+#### 3. Generate Tasks
+```bash
+taskflow tasks generate tasks/prds/YYYY-MM-DD-feature-name.md
+```
+
+This creates a complete task breakdown with features, stories, and individual tasks.
+
+#### 4. Start Working
+```bash
+taskflow status            # View all tasks
+taskflow start 1.1.0       # Start first task
+taskflow do                # Read instructions
+taskflow check             # Advance through states
+taskflow commit "- Done"   # Commit and complete
+```
+
+#### 5. Complete the Workflow
+Repeat step 4 for each task. Taskflow will guide you through the complete workflow:
+- **setup** → Understand requirements
+- **implementing** → Write code
+- **verifying** → Self-review
+- **validating** → Run automated checks
+- **committing** → Commit changes
+- **completed** → Task done!
+
+### AI Agent Integration
+
+When using Taskflow with AI agents (like Claude Desktop, Cursor, etc.):
+
+#### For MCP Server (Claude Desktop)
+
+Configure Claude Desktop to use the MCP Server:
 ```json
 {
-  "id": "1.1.0",
-  "title": "Implement user authentication",
-  "description": "Add login/logout functionality",
-  "status": "not-started",
-  "skill": "backend",
-  "subtasks": [
-    { "id": "1", "description": "Create auth endpoints", "status": "pending" },
-    { "id": "2", "description": "Add session management", "status": "pending" }
-  ],
-  "context": [
-    "See auth requirements in docs/auth.md"
-  ]
+  "mcpServers": {
+    "taskflow": {
+      "command": "npx",
+      "args": ["-y", "@krr2020/taskflow-mcp-server"]
+    }
+  }
 }
 ```
 
-### Task Status Values
+The AI agent will automatically:
+1. Use `taskflow` commands through MCP tools
+2. Follow the defined workflow states
+3. Read instructions at each step
+4. Execute validations before committing
+5. Generate proper commit messages
 
-| Status | Description |
-|--------|-------------|
-| `not-started` | Task has not been started |
-| `setup` | Reading context and requirements |
-| `implementing` | Writing code |
-| `verifying` | Self-reviewing implementation |
-| `validating` | Running automated checks |
-| `committing` | Ready to commit and push |
-| `completed` | Task is finished |
-| `blocked` | Task is blocked by an issue |
-| `on-hold` | Task is paused |
+#### For CLI-Based AI Agents
 
-### Feature & Story Status Values
+If using a non-MCP AI agent:
 
-Features and Stories use a simplified status set:
+**Important:** Instruct the AI agent to:
+1. Use `taskflow` commands (or `pnpm task` if dev dependency)
+2. Follow the workflow: `start` → `do` → `check` → `commit`
+3. Always read instructions via `taskflow do`
+4. Run validations via `taskflow check`
+5. Commit via `taskflow commit` with proper bullet points
 
-| Status | Description |
-|--------|-------------|
-| `not-started` | No work has begun |
-| `in-progress` | Work is actively being done (contains active tasks) |
-| `completed` | All tasks/stories are completed |
-| `blocked` | Progress is blocked |
-| `on-hold` | Progress is paused |
-
----
-
-## Flow Diagrams
-
-### Complete Happy Path Flow
-
+Example prompt for AI agent:
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                            HAPPY PATH WORKFLOW                               │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Developer                          CLI                           System    │
-│     │                                │                               │       │
-│     │  taskflow start 1.1.0         │                               │       │
-│     │───────────────────────────────▶│                               │       │
-│     │                                │  Check no active session      │       │
-│     │                                │  Verify branch                │       │
-│     │                                │  Check dependencies           │       │
-│     │                                │───────────────────────────────▶│      │
-│     │                                │  Update status: setup         │       │
-│     │◀───────────────────────────────│                               │       │
-│     │  "Task started! Run: do"       │                               │       │
-│     │                                │                               │       │
-│     │  taskflow do                  │                               │       │
-│     │───────────────────────────────▶│                               │       │
-│     │                                │  Display setup instructions   │       │
-│     │◀───────────────────────────────│                               │       │
-│     │                                │                               │       │
-│     │  taskflow check               │                               │       │
-│     │───────────────────────────────▶│                               │       │
-│     │                                │  Advance to implementing      │       │
-│     │◀───────────────────────────────│                               │       │
-│     │                                │                               │       │
-│     │  taskflow do                  │                               │       │
-│     │───────────────────────────────▶│                               │       │
-│     │                                │  Show protocols & task details│       │
-│     │◀───────────────────────────────│                               │       │
-│     │                                │                               │       │
-│     │  (Developer writes code...)    │                               │       │
-│     │                                │                               │       │
-│     │  taskflow check               │                               │       │
-│     │───────────────────────────────▶│                               │       │
-│     │                                │  Advance to verifying         │       │
-│     │◀───────────────────────────────│                               │       │
-│     │                                │                               │       │
-│     │  taskflow check               │                               │       │
-│     │───────────────────────────────▶│                               │       │
-│     │                                │  Advance to validating        │       │
-│     │◀───────────────────────────────│                               │       │
-│     │                                │                               │       │
-│     │  taskflow check               │                               │       │
-│     │───────────────────────────────▶│                               │       │
-│     │                                │  Run: configured checks       │       │
-│     │                                │  (format, lint, tests, etc.)  │       │
-│     │                                │                               │       │
-│     │                                │                               │       │
-│     │                                │───────────────────────────────▶│      │
-│     │                                │         All passed ✓          │       │
-│     │                                │  Advance to committing        │       │
-│     │◀───────────────────────────────│                               │       │
-│     │                                │                               │       │
-│     │  taskflow commit "..."        │                               │       │
-│     │───────────────────────────────▶│                               │       │
-│     │                                │  Generate commit message      │       │
-│     │                                │  git add .                    │       │
-│     │                                │  git commit                   │       │
-│     │                                │  git push                     │       │
-│     │                                │  Update status: completed     │       │
-│     │                                │  Find next available task     │       │
-│     │                                │───────────────────────────────▶│      │
-│     │◀───────────────────────────────│                               │       │
-│     │  "Task completed! Next: 1.1.1" │                               │       │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+Use Taskflow to manage this task. Start with `taskflow start <task-id>`,
+then follow the workflow states and commit when complete.
 ```
 
-### Validation Failure Scenario
+### Updating to New Versions
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         VALIDATION FAILURE FLOW                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  [Status: validating]                                                        │
-│        │                                                                     │
-│        ▼                                                                     │
-│  ┌─────────────┐                                                             │
-│  │ pnpm task   │                                                             │
-│  │   check     │                                                             │
-│  └──────┬──────┘                                                             │
-│         │                                                                    │
-│         ▼                                                                    │
-│  ┌─────────────────────────────────────────────────────┐                    │
-│  │              RUN VALIDATIONS                        │                    │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │                    │
-│  │  │ biome:fix   │  │ type-check  │  │biome:check  │ │                    │
-│  │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘ │                    │
-│  │         │                │                │        │                    │
-│  │         ▼                ▼                ▼        │                    │
-│  │        ✓ Pass          ✗ FAIL           (skip)    │                    │
-│  └─────────────────────────┬───────────────────────────┘                    │
-│                            │                                                 │
-│                            ▼                                                 │
-│  ┌─────────────────────────────────────────────────────┐                    │
-│  │           CHECK RETROSPECTIVE                       │                    │
-│  │                                                     │                    │
-│  │   Is this a KNOWN error pattern?                    │                    │
-│  │         │                    │                      │                    │
-│  │        YES                  NO                      │                    │
-│  │         │                    │                      │                    │
-│  │         ▼                    ▼                      │                    │
-│  │   Display solution     Prompt to add                │                    │
-│  │   from retrospective   new pattern                  │                    │
-│  └─────────────────────────┬───────────────────────────┘                    │
-│                            │                                                 │
-│                            ▼                                                 │
-│  ┌─────────────────────────────────────────────────────┐                    │
-│  │                 DEVELOPER ACTION                    │                    │
-│  │                                                     │                    │
-│  │  1. Read error summary in terminal                  │                    │
-│  │  2. Check full log: .taskflow/logs/                 │                    │
-│  │  3. Fix the error in code                           │                    │
-│  │  4. (Optional) Add to retrospective:                │                    │
-│  │     pnpm task retro add --category "Type Error" ... │                    │
-│  │  5. Re-run: pnpm task check                         │                    │
-│  └─────────────────────────────────────────────────────┘                    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+When a new version of Taskflow is released:
+
+#### Step 1: Update the Package
+```bash
+# If installed globally
+npm update -g @krr2020/taskflow-core
+npm update -g @krr2020/taskflow-mcp-server
+
+# If installed as dev dependency
+npm update @krr2020/taskflow-core
 ```
 
-### Session Recovery Scenarios
+#### Step 2: Check for Breaking Changes
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          RECOVERY SCENARIOS                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  SCENARIO 1: Interrupted Session                                             │
-│  ───────────────────────────────                                             │
-│                                                                              │
-│  [Session interrupted - context lost, task still active]                     │
-│        │                                                                     │
-│        ▼                                                                     │
-│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐        │
-│  │ pnpm task       │────▶│ Find task with  │────▶│ Set status to   │        │
-│  │   resume        │     │ active status   │     │ implementing    │        │
-│  └─────────────────┘     └─────────────────┘     └─────────────────┘        │
-│                                                          │                   │
-│                                                          ▼                   │
-│                                                  ┌─────────────────┐        │
-│                                                  │ Continue with   │        │
-│                                                  │ pnpm task do    │        │
-│                                                  └─────────────────┘        │
-│                                                                              │
-│  SCENARIO 2: Blocked Task                                                    │
-│  ────────────────────────                                                    │
-│                                                                              │
-│  [Task cannot proceed - external blocker]                                    │
-│        │                                                                     │
-│        ▼                                                                     │
-│  ┌─────────────────────────────────────────────┐                            │
-│  │ pnpm task skip --reason "Waiting for API"   │                            │
-│  └─────────────────┬───────────────────────────┘                            │
-│                    │                                                         │
-│                    ▼                                                         │
-│  ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐        │
-│  │ Mark task as    │────▶│ Clear session   │────▶│ Find next       │        │
-│  │ blocked         │     │                 │     │ available task  │        │
-│  └─────────────────┘     └─────────────────┘     └─────────────────┘        │
-│                                                                              │
-│  SCENARIO 3: Start with Different Active Session                            │
-│  ─────────────────────────────────────                                      │
-│                                                                              │
-│  [Try to start Task 2.1.0 while Task 1.1.0 is active]                       │
-│        │                                                                     │
-│        ▼                                                                     │
-│  ┌─────────────────┐                                                         │
-│  │ pnpm task start │                                                         │
-│  │   2.1.0         │                                                         │
-│  └────────┬────────┘                                                         │
-│           │                                                                  │
-│           ▼                                                                  │
-│  ┌─────────────────────────────────────────────┐                            │
-│  │  ❌ ERROR: ActiveSessionExistsError         │                            │
-│  │                                             │                            │
-│  │  "Active session exists for task 1.1.0"     │                            │
-│  │                                             │                            │
-│  │  Options:                                   │                            │
-│  │  - Complete current: pnpm task commit "..." │                            │
-│  │  - Skip current: pnpm task skip --reason "" │                            │
-│  └─────────────────────────────────────────────┘                            │
-│                                                                              │
-│  Note: Running start on the *active* task (1.1.0) will                       │
-│  simply resume the session without error.                                    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+Review the [CHANGELOG](./CHANGELOG.md) (if available) or [Release Notes](https://github.com/...) for:
+- New features
+- Breaking changes
+- Required migrations
 
-### Git Workflow Integration
+#### Step 3: Update Project Files (If Required)
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          GIT WORKFLOW INTEGRATION                            │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Branch Strategy: One branch per Story                                       │
-│  ─────────────────────────────────────                                       │
-│                                                                              │
-│  main                                                                        │
-│    │                                                                         │
-│    ├── story/S1.1-user-authentication                                        │
-│    │     ├── T1.1.0 commit                                                   │
-│    │     ├── T1.1.1 commit                                                   │
-│    │     └── T1.1.2 commit ──────▶ PR ──────▶ merge to main                 │
-│    │                                                                         │
-│    ├── story/S1.2-user-profile                                               │
-│    │     ├── T1.2.0 commit                                                   │
-│    │     └── T1.2.1 commit ──────▶ PR ──────▶ merge to main                 │
-│    │                                                                         │
-│    └── story/S2.1-dashboard                                                  │
-│          └── ...                                                             │
-│                                                                              │
-│  Commit Message Format:                                                      │
-│  ──────────────────────                                                      │
-│                                                                              │
-│  ┌─────────────────────────────────────────────────────────────────┐        │
-│  │  feat(F1): T1.1.0 - Implement user login                        │        │
-│  │                                                                  │        │
-│  │  - Add login endpoint with JWT                                   │        │
-│  │  - Implement password hashing                                    │        │
-│  │  - Add session management                                        │        │
-│  │                                                                  │        │
-│  │  Story: S1.1                                                     │        │
-│  └─────────────────────────────────────────────────────────────────┘        │
-│                                                                              │
-│  Branch Verification:                                                        │
-│  ────────────────────                                                        │
-│                                                                              │
-│  Before starting a task, CLI verifies:                                       │
-│  1. Current branch matches story branch (auto-switches/creates if needed)   │
-│  2. No other story is in-progress                                            │
-│  3. Task dependencies are completed                                          │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+**Most versions will NOT require project file updates.** However, major versions might:
 
-### Complete Error Handling Matrix
+**When project file updates are needed:**
+1. **Backup your current setup:**
+   ```bash
+   cp -r .taskflow .taskflow.backup
+   cp taskflow.config.json taskflow.config.json.backup
+   ```
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         ERROR HANDLING MATRIX                                │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Error                        │ Trigger                 │ Recovery           │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  NoActiveSessionError         │ do/check/commit/submit  │ pnpm task start   │
-│                               │ without active task     │                   │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  ActiveSessionExistsError     │ start while task        │ submit/skip       │
-│                               │ in-progress             │ current task      │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  TaskNotFoundError            │ Invalid task ID         │ Check task ID     │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  TaskAlreadyCompletedError    │ Start completed task    │ pnpm task next    │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  DependencyNotMetError        │ Start task with         │ Complete          │
-│                               │ incomplete dependencies │ dependencies first│
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  WrongBranchError             │ Not on story branch     │ git checkout      │
-│                               │                         │ story/S...        │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  StoryInProgressError         │ Start task from         │ Complete current  │
-│                               │ different story         │ story first       │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  InvalidWorkflowStateError    │ commit not in           │ pnpm task check   │
-│                               │ committing status       │ to advance        │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  ValidationFailedError        │ check fails in          │ Fix errors,       │
-│                               │ validating status       │ re-run check      │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  CommitError                  │ git add/commit/push     │ Fix git issue,    │
-│                               │ fails                   │ retry commit      │
-│  ─────────────────────────────┼─────────────────────────┼───────────────────│
-│  NoSubtasksCompletedError     │ commit with no          │ Mark subtasks     │
-│                               │ completed subtasks      │ as completed      │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+2. **Reinitialize to get new templates:**
+   ```bash
+   rm -rf .taskflow
+   taskflow init
+   ```
 
----
+3. **Restore your custom settings:**
+   - Edit `taskflow.config.json` to restore your validation commands
+   - Compare `.taskflow.backup/ref/` with `.taskflow/ref/` to restore custom reference files
+   - Your `tasks/` directory and task files are NOT affected
 
-## Retrospective System
+4. **Verify everything works:**
+   ```bash
+   taskflow status
+   taskflow do  # Test on a task
+   ```
 
-The retrospective system tracks error patterns to prevent repeated mistakes:
+**When project file updates are NOT needed:**
+- Simply run the new version
+- Your existing `.taskflow/` directory and task files will work as-is
+- New features will be available automatically
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        RETROSPECTIVE SYSTEM                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌───────────────┐    ┌───────────────┐    ┌───────────────┐                │
-│  │  Validation   │───▶│ Check against │───▶│ Display known │                │
-│  │    Fails      │    │ known patterns│    │ solution      │                │
-│  └───────────────┘    └───────────────┘    └───────────────┘                │
-│                              │                                               │
-│                              │ Not found                                     │
-│                              ▼                                               │
-│                       ┌───────────────┐                                      │
-│                       │ Prompt to add │                                      │
-│                       │ new pattern   │                                      │
-│                       └───────────────┘                                      │
-│                                                                              │
-│  Categories:                                                                 │
-│  • Type Error    - TypeScript compilation errors                             │
-│  • Lint          - ESLint/Biome violations                                   │
-│  • Architecture  - Dependency/import violations                              │
-│  • Runtime       - Runtime errors                                            │
-│  • Build         - Build process failures                                    │
-│  • Test          - Test failures                                             │
-│  • Formatting    - Code style issues                                         │
-│                                                                              │
-│  Criticality Levels:                                                         │
-│  • Critical  - Blocks deployment                                             │
-│  • High      - Must fix before commit                                        │
-│  • Medium    - Should fix soon                                               │
-│  • Low       - Nice to fix                                                   │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Testing
-
-The framework includes 340 unit tests covering all modules:
+#### Step 4: Test the Update
 
 ```bash
-# Run all tests
-pnpm test
+# Test basic commands
+taskflow --version
+taskflow status
 
-# Run with watch mode
-pnpm test:watch
-
-# Run with coverage
-pnpm test:coverage
+# If using MCP server, restart Claude Desktop
 ```
 
-Test structure mirrors source structure:
-- `tests/lib/` - Library module tests
-- `tests/commands/` - Command module tests
+### Basic Workflow Example
 
----
+```bash
+taskflow start 1.1.0        # Start a task
+taskflow do                  # Read instructions
+taskflow check               # Advance through states
+taskflow commit "- Changes"   # Commit and complete
+```
+
+## Packages
+
+- **[@krr2020/taskflow-core](./packages/core/)** - Core commands and CLI
+- **[@krr2020/taskflow-mcp-server](./packages/mcp-server/)** - MCP Server for Claude Desktop
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| **[USAGE.md](./docs/USAGE.md)** | Complete usage guide with step-by-step examples |
+| **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** | Architecture details and module structure |
+| **[WORKFLOW.md](./docs/WORKFLOW.md)** | Workflow states and flow diagrams |
+| **[COMMANDS.md](./docs/COMMANDS.md)** | Complete command reference |
+| **[FAQ.md](./docs/FAQ.md)** | Frequently asked questions and solutions |
 
 ## Quick Reference
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           QUICK REFERENCE                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Standard Workflow:                                                          │
-│  ──────────────────                                                          │
-│  pnpm task start <id>     # Start task                                       │
-│  pnpm task do             # Read SETUP instructions                           │
-│  pnpm task check          # Advance to IMPLEMENTING                          │
-│  pnpm task do             # Read implementation details                      │
-│  (write code)                                                                │
-│  pnpm task check          # Advance through: VERIFYING → VALIDATING          │
-│  pnpm task commit "..."   # Commit and complete (auto-marks completed)       │
-│                                                                              │
-│  Navigation:                                                                 │
-│  ───────────                                                                 │
-│  pnpm task status         # Project overview                                 │
-│  pnpm task next           # Find next task                                   │
-│                                                                              │
-│  Recovery:                                                                   │
-│  ─────────                                                                   │
-│  pnpm task resume         # Resume interrupted session                       │
-│  pnpm task skip           # Block current task                               │
-│                                                                              │
-│  Retrospective:                                                              │
-│  ──────────────                                                              │
-│  pnpm task retro add      # Add error pattern                                │
-│  pnpm task retro list     # View patterns                                    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+taskflow start <id>     # Start task
+taskflow do             # Read instructions for current state
+taskflow check          # Advance to next state / run validations
+taskflow commit "..."    # Commit and complete task
+taskflow status         # View project overview
+taskflow next           # Find next available task
+taskflow resume         # Resume interrupted session
+taskflow skip           # Block current task
 ```
-
----
-
-## Documentation
-
-### Getting Started
-- **[USAGE.md](./USAGE.md)** - Complete usage guide with step-by-step examples
-  - Installation and setup
-  - Complete workflow example (PRD → Tasks → Commit)
-  - CLI reference
-  - MCP Server setup for Claude Desktop
-  - Common patterns and troubleshooting
-
-### Package Documentation
-- **[packages/core/README.md](./packages/core/README.md)** - Core package documentation
-  - 13 Command classes
-  - 8 Library modules
-  - CLI reference
-  - Programmatic usage
-  - Data structures
-
-- **[packages/mcp-server/README.md](./packages/mcp-server/README.md)** - MCP Server documentation
-  - 13 MCP tools
-  - Claude Desktop setup
-  - Tool reference with inputs/outputs
-  - Architecture overview
-
-### Reference Files
-Located in `.taskflow/ref/` after running `taskflow init`:
-- `ai-protocol.md` - AI execution guidelines
-- `task-generator.md` - Task generation instructions
-- `task-executor.md` - Task execution instructions
-- `prd-generator.md` - PRD creation guidelines
-- `coding-standards.md` - Project-specific standards (generated)
-- `ARCHITECTURE-RULES.md` - Architecture patterns (generated)
-- `retrospective.md` - Error pattern database

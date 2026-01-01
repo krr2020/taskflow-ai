@@ -280,7 +280,7 @@ pnpm start
 ## 📚 Related Packages
 
 - **[@krr2020/taskflow-core](https://www.npmjs.com/package/@krr2020/taskflow-core)** - Core logic and CLI
-- **[Main Documentation](../../README.md)** - Complete workflow documentation
+- **[Main Documentation](../README.md)** - Complete workflow documentation
 
 ## 📄 License
 
