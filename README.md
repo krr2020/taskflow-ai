@@ -1,59 +1,123 @@
-# Taskflow - AI Task Management Framework
+# 🚀 Taskflow
 
-A structured task management CLI framework designed for AI-assisted development workflows. Taskflow enforces a consistent workflow pattern to ensure quality, traceability, and automated validation at every step.
+> AI-powered task management framework for structured development workflows
 
-## Overview
+Taskflow brings structure, quality gates, and traceability to your development process. Perfect for teams and AI-assisted coding.
 
-Taskflow provides a state-machine-based workflow for executing development tasks. Each task progresses through defined states with validation gates, ensuring:
+---
 
-- **Consistency**: Every task follows the same execution pattern
-- **Traceability**: Git commits are linked to specific tasks
-- **Quality**: Automated validation before commits
-- **Learning**: Error patterns are tracked for prevention
+## ✨ What Taskflow Does
 
-## Quick Start
+| ✅ Feature | 📖 Description |
+|--------------|------------------|
+| **State Machine** | Tasks follow a clear path: setup → implement → verify → validate → commit |
+| **Quality Gates** | Automated checks (lint, tests, build) before every commit |
+| **Git Integration** | Automatic branch management and conventional commit messages |
+| **AI-Ready** | Designed for Claude Desktop, Cursor, and other AI agents |
+| **Error Learning** | Tracks common errors and their solutions |
 
-### Installation Options
+---
 
-**Option 1: Global CLI (Recommended for most users)**
+## 📦 Installation
+
+Choose your installation method:
+
+### Option A: Global CLI (Recommended)
+
+Best for: Most developers who want to use Taskflow across multiple projects
+
 ```bash
 npm install -g @krr2020/taskflow-core
 ```
 
-**Option 2: MCP Server for Claude Desktop**
+**Command:** `taskflow <command>`
+
+---
+
+### Option B: MCP Server for Claude Desktop
+
+Best for: Using Claude Desktop with AI assistance
+
 ```bash
 npm install -g @krr2020/taskflow-mcp-server
 ```
 
-**Option 3: As Dev Dependency (for local development)**
+**Setup:** See [MCP Configuration](#mcp-server-setup) below
+
+---
+
+### Option C: Dev Dependency
+
+Best for: Adding Taskflow to an existing project
+
 ```bash
 cd your-project
 npm install -D @krr2020/taskflow-core
 ```
 
-### Which Command to Use?
+**Command:** `npx @krr2020/taskflow-core <command>`
 
-After installation, you have two ways to run Taskflow:
-
-| If You Installed... | Use This Command... | Example |
-|-------------------|---------------------|-----------|
-| **Globally** (`npm install -g`) | `taskflow` | `taskflow start 1.1.0` |
-| **As Dev Dependency** (`npm install -D`) | `pnpm task` | `pnpm task start 1.1.0` |
-| **npx (without install)** | `npx @krr2020/taskflow-core` | `npx @krr2020/taskflow-core start 1.1.0` |
-
-**Note:** Throughout this documentation, we use `taskflow` for simplicity. Replace with `pnpm task` if using as dev dependency.
-
-### After Installation
-
-Once Taskflow is installed, follow these steps in your project:
-
-#### 1. Initialize Your Project
+**Example:**
 ```bash
-cd your-project
-taskflow init your-project-name
+npx @krr2020/taskflow-core init my-project
+npx @krr2020/taskflow-core status
 ```
 
-This creates:
+💡 **Note:** Want shorter commands (`taskflow` or `pnpm task`)? See [Manual Setup Guide](#manual-setup) below.
+
+---
+
+## 🎯 Quick Start (5 Minutes)
+
+### Step 1️⃣: Navigate to Your Project
+
+```bash
+cd your-project-directory
+# If installed globally
+taskflow init my-project
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core init my-project
+# If installed globally
+taskflow init my-project
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core init my-project
+# If installed globally
+taskflow init my-project
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core init my-project
+# If installed globally
+taskflow init my-project
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core init my-project
+# If installed globally
+taskflow init my-project
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core init my-project
+# If installed globally
+taskflow init my-project
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core init my-project
+> ⚠️ **Important:** Installation only downloads the package. You MUST initialize it to set up your project.
+
+```bash
+# If installed globally
+taskflow init my-project
+
+# If installed as dev dependency AND added "task" script to package.json
+pnpm task init my-project
+
+# OR if installed as dev dependency WITHOUT adding script (using npx)
+npx @krr2020/taskflow-core init my-project
+pnpm task init my-project
+```
+
+**What happens:** Creates these files and directories:
 ```
 your-project/
 ├── taskflow.config.json      # Configuration
@@ -63,177 +127,440 @@ your-project/
     └── logs/                  # Validation logs (empty initially)
 ```
 
-#### 2. Create Your First PRD
+---
+
+### Step 3️⃣: Create Your First Feature PRD
+
 ```bash
+# If installed globally
 taskflow prd create user-authentication
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core prd create user-authentication
+# If installed globally
+taskflow prd create user-authentication
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core prd create user-authentication
+# If installed globally
+taskflow prd create user-authentication
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core prd create user-authentication
+# If installed globally
+taskflow prd create user-authentication
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core prd create user-authentication
+# If installed globally
+taskflow prd create user-authentication
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core prd create user-authentication
+# If installed globally
+taskflow prd create user-authentication
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core prd create user-authentication
+# If installed globally
+taskflow prd create user-authentication
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core prd create user-authentication
+npx @krr2020/taskflow-core init my-project
+pnpm task prd create user-authentication
 ```
 
-Edit the generated PRD to define your feature requirements.
+**What happens:** Creates `tasks/prds/YYYY-MM-DD-user-authentication.md`
 
-#### 3. Generate Tasks
+Edit this file to define your feature:
+- User stories
+- Technical requirements
+- Dependencies
+- Success criteria
+
+---
+
+### Step 4️⃣: Generate Tasks
+
 ```bash
-taskflow tasks generate tasks/prds/YYYY-MM-DD-feature-name.md
+# If installed globally
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+# If installed globally
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+# If installed globally
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+# If installed globally
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+# If installed globally
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+# If installed globally
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+# If installed globally
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+npx @krr2020/taskflow-core init my-project
+pnpm task tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
 ```
 
-This creates a complete task breakdown with features, stories, and individual tasks.
+**What happens:** Analyzes your PRD and creates:
+- Features (F1, F2, ...)
+- Stories (S1.1, S1.2, ...)
+- Tasks (T1.1.0, T1.1.1, ...)
+- Dependencies between tasks
 
-#### 4. Start Working
+---
+
+### Step 5️⃣: Start Your First Task
+
 ```bash
-taskflow status            # View all tasks
-taskflow start 1.1.0       # Start first task
-taskflow do                # Read instructions
-taskflow check             # Advance through states
-taskflow commit "- Done"   # Commit and complete
+# If installed globally
+taskflow start 1.1.0
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core start 1.1.0
+# If installed globally
+taskflow start 1.1.0
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core start 1.1.0
+# If installed globally
+taskflow start 1.1.0
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core start 1.1.0
+# If installed globally
+taskflow start 1.1.0
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core start 1.1.0
+# If installed globally
+taskflow start 1.1.0
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core start 1.1.0
+# If installed globally
+taskflow start 1.1.0
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core start 1.1.0
+# If installed globally
+taskflow start 1.1.0
+
+# If installed as dev dependency
+npx @krr2020/taskflow-core start 1.1.0
+npx @krr2020/taskflow-core init my-project
+pnpm task start 1.1.0
 ```
 
-#### 5. Complete the Workflow
-Repeat step 4 for each task. Taskflow will guide you through the complete workflow:
-- **setup** → Understand requirements
-- **implementing** → Write code
-- **verifying** → Self-review
-- **validating** → Run automated checks
-- **committing** → Commit changes
-- **completed** → Task done!
+**What happens:**
+- Creates/switches to Git branch: `story/S1.1-*`
+- Loads task context
+- Sets status to `setup`
 
-### AI Agent Integration
+---
 
-When using Taskflow with AI agents (like Claude Desktop, Cursor, etc.):
+## 🔄 Daily Workflow
 
-#### For MCP Server (Claude Desktop)
+Once set up, this is your daily routine:
 
-Configure Claude Desktop to use the MCP Server:
+```bash
+# 1. Check what to work on
+taskflow status
+taskflow next
+
+# 2. Start a task
+taskflow start 1.1.0
+
+# 3. Read instructions for current state
+taskflow do
+
+# 4. Write code...
+
+# 5. Advance to next state (runs validations)
+taskflow check
+
+# 6. Repeat until commit-ready, then:
+taskflow commit "- Implemented feature X
+             - Fixed bug Y
+             - Added tests"
+```
+
+## 📊 Task Lifecycle Explained
+
+Each task goes through these states:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                     │
+│   setup     →   implementing   →   verifying      │
+│      ↓              ↓                ↓              │
+│   (understand)  (write code)   (self-review)      │
+│                                ↓                ↓              │
+│                           validating   →   committing        │
+│                              ↓              ↓              │
+│                         (run checks)   (git commit)        │
+│                                                     │
+│                           completed ✓                    │
+│                                                     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| State | What You Do | Command |
+|--------|--------------|----------|
+| **setup** | Read requirements, understand context | `taskflow do` |
+| **implementing** | Write code, implement feature | `taskflow check` (to advance) |
+| **verifying** | Self-review, check for edge cases | `taskflow check` (to advance) |
+| **validating** | Wait for automated checks to run | `taskflow check` (to run) |
+| **committing** | Ready to commit changes | `taskflow commit "- message"` |
+| **completed** | Done! Move to next task | (start next task) |
+
+---
+
+## 🤖 Using with AI Agents
+
+### For Claude Desktop (MCP Server)
+
+**Setup:**
+
+1. Install MCP Server: `npm install -g @krr2020/taskflow-mcp-server`
+2. Open Claude Desktop config:
+   - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+3. Add this configuration:
+   ```json
+   {
+     "mcpServers": {
+       "taskflow": {
+         "command": "npx",
+         "args": ["-y", "@krr2020/taskflow-mcp-server"]
+       }
+     }
+   }
+   ```
+4. Restart Claude Desktop
+
+**How it works:**
+- Claude sees 13 Taskflow tools in tools menu (🔌)
+- Claude automatically calls Taskflow commands
+- Claude reads instructions and follows workflow
+- Claude generates proper commit messages
+
+---
+
+### For Other AI Agents (Cursor, Windsurf, etc.)
+
+**Prompt your AI:**
+```
+Use Taskflow to manage this task. Follow this pattern:
+
+1. Start to task: taskflow start <id>
+2. Read instructions: taskflow do
+3. Implement the feature
+4. Advance states: taskflow check
+5. When complete: taskflow commit "- summary of changes"
+
+Replace `taskflow` with `pnpm task` if you installed as dev dependency.
+```
+
+---
+
+
+## 🔧 Manual Setup (Optional)
+
+### Add "task" Script to package.json
+
+Want shorter commands (`pnpm task` instead of `npx @krr2020/taskflow-core`)? Add this to your `package.json`:
+
 ```json
 {
-  "mcpServers": {
-    "taskflow": {
-      "command": "npx",
-      "args": ["-y", "@krr2020/taskflow-mcp-server"]
+  "scripts": {
+    "task": "node node_modules/@krr2020/taskflow-core/bin/taskflow.js"
+  }
+}
+```
+Then use:
+```bash
+pnpm task init my-project
+pnpm task status
+pnpm task start 1.1.0
+```
+
+### Why Manual Setup?
+
+- **Pros:** Shorter commands (`pnpm task` vs `npx @krr2020/taskflow-core`)
+- **Cons:** Must manually add script to package.json
+- **Recommendation:** Use `npx` if you prefer zero-setup workflow. Use manual script if you type commands frequently and want brevity.## 📚 Reference
+
+### Core Commands
+
+```bash
+# Task Management
+taskflow start <id>     # Begin working on a task
+taskflow do             # Show instructions for current state
+taskflow check          # Advance to next state / run validations
+taskflow commit "..."    # Commit and complete task
+
+# Navigation
+taskflow status         # View project progress
+taskflow status <id>   # View feature/story details
+taskflow next           # Find next available task
+
+# Recovery
+taskflow resume         # Resume interrupted session
+taskflow skip           # Block current task
+
+# PRD & Tasks
+taskflow prd create <name>           # Create PRD template
+taskflow prd generate-arch <file>    # Generate architecture docs
+taskflow tasks generate <file>        # Generate tasks from PRD
+```
+
+---
+
+### Configuration
+
+Edit `taskflow.config.json` to customize:
+
+```json
+{
+  "project": {
+    "name": "my-project"
+  },
+  "branching": {
+    "strategy": "per-story",
+    "base": "main",
+    "prefix": "story/"
+  },
+  "validation": {
+    "commands": {
+      "format": "biome check --write .",
+      "lint": "biome lint .",
+      "test": "vitest run",
+      "type-check": "tsc --noEmit"
     }
   }
 }
 ```
 
-The AI agent will automatically:
-1. Use `taskflow` commands through MCP tools
-2. Follow the defined workflow states
-3. Read instructions at each step
-4. Execute validations before committing
-5. Generate proper commit messages
+---
 
-#### For CLI-Based AI Agents
+## 🆘 Troubleshooting
 
-If using a non-MCP AI agent:
+### "Command not found: taskflow"
 
-**Important:** Instruct the AI agent to:
-1. Use `taskflow` commands (or `pnpm task` if dev dependency)
-2. Follow the workflow: `start` → `do` → `check` → `commit`
-3. Always read instructions via `taskflow do`
-4. Run validations via `taskflow check`
-5. Commit via `taskflow commit` with proper bullet points
+**Cause:** Installed as dev dependency but using wrong command
 
-Example prompt for AI agent:
-```
-Use Taskflow to manage this task. Start with `taskflow start <task-id>`,
-then follow the workflow states and commit when complete.
-```
-
-### Updating to New Versions
-
-When a new version of Taskflow is released:
-
-#### Step 1: Update the Package
+**Solution:**
 ```bash
-# If installed globally
-npm update -g @krr2020/taskflow-core
-npm update -g @krr2020/taskflow-mcp-server
-
-# If installed as dev dependency
-npm update @krr2020/taskflow-core
+# Use this instead
+pnpm task init
 ```
 
-#### Step 2: Check for Breaking Changes
+---
 
-Review the [CHANGELOG](./CHANGELOG.md) (if available) or [Release Notes](https://github.com/...) for:
-- New features
-- Breaking changes
-- Required migrations
+### "No .taskflow directory"
 
-#### Step 3: Update Project Files (If Required)
+**Cause:** Project not initialized yet
 
-**Most versions will NOT require project file updates.** However, major versions might:
-
-**When project file updates are needed:**
-1. **Backup your current setup:**
-   ```bash
-   cp -r .taskflow .taskflow.backup
-   cp taskflow.config.json taskflow.config.json.backup
-   ```
-
-2. **Reinitialize to get new templates:**
-   ```bash
-   rm -rf .taskflow
-   taskflow init
-   ```
-
-3. **Restore your custom settings:**
-   - Edit `taskflow.config.json` to restore your validation commands
-   - Compare `.taskflow.backup/ref/` with `.taskflow/ref/` to restore custom reference files
-   - Your `tasks/` directory and task files are NOT affected
-
-4. **Verify everything works:**
-   ```bash
-   taskflow status
-   taskflow do  # Test on a task
-   ```
-
-**When project file updates are NOT needed:**
-- Simply run the new version
-- Your existing `.taskflow/` directory and task files will work as-is
-- New features will be available automatically
-
-#### Step 4: Test the Update
-
+**Solution:**
 ```bash
-# Test basic commands
-taskflow --version
-taskflow status
-
-# If using MCP server, restart Claude Desktop
+# Initialize first
+pnpm task init my-project
 ```
 
-### Basic Workflow Example
+---
 
+### "Active session exists"
+
+**Cause:** Tried to start a new task while one is already in progress
+
+**Solution:**
 ```bash
-taskflow start 1.1.0        # Start a task
-taskflow do                  # Read instructions
-taskflow check               # Advance through states
-taskflow commit "- Changes"   # Commit and complete
+# Complete current task
+pnpm task commit "- Changes"
+
+# Or block it
+pnpm task skip --reason "Reason"
 ```
 
-## Packages
+---
 
-- **[@krr2020/taskflow-core](./packages/core/)** - Core commands and CLI
-- **[@krr2020/taskflow-mcp-server](./packages/mcp-server/)** - MCP Server for Claude Desktop
+### Validation failed
 
-## Documentation
+**Cause:** Automated checks (lint, tests) didn't pass
+
+**Solution:**
+```bash
+# 1. Read the error
+# 2. Check logs: .taskflow/logs/
+# 3. Fix the errors
+# 4. Try again
+pnpm task check
+```
+
+---
+
+## 📦 Package Structure
+
+```
+taskflow-ai/
+├── packages/
+│   ├── core/                    # Main package
+│   │   ├── src/
+│   │   │   ├── commands/       # 13 command classes
+│   │   │   └── lib/           # 8 library modules
+│   │   └── bin/
+│   │       └── taskflow.js     # CLI entry point
+│   └── mcp-server/             # MCP server package
+└── docs/                         # This documentation
+    ├── USAGE.md
+    ├── ARCHITECTURE.md
+    ├── WORKFLOW.md
+    ├── COMMANDS.md
+    └── FAQ.md
+```
+
+---
+
+## 📖 Documentation
 
 | Document | Description |
-|----------|-------------|
-| **[USAGE.md](./docs/USAGE.md)** | Complete usage guide with step-by-step examples |
-| **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** | Architecture details and module structure |
-| **[WORKFLOW.md](./docs/WORKFLOW.md)** | Workflow states and flow diagrams |
+|-----------|-------------|
+| **[USAGE.md](./docs/USAGE.md)** | Step-by-step usage guide with examples |
+| **[WORKFLOW.md](./docs/WORKFLOW.md)** | Detailed workflow diagrams and state flows |
 | **[COMMANDS.md](./docs/COMMANDS.md)** | Complete command reference |
-| **[FAQ.md](./docs/FAQ.md)** | Frequently asked questions and solutions |
+| **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** | Technical architecture and module details |
+| **[FAQ.md](./docs/FAQ.md)** | Frequently asked questions |
 
-## Quick Reference
+---
 
-```
-taskflow start <id>     # Start task
-taskflow do             # Read instructions for current state
-taskflow check          # Advance to next state / run validations
-taskflow commit "..."    # Commit and complete task
-taskflow status         # View project overview
-taskflow next           # Find next available task
-taskflow resume         # Resume interrupted session
-taskflow skip           # Block current task
-```
+## 🚀 Getting Help
+
+- **Documentation:** Check `/docs` folder for detailed guides
+- **Issues:** Report bugs on GitHub repository
+- **Discussions:** Ask questions in GitHub Discussions
+
+---
+
+**Made with ❤️ for better development workflows**
