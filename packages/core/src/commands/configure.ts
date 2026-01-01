@@ -389,7 +389,7 @@ export class ConfigureAICommand extends BaseCommand {
 					"Invalid model definition",
 					[
 						"Model definition must be valid JSON.",
-						'Example: \'{"provider":"anthropic","model":"claude-3-5-sonnet","apiKey":"${ANTHROPIC_API_KEY}"}\'',
+						'Example: \'{"provider":"anthropic","model":"claude-3-5-sonnet","apiKey":"$${ANTHROPIC_API_KEY"}\'',
 					],
 					"Provide valid JSON for model definition.",
 				);
@@ -458,76 +458,56 @@ export class ConfigureAICommand extends BaseCommand {
 		lines.push("─".repeat(60));
 		lines.push(`Enabled: ${(aiConfig.enabled as boolean) ? "✓" : "✗"}`);
 
-		// New format: models and usage
-		if (aiConfig.models && typeof aiConfig.models === "object") {
+		// Display provider and API key
+		lines.push("");
+		lines.push(`Provider: ${aiConfig.provider || "Not configured"}`);
+		lines.push(
+			`API Key: ${aiConfig.apiKey ? "***configured***" : "Not configured"}`,
+		);
+
+		// Display models for each phase
+		const models = aiConfig.models as Record<string, unknown>;
+		if (models && typeof models === "object") {
 			lines.push("");
-			lines.push("Model Definitions:");
-			const models = aiConfig.models as Record<string, Record<string, unknown>>;
-			for (const [key, model] of Object.entries(models)) {
-				lines.push(`  ${key}:`);
-				lines.push(`    Provider: ${model.provider}`);
-				lines.push(`    Model: ${model.model}`);
-				if (model.baseUrl) {
-					lines.push(`    Base URL: ${model.baseUrl}`);
+			lines.push("Models:");
+			const getPhaseModel = (phase: string): string => {
+				if (typeof models[phase] === "string") {
+					return models[phase] as string;
 				}
-				lines.push(
-					`    API Key: ${model.apiKey ? "***configured***" : "Not configured"}`,
-				);
-			}
+				if (typeof models[phase] === "object" && models[phase] !== null) {
+					return (models[phase] as Record<string, unknown>).model as string;
+				}
+				return "Not configured";
+			};
 
-			if (aiConfig.usage && typeof aiConfig.usage === "object") {
-				lines.push("");
-				lines.push("Usage Mapping:");
-				const usage = aiConfig.usage as Record<string, unknown>;
-				lines.push(`  Default: ${usage.default || "Not configured"}`);
-				lines.push(
-					`  Planning: ${(usage.planning as string) || "Uses default"}`,
-				);
-				lines.push(
-					`  Execution: ${(usage.execution as string) || "Uses default"}`,
-				);
-				lines.push(
-					`  Analysis: ${(usage.analysis as string) || "Uses default"}`,
-				);
-			}
-		} else {
-			// Legacy format support
-			lines.push("");
-			lines.push(`Provider: ${aiConfig.provider || "Not configured"}`);
-			lines.push(
-				`API Key: ${aiConfig.apiKey ? "***configured***" : "Not configured"}`,
-			);
-
-			if (aiConfig.models && typeof aiConfig.models === "object") {
-				const models = aiConfig.models as Record<string, unknown>;
-				lines.push("");
-				lines.push("Models (Legacy Format):");
-				lines.push(`  Default: ${models.default || "Not configured"}`);
-				lines.push(`  Planning: ${models.planning || "Uses default"}`);
-				lines.push(`  Execution: ${models.execution || "Uses default"}`);
-				lines.push(`  Analysis: ${models.analysis || "Uses default"}`);
-			}
-
-			lines.push("");
-			lines.push("Per-Phase Providers (Legacy):");
-			lines.push(
-				`  Planning: ${aiConfig.planningProvider || "Uses default provider"}`,
-			);
-			lines.push(
-				`  Execution: ${aiConfig.executionProvider || "Uses default provider"}`,
-			);
-			lines.push(
-				`  Analysis: ${aiConfig.analysisProvider || "Uses default provider"}`,
-			);
-			lines.push("");
-			lines.push("Base URLs:");
-			lines.push(
-				`  Ollama: ${aiConfig.ollamaBaseUrl || "http://localhost:11434"}`,
-			);
-			lines.push(
-				`  OpenAI: ${aiConfig.openaiBaseUrl || "https://api.openai.com/v1"}`,
-			);
+			lines.push(`  Default: ${getPhaseModel("default")}`);
+			lines.push(`  Planning: ${getPhaseModel("planning")}`);
+			lines.push(`  Execution: ${getPhaseModel("execution")}`);
+			lines.push(`  Analysis: ${getPhaseModel("analysis")}`);
 		}
+
+		// Display per-phase providers
+		lines.push("");
+		lines.push("Per-Phase Providers:");
+		lines.push(
+			`  Planning: ${aiConfig.planningProvider || "Uses default provider"}`,
+		);
+		lines.push(
+			`  Execution: ${aiConfig.executionProvider || "Uses default provider"}`,
+		);
+		lines.push(
+			`  Analysis: ${aiConfig.analysisProvider || "Uses default provider"}`,
+		);
+
+		// Display base URLs
+		lines.push("");
+		lines.push("Base URLs:");
+		lines.push(
+			`  Ollama: ${aiConfig.ollamaBaseUrl || "http://localhost:11434"}`,
+		);
+		lines.push(
+			`  OpenAI: ${aiConfig.openaiBaseUrl || "https://api.openai.com/v1"}`,
+		);
 
 		return lines.join("\n");
 	}

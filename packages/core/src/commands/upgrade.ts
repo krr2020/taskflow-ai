@@ -113,7 +113,8 @@ export class UpgradeCommand extends BaseCommand {
 			return {
 				success: false,
 				output,
-				nextSteps: "Review your customizations, then run with --force if you want to proceed",
+				nextSteps:
+					"Review your customizations, then run with --force if you want to proceed",
 			};
 		}
 

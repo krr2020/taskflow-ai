@@ -164,7 +164,11 @@ describe("ModelSelector", () => {
 				provider: LLMProviderType.Anthropic,
 				apiKey: "test-key",
 				models: {
-					default: "claude-3-5-sonnet-20241022",
+					default: {
+						provider: "anthropic",
+						model: "claude-3-5-sonnet-20241022",
+						apiKey: "test-key",
+					},
 				},
 			});
 
@@ -185,7 +189,11 @@ describe("ModelSelector", () => {
 				provider: LLMProviderType.Anthropic,
 				apiKey: "test-key",
 				models: {
-					default: "claude-3-5-sonnet-20241022",
+					default: {
+						provider: "anthropic",
+						model: "claude-3-5-sonnet-20241022",
+						apiKey: "test-key",
+					},
 				},
 			});
 
@@ -200,10 +208,26 @@ describe("ModelSelector", () => {
 				provider: LLMProviderType.Anthropic,
 				apiKey: "test-key",
 				models: {
-					default: "claude-3-5-sonnet-20241022",
-					planning: "claude-opus-4",
-					execution: "gemini-pro-2.0",
-					analysis: "claude-sonnet-4-20250514",
+					default: {
+						provider: "anthropic",
+						model: "claude-3-5-sonnet-20241022",
+						apiKey: "test-key",
+					},
+					planning: {
+						provider: "anthropic",
+						model: "claude-opus-4",
+						apiKey: "test-key",
+					},
+					execution: {
+						provider: "openai-compatible",
+						model: "gemini-pro-2.0",
+						apiKey: "test-key",
+					},
+					analysis: {
+						provider: "anthropic",
+						model: "claude-sonnet-4-20250514",
+						apiKey: "test-key",
+					},
 				},
 			});
 
@@ -220,8 +244,16 @@ describe("ModelSelector", () => {
 				provider: LLMProviderType.Anthropic,
 				apiKey: "test-key",
 				models: {
-					default: "claude-3-5-sonnet-20241022",
-					planning: "claude-opus-4",
+					default: {
+						provider: "anthropic",
+						model: "claude-3-5-sonnet-20241022",
+						apiKey: "test-key",
+					},
+					planning: {
+						provider: "anthropic",
+						model: "claude-opus-4",
+						apiKey: "test-key",
+					},
 				},
 			});
 
@@ -242,10 +274,25 @@ describe("ModelSelector", () => {
 				provider: LLMProviderType.Anthropic,
 				apiKey: "test-key",
 				models: {
-					default: "claude-3-5-sonnet-20241022",
-					planning: "claude-opus-4",
-					execution: "gpt-4o",
-					analysis: "llama2",
+					default: {
+						provider: "anthropic",
+						model: "claude-3-5-sonnet-20241022",
+						apiKey: "test-key",
+					},
+					planning: {
+						provider: "anthropic",
+						model: "claude-opus-4",
+						apiKey: "anthropic-key",
+					},
+					execution: {
+						provider: "openai-compatible",
+						model: "gpt-4o",
+						apiKey: "openai-key",
+					},
+					analysis: {
+						provider: "ollama",
+						model: "llama2",
+					},
 				},
 				planningProvider: LLMProviderType.Anthropic,
 				planningApiKey: "anthropic-key",
@@ -303,7 +350,11 @@ describe("ProviderFactory", () => {
 			provider: LLMProviderType.Anthropic,
 			apiKey: "test-key",
 			models: {
-				default: "claude-3-5-sonnet-20241022",
+				default: {
+					provider: "anthropic",
+					model: "claude-3-5-sonnet-20241022",
+					apiKey: "test-key",
+				},
 			},
 		});
 

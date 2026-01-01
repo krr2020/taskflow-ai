@@ -35,19 +35,35 @@ export class StartCommand extends BaseCommand {
 		// Load tasks progress
 		const tasksProgress = loadTasksProgress(paths.tasksDir);
 
-		// Check for existing active session
-		const activeTask = findActiveTask(paths.tasksDir, tasksProgress);
-		if (activeTask && activeTask.taskId !== taskId) {
-			throw new ActiveSessionExistsError(activeTask.taskId);
-		}
-
-		// Find the task
+		// Find task first to check if it's intermittent
 		const location = findTaskLocation(tasksProgress, taskId);
 		if (!location) {
 			throw new TaskNotFoundError(taskId);
 		}
 
-		const { task, story } = location;
+		const { task } = location;
+
+		// Check for existing active session
+		const activeTask = findActiveTask(paths.tasksDir, tasksProgress);
+
+		// Allow starting intermittent tasks even if active task exists
+		const isSwitchingToIntermittent = task.isIntermittent;
+		if (
+			activeTask &&
+			activeTask.taskId !== taskId &&
+			!isSwitchingToIntermittent
+		) {
+			throw new ActiveSessionExistsError(activeTask.taskId);
+		}
+
+		// If active task exists and we're starting an intermittent task, show warning
+		if (activeTask && isSwitchingToIntermittent) {
+			console.log(
+				`\n⚠️  Switching to intermittent task. Main task ${activeTask.taskId} is paused.\n`,
+			);
+		}
+
+		const { story } = location;
 
 		// Check if task is already completed
 		if (task.status === "completed") {

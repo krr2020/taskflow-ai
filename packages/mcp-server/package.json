@@ -1,6 +1,6 @@
 {
-	"name": "@krr2020/taskflow-mcp-server",
-	"version": "0.1.0-beta.4",
+	"name": "@krr2020/taskflow-mcp",
+	"version": "0.1.0-beta.1",
 	"description": "MCP Server for Taskflow",
 	"license": "MIT",
 	"publishConfig": {
@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"@modelcontextprotocol/sdk": "1.25.1",
-		"@krr2020/taskflow-core": "workspace:*",
+		"@krr2020/taskflow": "workspace:*",
 		"zod": "4.3.2"
 	},
 	"devDependencies": {

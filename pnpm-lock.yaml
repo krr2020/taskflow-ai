@@ -76,7 +76,7 @@ importers:
 
   packages/mcp-server:
     dependencies:
-      '@krr2020/taskflow-core':
+      '@krr2020/taskflow':
         specifier: workspace:*
         version: link:../core
       '@modelcontextprotocol/sdk':

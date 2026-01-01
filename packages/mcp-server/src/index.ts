@@ -16,7 +16,7 @@ import {
 	StartCommand,
 	StatusCommand,
 	TasksGenerateCommand,
-} from "@krr2020/taskflow-core";
+} from "@krr2020/taskflow";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {

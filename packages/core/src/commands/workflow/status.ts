@@ -60,12 +60,36 @@ export class StatusCommand extends BaseCommand {
 		const stats = calculateProgressStats(tasksProgress);
 		const activeTask = findActiveTask(tasksDir, tasksProgress);
 
-		const featuresList = tasksProgress.features
+		// Separate F0 (intermittent) from other features
+		const intermittentFeature = tasksProgress.features.find(
+			(f) => f.id === "0",
+		);
+		const mainFeatures = tasksProgress.features.filter((f) => f.id !== "0");
+
+		const mainFeaturesList = mainFeatures
 			.map((f: Feature) => {
 				const statusIcon = this.getStatusIcon(f.status);
 				return `  ${statusIcon} F${f.id}: ${f.title} (${f.status})`;
 			})
 			.join("\n");
+
+		const intermittentTasksList =
+			intermittentFeature && intermittentFeature.stories.length > 0
+				? intermittentFeature.stories
+						.flatMap((s: Story) =>
+							s.tasks.map((t: TaskRef) => ({
+								task: t,
+								story: s,
+								feature: intermittentFeature,
+							})),
+						)
+						.filter((item) => item.task.status !== "completed")
+						.map((item) => {
+							const statusIcon = this.getStatusIcon(item.task.status);
+							return `  ${statusIcon} T${item.task.id}: ${item.task.title} (${item.task.status}) 🔄`;
+						})
+						.join("\n") || "  No intermittent tasks"
+				: "  No intermittent tasks";
 
 		return this.success(
 			[
@@ -81,9 +105,13 @@ export class StatusCommand extends BaseCommand {
 					? `ACTIVE TASK: ${activeTask.taskId} (${activeTask.content.status})`
 					: "No active task",
 				"",
-				"FEATURES:",
+				"MAIN FEATURES:",
 				"─".repeat(60),
-				featuresList || "  No features",
+				mainFeaturesList || "  No main features",
+				"",
+				"INTERMITTENT TASKS (Side Tasks):",
+				"─".repeat(60),
+				intermittentTasksList,
 			].join("\n"),
 			[
 				"View detailed status:",

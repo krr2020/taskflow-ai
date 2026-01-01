@@ -7,6 +7,7 @@ Frequently asked questions and solutions for common issues.
 - [Installation & Setup](#installation--setup)
 - [Project Initialization](#project-initialization)
 - [Task Workflow](#task-workflow)
+- [Intermittent Tasks](#intermittent-tasks)
 - [Error Messages](#error-messages)
 - [Git Integration](#git-integration)
 - [Validation Issues](#validation-issues)
@@ -23,12 +24,12 @@ Frequently asked questions and solutions for common issues.
 
 1. **Global CLI Installation:**
    ```bash
-   npm install -g @krr2020/taskflow-core
+   npm install -g @krr2020/taskflow
    ```
 
 2. **MCP Server for Claude Desktop:**
    ```bash
-   npm install -g @krr2020/taskflow-mcp-server
+   npm install -g @krr2020/taskflow-mcp
    ```
 
 ### Q: Installation completed but `taskflow` command not found?
@@ -52,20 +53,20 @@ source ~/.bashrc  # or ~/.zshrc
 
 **Solution 2: Use npx (works without global install)**
 ```bash
-npx @krr2020/taskflow-core init
-npx @krr2020/taskflow-core status
+npx @krr2020/taskflow init
+npx @krr2020/taskflow status
 ```
 
 **Solution 3: Reinstall with npm**
 ```bash
-npm uninstall -g @krr2020/taskflow-core
-npm install -g @krr2020/taskflow-core
+npm uninstall -g @krr2020/taskflow
+npm install -g @krr2020/taskflow
 ```
 
 **Solution 4: Clear npm cache and reinstall**
 ```bash
 npm cache clean --force
-npm install -g @krr2020/taskflow-core
+npm install -g @krr2020/taskflow
 ```
 
 ### Q: I installed a new version but it's not working. What should I do?
@@ -74,8 +75,8 @@ npm install -g @krr2020/taskflow-core
 
 1. **Uninstall old version:**
    ```bash
-   npm uninstall -g @krr2020/taskflow-core
-   npm uninstall -g @krr2020/taskflow-mcp-server
+   npm uninstall -g @krr2020/taskflow
+   npm uninstall -g @krr2020/taskflow-mcp
    ```
 
 2. **Clear npm cache:**
@@ -85,8 +86,8 @@ npm install -g @krr2020/taskflow-core
 
 3. **Install new version:**
    ```bash
-   npm install -g @krr2020/taskflow-core
-   npm install -g @krr2020/taskflow-mcp-server
+   npm install -g @krr2020/taskflow
+   npm install -g @krr2020/taskflow-mcp
    ```
 
 4. **Verify installation:**
@@ -107,7 +108,7 @@ npm install -g @krr2020/taskflow-core
 **A:** Currently, Taskflow requires npm or pnpm. However, you can use `npx` without global installation:
 
 ```bash
-npx @krr2020/taskflow-core <command>
+npx @krr2020/taskflow <command>
 ```
 
 ### Q: I'm getting permission errors during installation?
@@ -116,7 +117,7 @@ npx @krr2020/taskflow-core <command>
 
 **Solution 1: Use sudo (macOS/Linux)**
 ```bash
-sudo npm install -g @krr2020/taskflow-core
+sudo npm install -g @krr2020/taskflow
 ```
 
 **Solution 2: Fix npm permissions (recommended)**
@@ -134,7 +135,7 @@ export PATH="~/.npm-global/bin:$PATH"
 source ~/.bashrc
 
 # Install without sudo
-npm install -g @krr2020/taskflow-core
+npm install -g @krr2020/taskflow
 ```
 
 **Solution 3: Use nvm (Node Version Manager)**
@@ -149,7 +150,7 @@ source ~/.bashrc
 nvm install node
 
 # Install Taskflow
-npm install -g @krr2020/taskflow-core
+npm install -g @krr2020/taskflow
 ```
 
 ---
@@ -222,12 +223,12 @@ cp ~/coding-standards-backup.md .taskflow/ref/coding-standards.md
 
 2. **Uninstall old version:**
    ```bash
-   npm uninstall -g @krr2020/taskflow-core
+   npm uninstall -g @krr2020/taskflow
    ```
 
 3. **Install new version:**
    ```bash
-   npm install -g @krr2020/taskflow-core
+   npm install -g @krr2020/taskflow
    ```
 
 4. **Test in a new branch:**
@@ -347,6 +348,152 @@ tasks/F1/S1.1/T1.1.0.json
 ```
 
 And update the `status` field manually.
+
+---
+
+## Intermittent Tasks
+
+### Q: What are intermittent tasks?
+
+**A:** Intermittent tasks (also called "side tasks") are for quick fixes, bug fixes, or small work that can be done independently of main feature work.
+
+**Use Cases:**
+- Quick bug fixes unrelated to current feature
+- Adding missing tests discovered during work
+- Fixing build/deployment issues
+- Small refactoring tasks
+- Urgent hotfixes
+
+### Q: How do I create an intermittent task?
+
+**A:**
+
+```bash
+taskflow task create "Fix TypeScript error" --intermittent
+```
+
+This creates a task in Feature 0 (F0 - Infrastructure & Quick Fixes) with the `--intermittent` flag.
+
+### Q: Can I work on multiple tasks at once?
+
+**A:** Yes, with intermittent tasks! Here's how:
+
+1. **Start your main feature task:**
+   ```bash
+   taskflow start 1.1.0
+   ```
+
+2. **If you need to fix a bug, start intermittent task:**
+   ```bash
+   taskflow task create "Fix critical bug" --intermittent
+   taskflow start 0.1.0
+   ```
+   ⚠️ Main task 1.1.0 is paused
+
+3. **Complete intermittent task:**
+   ```bash
+   taskflow commit "- Fixed critical bug"
+   ```
+
+4. **Resume main task:**
+   ```bash
+   taskflow resume
+   ```
+
+### Q: How are intermittent tasks different from regular tasks?
+
+**A:**
+
+| Aspect | Regular Tasks | Intermittent Tasks |
+|---------|---------------|-------------------|
+| **Priority** | Always prioritized | Lower priority |
+| **Blocking** | Block other tasks | No blocking |
+| **Branch** | `story/S{id}-{title}` | `intermittent/S{id}-{title}` |
+| **Workflow** | Must complete in order | Work independently |
+| **Active Session** | Only one at a time | Can switch anytime |
+
+### Q: What happens to my main task when I switch to intermittent?
+
+**A:** Your main feature task is **not** marked as blocked or completed. It remains in its current state and you can resume it later:
+
+```bash
+# 1. Switch to intermittent task
+taskflow start 0.1.0
+# Output: ⚠️  Switching to intermittent task. Main task 1.1.0 is paused.
+
+# 2. Complete intermittent task
+taskflow commit "- Quick fix done"
+
+# 3. Resume main task
+taskflow resume
+# Output: Resuming task 1.1.0
+```
+
+### Q: Can I see intermittent tasks in the status output?
+
+**A:** Yes! Intermittent tasks are shown in a separate section:
+
+```bash
+taskflow status
+```
+
+Output:
+```
+MAIN FEATURES:
+────────────
+  ● F1: User Authentication (completed)
+
+INTERMITTENT TASKS (Side Tasks):
+──────────────────────────
+  ○ T0.1.0: Fix TypeScript error (not-started) 🔄
+  ◐ T0.1.1: Add unit test (in-progress) 🔄
+```
+
+### Q: How do I know if a task is intermittent?
+
+**A:** Look for the 🔄 emoji in various outputs:
+
+- `taskflow next` - Shows "INTERMITTENT TASK (Side Task)" for intermittent tasks
+- `taskflow status` - Shows 🔄 next to intermittent task IDs
+- `taskflow start` - Shows warning when switching to intermittent task
+
+### Q: Can I convert a regular task to intermittent?
+
+**A:** Not directly, but you can:
+
+1. **Mark regular task as blocked:**
+   ```bash
+   taskflow skip --reason "Reprioritizing as side task"
+   ```
+
+2. **Create new intermittent task:**
+   ```bash
+   taskflow task create "Same task but intermittent" --intermittent
+   ```
+
+3. **Reference original task** in description of new intermittent task
+
+### Q: Do intermittent tasks have dependencies?
+
+**A:** No! Intermittent tasks are designed to be independent:
+
+- No blocking dependencies on other tasks
+- No dependency checks when starting
+- Can be worked on at any time
+- No impact on main feature workflow
+
+### Q: Where are intermittent task files stored?
+
+**A:** Intermittent tasks are stored in F0:
+
+```
+tasks/
+└── F0-infrastructure/
+    └── F0.json  (Feature 0 definition)
+    └── S0.1-intermittent-tasks/
+        └── T0.1.0.json  (Intermittent task 1)
+        └── T0.1.1.json  (Intermittent task 2)
+```
 
 ---
 
@@ -720,7 +867,7 @@ taskflow retro list
 
 1. **Install MCP server:**
    ```bash
-   npm install -g @krr2020/taskflow-mcp-server
+   npm install -g @krr2020/taskflow-mcp
    ```
 
 2. **Create/edit config file:**
@@ -741,7 +888,7 @@ taskflow retro list
      "mcpServers": {
        "taskflow": {
          "command": "npx",
-         "args": ["-y", "@krr2020/taskflow-mcp-server"]
+         "args": ["-y", "@krr2020/taskflow-mcp"]
        }
      }
    }
@@ -779,7 +926,7 @@ type %APPDATA%\..\Local\Logs\Claude\mcp*.log
 
 **Solution 4: Verify MCP server installation**
 ```bash
-npx @krr2020/taskflow-mcp-server
+npx @krr2020/taskflow-mcp
 # Should start the server without errors
 ```
 
@@ -789,7 +936,7 @@ npx @krr2020/taskflow-mcp-server
   "mcpServers": {
     "taskflow": {
       "command": "/usr/local/bin/npx",
-      "args": ["-y", "@krr2020/taskflow-mcp-server"]
+      "args": ["-y", "@krr2020/taskflow-mcp"]
     }
   }
 }
@@ -866,8 +1013,8 @@ Claude will use the tools as needed throughout your conversation.
 **A:**
 
 ```bash
-npm update -g @krr2020/taskflow-core
-npm update -g @krr2020/taskflow-mcp-server
+npm update -g @krr2020/taskflow
+npm update -g @krr2020/taskflow-mcp
 
 # Verify version
 taskflow --version

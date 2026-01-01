@@ -31,7 +31,9 @@ export function branchExists(branchName: string): boolean {
 }
 
 export function getExpectedBranch(story: Story): string {
-	return getExpectedBranchName(story.id, story.title);
+	// Check if this is an intermittent task (F0 story)
+	const isIntermittent = story.id.startsWith("0.");
+	return getExpectedBranchName(story.id, story.title, isIntermittent);
 }
 
 export function getBranchSwitchCommand(

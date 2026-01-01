@@ -141,12 +141,83 @@ export class ModelSelector {
 		config: AIConfig,
 		phase: "planning" | "execution" | "analysis",
 	): ModelDefinition | null {
-		// New config format: resolve from usage
-		if (config.models && config.usage) {
-			const modelKey = config.usage[phase] || config.usage.default;
-			return (
-				config.models[modelKey] || config.models[config.usage.default] || null
-			);
+		if (!config.models || typeof config.models !== "object") {
+			// Old config format: backward compatibility
+			if (config.provider) {
+				return this.createLegacyModelDefinition(config, phase);
+			}
+			return null;
+		}
+
+		const models = config.models as Record<string, unknown>;
+
+		// New config format with usage mapping
+		if (config.usage && typeof config.usage === "object") {
+			const usage = config.usage as Record<string, string>;
+			const modelKey = usage[phase] || usage.default;
+			const definition = models[modelKey] || models[usage.default];
+			if (definition && typeof definition === "object") {
+				return definition as ModelDefinition;
+			}
+		}
+
+		// Simpler format: models directly keyed by phase name
+		// Check if models has phase-specific keys (default, planning, execution, analysis)
+		const phaseModel = models[phase];
+		if (phaseModel && typeof phaseModel === "object") {
+			return phaseModel as ModelDefinition;
+		}
+
+		// Legacy string format: models are strings (model names)
+		// Need to create model definition from provider + model name
+		if (phaseModel && typeof phaseModel === "string") {
+			const modelName = phaseModel as string;
+			const providerType =
+				(config[`${phase}Provider`] as LLMProviderType) ||
+				config.provider ||
+				"openai-compatible";
+			const apiKey = (config[`${phase}ApiKey`] as string) || config.apiKey;
+
+			let baseUrl: string | undefined;
+			if (providerType === LLMProviderType.Ollama) {
+				baseUrl = config.ollamaBaseUrl;
+			} else if (providerType === LLMProviderType.OpenAICompatible) {
+				baseUrl = config.openaiBaseUrl;
+			}
+
+			return {
+				provider: providerType as "anthropic" | "openai-compatible" | "ollama",
+				model: modelName,
+				apiKey,
+				baseUrl,
+			};
+		}
+
+		// Fall back to default model
+		const defaultModel = models.default;
+		if (defaultModel && typeof defaultModel === "object") {
+			return defaultModel as ModelDefinition;
+		}
+
+		// Legacy string format for default
+		if (defaultModel && typeof defaultModel === "string") {
+			const modelName = defaultModel as string;
+			const providerType = config.provider || "openai-compatible";
+			const apiKey = config.apiKey;
+
+			let baseUrl: string | undefined;
+			if (providerType === LLMProviderType.Ollama) {
+				baseUrl = config.ollamaBaseUrl;
+			} else if (providerType === LLMProviderType.OpenAICompatible) {
+				baseUrl = config.openaiBaseUrl;
+			}
+
+			return {
+				provider: providerType as "anthropic" | "openai-compatible" | "ollama",
+				model: modelName,
+				apiKey,
+				baseUrl,
+			};
 		}
 
 		// Old config format: backward compatibility
@@ -234,8 +305,6 @@ export class ModelSelector {
 			enabled: config.enabled,
 			provider: config.provider,
 			apiKey: config.apiKey ?? "",
-			models: undefined,
-			usage: undefined,
 		});
 	}
 }

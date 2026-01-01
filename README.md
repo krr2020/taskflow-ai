@@ -27,7 +27,7 @@ Choose your installation method:
 Best for: Most developers who want to use Taskflow across multiple projects
 
 ```bash
-npm install -g @krr2020/taskflow-core
+npm install -g @krr2020/taskflow
 ```
 
 **Command:** `taskflow <command>`
@@ -39,7 +39,7 @@ npm install -g @krr2020/taskflow-core
 Best for: Using Claude Desktop with AI assistance
 
 ```bash
-npm install -g @krr2020/taskflow-mcp-server
+npm install -g @krr2020/taskflow-mcp
 ```
 
 **Setup:** See [MCP Configuration](#mcp-server-setup) below
@@ -52,15 +52,15 @@ Best for: Adding Taskflow to an existing project
 
 ```bash
 cd your-project
-npm install -D @krr2020/taskflow-core
+npm install -D @krr2020/taskflow
 ```
 
-**Command:** `npx @krr2020/taskflow-core <command>`
+**Command:** `npx @krr2020/taskflow <command>`
 
 **Example:**
 ```bash
-npx @krr2020/taskflow-core init
-npx @krr2020/taskflow-core status
+npx @krr2020/taskflow init
+npx @krr2020/taskflow status
 ```
 
 💡 **Note:** Want shorter commands (`taskflow` or `pnpm task`)? See [Manual Setup Guide](#manual-setup) below.
@@ -87,7 +87,7 @@ taskflow init
 pnpm task init
 
 # OR if installed as dev dependency WITHOUT adding script (using npx)
-npx @krr2020/taskflow-core init
+npx @krr2020/taskflow init
 ```
 
 💡 **Note:** Project name is auto-detected from `package.json`, or falls back to directory name. You can optionally override with `taskflow init my-project`.
@@ -224,7 +224,7 @@ Each task goes through these states:
 
 **Setup:**
 
-1. Install MCP Server: `npm install -g @krr2020/taskflow-mcp-server`
+1. Install MCP Server: `npm install -g @krr2020/taskflow-mcp`
 2. Open Claude Desktop config:
    - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
@@ -234,7 +234,7 @@ Each task goes through these states:
      "mcpServers": {
        "taskflow": {
          "command": "npx",
-         "args": ["-y", "@krr2020/taskflow-mcp-server"]
+         "args": ["-y", "@krr2020/taskflow-mcp"]
        }
      }
    }
@@ -271,12 +271,12 @@ Replace `taskflow` with `pnpm task` if you installed as dev dependency.
 
 ### Add "task" Script to package.json
 
-Want shorter commands (`pnpm task` instead of `npx @krr2020/taskflow-core`)? Add this to your `package.json`:
+Want shorter commands (`pnpm task` instead of `npx @krr2020/taskflow`)? Add this to your `package.json`:
 
 ```json
 {
   "scripts": {
-    "task": "node node_modules/@krr2020/taskflow-core/bin/taskflow.js"
+    "task": "node node_modules/@krr2020/taskflow/bin/taskflow.js"
   }
 }
 ```
@@ -289,7 +289,7 @@ pnpm task start 1.1.0
 
 ### Why Manual Setup?
 
-- **Pros:** Shorter commands (`pnpm task` vs `npx @krr2020/taskflow-core`)
+- **Pros:** Shorter commands (`pnpm task` vs `npx @krr2020/taskflow`)
 - **Cons:** Must manually add script to package.json
 - **Recommendation:** Use `npx` if you prefer zero-setup workflow. Use manual script if you type commands frequently and want brevity.## 🤖 LLM Configuration (Optional)
 
@@ -534,7 +534,7 @@ pnpm task check
 ## 📦 Package Structure
 
 ```
-taskflow-ai/
+taskflow/
 ├── packages/
 │   ├── core/                    # Main package
 │   │   ├── src/

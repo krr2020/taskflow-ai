@@ -19,12 +19,12 @@ Complete guide to using Taskflow for AI-assisted development workflows.
 
 **Option 1: Global CLI Installation**
 ```bash
-npm install -g @krr2020/taskflow-core
+npm install -g @krr2020/taskflow
 ```
 
 **Option 2: MCP Server for Claude Desktop**
 ```bash
-npm install -g @krr2020/taskflow-mcp-server
+npm install -g @krr2020/taskflow-mcp
 ```
 
 ### Initialize Your Project
@@ -34,7 +34,7 @@ cd your-project
 taskflow init
 
 # Or using npx
-npx @krr2020/taskflow-core init
+npx @krr2020/taskflow init
 ```
 
 💡 **Note:** Project name is auto-detected from `package.json`, or falls back to directory name. You can optionally specify `taskflow init my-project`.
@@ -385,7 +385,7 @@ taskflow retro list type_error
 
 1. Install the MCP server:
 ```bash
-npm install -g @krr2020/taskflow-mcp-server
+npm install -g @krr2020/taskflow-mcp
 ```
 
 2. Configure Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`):
@@ -394,7 +394,7 @@ npm install -g @krr2020/taskflow-mcp-server
   "mcpServers": {
     "taskflow": {
       "command": "npx",
-      "args": ["-y", "@krr2020/taskflow-mcp-server"]
+      "args": ["-y", "@krr2020/taskflow-mcp"]
     }
   }
 }
@@ -627,7 +627,7 @@ cat tasks/project-index.json
 1. Check config file path: `~/Library/Application Support/Claude/claude_desktop_config.json`
 2. Restart Claude Desktop completely
 3. Check logs: `~/Library/Logs/Claude/mcp*.log`
-4. Verify installation: `npx @krr2020/taskflow-mcp-server` should run without errors
+4. Verify installation: `npx @krr2020/taskflow-mcp` should run without errors
 
 ---
 

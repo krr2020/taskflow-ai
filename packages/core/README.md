@@ -1,11 +1,11 @@
-# @krr2020/taskflow-core
+# @krr2020/taskflow
 
 Core task management framework for AI-assisted development workflows. This package provides the foundational commands, state management, and configuration handling used by the Taskflow MCP Server and CLI.
 
 ## 📦 Installation
 
 ```bash
-npm install @krr2020/taskflow-core
+npm install @krr2020/taskflow
 ```
 
 ## 🏗️ Architecture
@@ -102,7 +102,7 @@ import {
   CheckCommand,
   CommitCommand,
   type CommandContext
-} from '@krr2020/taskflow-core';
+} from '@krr2020/taskflow';
 
 const context: CommandContext = {
   projectRoot: process.cwd()
@@ -169,8 +169,8 @@ pnpm test --coverage
 ## 📚 Integration
 
 Most users should use this package via:
-- **[@krr2020/taskflow-mcp-server](https://www.npmjs.com/package/@krr2020/taskflow-mcp-server)** - MCP Server for Claude Desktop
-- **CLI** - Direct command-line usage via `npx @krr2020/taskflow-core`
+- **[@krr2020/taskflow-mcp](https://www.npmjs.com/package/@krr2020/taskflow-mcp)** - MCP Server for Claude Desktop
+- **CLI** - Direct command-line usage via `npx @krr2020/taskflow`
 
 See the main [Taskflow documentation](../README.md) for complete usage examples.
 

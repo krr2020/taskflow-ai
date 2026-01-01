@@ -134,6 +134,7 @@ export const TaskRefSchema = z.object({
 	title: z.string().min(1),
 	status: TaskStatusSchema,
 	dependencies: z.array(z.string()).default([]),
+	isIntermittent: z.boolean().optional().default(false),
 });
 export type TaskRef = z.infer<typeof TaskRefSchema>;
 

@@ -1,6 +1,6 @@
 {
-	"name": "@krr2020/taskflow-core",
-	"version": "0.1.0-beta.5",
+	"name": "@krr2020/taskflow",
+	"version": "0.1.0-beta.1",
 	"description": "Core logic for Taskflow - AI-first task management and workflow system",
 	"license": "MIT",
 	"publishConfig": {

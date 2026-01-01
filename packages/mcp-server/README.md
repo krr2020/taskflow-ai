@@ -1,11 +1,11 @@
-# @krr2020/taskflow-mcp-server
+# @krr2020/taskflow-mcp
 
-Model Context Protocol (MCP) server that exposes Taskflow's task management capabilities to AI assistants like Claude Desktop. Delegates all logic to `@krr2020/taskflow-core` for a clean, maintainable architecture.
+Model Context Protocol (MCP) server that exposes Taskflow's task management capabilities to AI assistants like Claude Desktop. Delegates all logic to `@krr2020/taskflow` for a clean, maintainable architecture.
 
 ## 📦 Installation
 
 ```bash
-npm install -g @krr2020/taskflow-mcp-server
+npm install -g @krr2020/taskflow-mcp
 ```
 
 ## 🚀 Quick Start
@@ -19,7 +19,7 @@ Add to your `claude_desktop_config.json` (located at `~/Library/Application Supp
   "mcpServers": {
     "taskflow": {
       "command": "npx",
-      "args": ["-y", "@krr2020/taskflow-mcp-server"]
+      "args": ["-y", "@krr2020/taskflow-mcp"]
     }
   }
 }
@@ -33,7 +33,7 @@ After updating the configuration:
 ### Option 2: Run Standalone
 
 ```bash
-npx @krr2020/taskflow-mcp-server
+npx @krr2020/taskflow-mcp
 ```
 
 ## 🛠️ Available Tools (13 Total)
@@ -230,14 +230,14 @@ List all retrospective entries.
 
 ## 🏗️ Architecture
 
-This MCP server is a thin wrapper around `@krr2020/taskflow-core`:
+This MCP server is a thin wrapper around `@krr2020/taskflow`:
 
 ```
 MCP Server (index.ts)
   ├── Tool Definitions (13 tools)
   ├── Input Validation (Zod schemas)
   └── Command Delegation
-      └── @krr2020/taskflow-core
+      └── @krr2020/taskflow
           ├── 13 Command Classes
           └── 8 Library Modules
 ```
@@ -279,7 +279,7 @@ pnpm start
 
 ## 📚 Related Packages
 
-- **[@krr2020/taskflow-core](https://www.npmjs.com/package/@krr2020/taskflow-core)** - Core logic and CLI
+- **[@krr2020/taskflow](https://www.npmjs.com/package/@krr2020/taskflow)** - Core logic and CLI
 - **[Main Documentation](../README.md)** - Complete workflow documentation
 
 ## 📄 License

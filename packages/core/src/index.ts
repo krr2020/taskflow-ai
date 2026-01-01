@@ -1,5 +1,5 @@
 /**
- * @krr2020/taskflow-core
+ * @krr2020/taskflow
  * Core business logic and CLI for TaskFlow task management system
  */
 
@@ -14,6 +14,7 @@ export * from "./commands/prd/create.js";
 export * from "./commands/prd/generate-arch.js";
 export * from "./commands/retro/add.js";
 export * from "./commands/retro/list.js";
+export * from "./commands/tasks/create.js";
 export * from "./commands/tasks/generate.js";
 export * from "./commands/upgrade.js";
 export * from "./commands/workflow/check.js";

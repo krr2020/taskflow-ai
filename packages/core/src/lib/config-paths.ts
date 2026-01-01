@@ -9,7 +9,16 @@ import path from "node:path";
 // Path Helpers (relative to user's project root)
 // ============================================================================
 
-export function getProjectPaths(projectRoot: string) {
+export interface ProjectPaths {
+	projectRoot: string;
+	tasksDir: string;
+	taskflowDir: string;
+	refDir: string;
+	logsDir: string;
+	configPath: string;
+}
+
+export function getProjectPaths(projectRoot: string): ProjectPaths {
 	const tasksDir = path.join(projectRoot, "tasks");
 	const taskflowDir = path.join(projectRoot, ".taskflow");
 	const refDir = path.join(taskflowDir, "ref");
@@ -182,11 +191,18 @@ export function getLogFilePath(
 export function getExpectedBranchName(
 	storyId: string,
 	storyTitle: string,
+	isIntermittent: boolean = false,
 ): string {
 	const slug = storyTitle
 		.toLowerCase()
 		.replace(/[^a-z0-9]+/g, "-")
 		.replace(/^-|-$/g, "");
+
+	// Intermittent tasks use different branch prefix
+	if (isIntermittent || storyId.startsWith("0.")) {
+		return `intermittent/S${storyId}-${slug}`;
+	}
+
 	return `story/S${storyId}-${slug}`;
 }
 

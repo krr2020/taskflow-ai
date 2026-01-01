@@ -12,6 +12,7 @@ import { PrdCreateCommand } from "../commands/prd/create.js";
 import { PrdGenerateArchCommand } from "../commands/prd/generate-arch.js";
 import { RetroAddCommand } from "../commands/retro/add.js";
 import { RetroListCommand } from "../commands/retro/list.js";
+import { TaskCreateCommand } from "../commands/tasks/create.js";
 import { TasksGenerateCommand } from "../commands/tasks/generate.js";
 import { UpgradeCommand } from "../commands/upgrade.js";
 import { CheckCommand } from "../commands/workflow/check.js";
@@ -367,6 +368,49 @@ export async function runCLI() {
 				handleError(error);
 			}
 		});
+
+	program
+		.command("task create")
+		.description("Create a new task for a feature or as intermittent")
+		.argument("<title>", "Task title")
+		.option("--description <desc>", "Task description (optional)")
+		.option("--intermittent", "Create as intermittent task (in F0)")
+		.option("--feature <id>", "Feature ID for regular task")
+		.option("--story <id>", "Story ID for regular task")
+		.action(
+			async (
+				title: string,
+				options: {
+					description?: string;
+					intermittent?: boolean;
+					feature?: string;
+					story?: string;
+				},
+			) => {
+				try {
+					const cmd = new TaskCreateCommand(context);
+					const optionsObj: {
+						intermitent?: boolean;
+						feature?: string;
+						story?: string;
+					} = {};
+					if (options.intermittent !== undefined)
+						optionsObj.intermitent = options.intermittent;
+					if (options.feature !== undefined)
+						optionsObj.feature = options.feature;
+					if (options.story !== undefined) optionsObj.story = options.story;
+					const result = await cmd.execute(
+						title,
+						options.description,
+						optionsObj,
+					);
+					console.log(formatSuccess(result));
+					process.exit(0);
+				} catch (error) {
+					handleError(error);
+				}
+			},
+		);
 
 	// ========================================
 	// RETRO COMMANDS

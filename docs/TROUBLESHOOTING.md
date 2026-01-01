@@ -23,10 +23,10 @@ Common issues and solutions for Taskflow, including AI/LLM integration problems.
 **Solution:**
 ```bash
 # If installed as dev dependency
-npx @krr2020/taskflow-core <command>
+npx @krr2020/taskflow <command>
 
 # Or install globally
-npm install -g @krr2020/taskflow-core
+npm install -g @krr2020/taskflow
 taskflow <command>
 
 # Or add script to package.json
@@ -768,7 +768,7 @@ If you can't resolve an issue:
 
 | Issue | Quick Fix |
 |-------|-----------|
-| Command not found | Use `npx @krr2020/taskflow-core <cmd>` |
+| Command not found | Use `npx @krr2020/taskflow <cmd>` |
 | No .taskflow directory | Run `taskflow init` |
 | Active session exists | Run `taskflow commit "- done"` |
 | Validation failed | Fix errors, run `taskflow check` |
@@ -787,7 +787,7 @@ If you can't resolve an issue:
 
 1. **Keep dependencies updated:**
    ```bash
-   npm update @krr2020/taskflow-core
+   npm update @krr2020/taskflow
    ```
 
 2. **Use version control:**

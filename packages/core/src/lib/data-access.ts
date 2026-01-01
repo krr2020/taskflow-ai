@@ -441,49 +441,84 @@ export function calculateProgressStats(
 // Next Task Finding
 // ============================================================================
 
+export interface NextTaskResult {
+	task: TaskRef;
+	story: Story;
+	feature: Feature;
+	isIntermittent: boolean;
+}
+
 export function findNextAvailableTask(
 	tasksProgress: TasksProgress,
 	excludeTaskId?: string,
-): { task: TaskRef; story: Story; feature: Feature } | null {
-	// Priority 1: Active tasks in active stories
+	includeIntermittent: boolean = false,
+): NextTaskResult | null {
+	// Priority 1: Active tasks in active stories (non-intermittent only)
 	for (const feature of tasksProgress.features) {
 		if (feature.status === "completed") continue;
 		for (const story of feature.stories) {
 			if (story.status !== "in-progress") continue;
 			for (const task of story.tasks) {
+				// Skip intermittent tasks in priority 1
+				if (task.isIntermittent) continue;
 				if (isActiveStatus(task.status) && task.id !== excludeTaskId) {
-					return { task, story, feature };
+					return { task, story, feature, isIntermittent: false };
 				}
 			}
 		}
 	}
 
-	// Priority 2: Not-started tasks in active stories
+	// Priority 2: Not-started tasks in active stories (non-intermittent only)
 	for (const feature of tasksProgress.features) {
 		if (feature.status === "completed") continue;
 		for (const story of feature.stories) {
 			if (story.status !== "in-progress") continue;
 			for (const task of story.tasks) {
+				// Skip intermittent tasks in priority 2
+				if (task.isIntermittent) continue;
 				if (task.status === "not-started" && task.id !== excludeTaskId) {
 					const depsMet = checkDependenciesMet(tasksProgress, task);
 					if (depsMet) {
-						return { task, story, feature };
+						return { task, story, feature, isIntermittent: false };
 					}
 				}
 			}
 		}
 	}
 
-	// Priority 3: Not-started tasks in not-started stories
+	// Priority 3: Not-started tasks in not-started stories (non-intermittent only)
 	for (const feature of tasksProgress.features) {
 		if (feature.status === "completed") continue;
 		for (const story of feature.stories) {
 			if (story.status !== "not-started") continue;
 			for (const task of story.tasks) {
+				// Skip intermittent tasks in priority 3
+				if (task.isIntermittent) continue;
 				if (task.status === "not-started" && task.id !== excludeTaskId) {
 					const depsMet = checkDependenciesMet(tasksProgress, task);
 					if (depsMet) {
-						return { task, story, feature };
+						return { task, story, feature, isIntermittent: false };
+					}
+				}
+			}
+		}
+	}
+
+	// Priority 4: Intermittent tasks (only if includeIntermittent is true)
+	if (includeIntermittent) {
+		for (const feature of tasksProgress.features) {
+			if (feature.status === "completed") continue;
+			// F0 is for intermittent tasks
+			if (feature.id !== "0") continue;
+
+			for (const story of feature.stories) {
+				for (const task of story.tasks) {
+					// Only look at intermittent tasks
+					if (!task.isIntermittent) continue;
+
+					// Return any non-completed intermittent task
+					if (task.status !== "completed" && task.id !== excludeTaskId) {
+						return { task, story, feature, isIntermittent: true };
 					}
 				}
 			}
@@ -566,3 +601,18 @@ export function saveLogFile(
 	const content = `Command: ${command}\nTimestamp: ${new Date().toISOString()}\n\n${output}`;
 	fs.writeFileSync(logPath, content);
 }
+
+// ============================================================================
+// Re-exports for convenience
+// ============================================================================
+
+export { getProjectIndexPath, type ProjectPaths } from "./config-paths.js";
+export type {
+	Feature,
+	FeatureStatus,
+	Story,
+	TaskFileContent,
+	TaskRef,
+	TaskStatus,
+	TasksProgress,
+} from "./types.js";
