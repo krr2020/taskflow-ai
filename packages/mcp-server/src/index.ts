@@ -5,17 +5,25 @@ import {
 	type CommandContext,
 	type CommandResult,
 	CommitCommand,
+	ConfigureAICommand,
+	DoCommand,
 	InitCommand,
 	NextCommand,
 	PrdCreateCommand,
 	PrdGenerateArchCommand,
+	PrdUpdateArchCommand,
+	PrdUpdateStandardsCommand,
 	ResumeCommand,
 	RetroAddCommand,
 	RetroListCommand,
 	SkipCommand,
 	StartCommand,
 	StatusCommand,
+	TaskCreateCommand,
+	TasksAddCommand,
 	TasksGenerateCommand,
+	TasksRefineCommand,
+	UpgradeCommand,
 } from "@krr2020/taskflow";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -263,6 +271,217 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 					},
 				},
 			},
+
+			// Workflow - AI Guidance
+			{
+				name: "do_task",
+				description:
+					"Get AI guidance and instructions for the current task step based on status. Returns context-aware guidance for setup, planning, implementing, verifying, validating, or committing phases.",
+				inputSchema: {
+					type: "object",
+					properties: {},
+				},
+			},
+
+			// Task Refinement
+			{
+				name: "tasks_refine",
+				description:
+					"Refine existing task breakdown with AI. Provide instructions to split large tasks, add more detail, reorganize, or adjust task structure.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						instructions: {
+							type: "string",
+							description:
+								'Refinement instructions (e.g., "Split large tasks into smaller ones", "Add more backend tasks")',
+						},
+					},
+					required: ["instructions"],
+				},
+			},
+			{
+				name: "tasks_add",
+				description:
+					"Add a new task to existing feature and story. AI will generate task details if LLM is configured, otherwise provides guidance.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						featureId: {
+							type: "string",
+							description: "Feature ID (e.g., '1')",
+						},
+						storyId: {
+							type: "string",
+							description: "Story ID (e.g., '1.1')",
+						},
+						taskTitle: {
+							type: "string",
+							description: "Task title",
+						},
+						description: {
+							type: "string",
+							description: "Task description (optional)",
+						},
+						skill: {
+							type: "string",
+							description:
+								"Task skill: backend, frontend, fullstack, devops, docs, mobile (optional)",
+							enum: [
+								"backend",
+								"frontend",
+								"fullstack",
+								"devops",
+								"docs",
+								"mobile",
+							],
+						},
+						dependencies: {
+							type: "string",
+							description:
+								"Comma-separated task IDs this task depends on (optional)",
+						},
+					},
+					required: ["featureId", "storyId", "taskTitle"],
+				},
+			},
+			{
+				name: "task_create",
+				description:
+					"Create a standalone task or intermittent task. Intermittent tasks go to F0 (Infrastructure), regular tasks require feature and story IDs.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						title: {
+							type: "string",
+							description: "Task title",
+						},
+						description: {
+							type: "string",
+							description: "Task description (optional)",
+						},
+						intermittent: {
+							type: "boolean",
+							description: "Whether this is an intermittent task (goes to F0)",
+						},
+						feature: {
+							type: "string",
+							description: "Feature ID for regular tasks (e.g., '1')",
+						},
+						story: {
+							type: "string",
+							description: "Story ID for regular tasks (e.g., '1.1')",
+						},
+					},
+					required: ["title"],
+				},
+			},
+
+			// PRD Updates
+			{
+				name: "prd_update_standards",
+				description:
+					"Add a new rule to coding-standards.md. AI will integrate the rule in the appropriate section if LLM is configured.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						rule: {
+							type: "string",
+							description: "The coding standard rule to add",
+						},
+						section: {
+							type: "string",
+							description:
+								"Section name to add the rule to (optional, AI will choose if not specified)",
+						},
+					},
+					required: ["rule"],
+				},
+			},
+			{
+				name: "prd_update_arch",
+				description:
+					"Add a new rule to architecture-rules.md. AI will integrate the rule in the appropriate section if LLM is configured.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						rule: {
+							type: "string",
+							description: "The architecture rule to add",
+						},
+						section: {
+							type: "string",
+							description:
+								"Section name to add the rule to (optional, AI will choose if not specified)",
+						},
+					},
+					required: ["rule"],
+				},
+			},
+
+			// Configuration
+			{
+				name: "configure_ai",
+				description:
+					"Configure AI/LLM provider settings. Set provider, API keys, models, per-phase configurations, and base URLs.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						provider: {
+							type: "string",
+							description:
+								"LLM provider: anthropic, openai-compatible, ollama, mock",
+							enum: ["anthropic", "openai-compatible", "ollama", "mock"],
+						},
+						apiKey: {
+							type: "string",
+							description: "API key for the provider",
+						},
+						model: {
+							type: "string",
+							description: "Default model name",
+						},
+						enable: {
+							type: "boolean",
+							description: "Enable AI features",
+						},
+						disable: {
+							type: "boolean",
+							description: "Disable AI features",
+						},
+						ollamaBaseUrl: {
+							type: "string",
+							description: "Ollama base URL (default: http://localhost:11434)",
+						},
+						openaiBaseUrl: {
+							type: "string",
+							description: "OpenAI-compatible base URL",
+						},
+					},
+				},
+			},
+			{
+				name: "upgrade_templates",
+				description:
+					"Upgrade .taskflow reference templates to latest version. Creates backup before updating. Shows diff with --diff flag.",
+				inputSchema: {
+					type: "object",
+					properties: {
+						force: {
+							type: "boolean",
+							description: "Force upgrade even if customized files exist",
+						},
+						auto: {
+							type: "boolean",
+							description: "Skip prompts and auto-apply updates",
+						},
+						diff: {
+							type: "boolean",
+							description: "Show diff summary without applying updates",
+						},
+					},
+				},
+			},
 		],
 	};
 });
@@ -473,6 +692,124 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 				const cmd = new RetroListCommand(context);
 				const result = await cmd.execute(category);
+				return formatCommandResult(result);
+			}
+
+			case "do_task": {
+				const cmd = new DoCommand(context);
+				const result = await cmd.execute();
+				return formatCommandResult(result);
+			}
+
+			case "tasks_refine": {
+				const schema = z.object({
+					instructions: z.string(),
+				});
+				const { instructions } = schema.parse(args);
+
+				const cmd = new TasksRefineCommand(context);
+				const result = await cmd.execute(instructions);
+				return formatCommandResult(result);
+			}
+
+			case "tasks_add": {
+				const schema = z.object({
+					featureId: z.string(),
+					storyId: z.string(),
+					taskTitle: z.string(),
+					description: z.string().optional(),
+					skill: z.string().optional(),
+					dependencies: z.string().optional(),
+				});
+				const {
+					featureId,
+					storyId,
+					taskTitle,
+					description,
+					skill,
+					dependencies,
+				} = schema.parse(args);
+
+				const cmd = new TasksAddCommand(context);
+				const result = await cmd.execute(featureId, storyId, taskTitle, {
+					description,
+					skill,
+					dependencies,
+				});
+				return formatCommandResult(result);
+			}
+
+			case "task_create": {
+				const schema = z.object({
+					title: z.string(),
+					description: z.string().optional(),
+					intermittent: z.boolean().optional(),
+					feature: z.string().optional(),
+					story: z.string().optional(),
+				});
+				const { title, description, intermittent, feature, story } =
+					schema.parse(args || {});
+
+				const cmd = new TaskCreateCommand(context);
+				const result = await cmd.execute(title, description, {
+					intermitent: intermittent, // Note: typo in original command
+					feature,
+					story,
+				});
+				return formatCommandResult(result);
+			}
+
+			case "prd_update_standards": {
+				const schema = z.object({
+					rule: z.string(),
+					section: z.string().optional(),
+				});
+				const { rule, section } = schema.parse(args);
+
+				const cmd = new PrdUpdateStandardsCommand(context);
+				const result = await cmd.execute(rule, section);
+				return formatCommandResult(result);
+			}
+
+			case "prd_update_arch": {
+				const schema = z.object({
+					rule: z.string(),
+					section: z.string().optional(),
+				});
+				const { rule, section } = schema.parse(args);
+
+				const cmd = new PrdUpdateArchCommand(context);
+				const result = await cmd.execute(rule, section);
+				return formatCommandResult(result);
+			}
+
+			case "configure_ai": {
+				const schema = z.object({
+					provider: z.string().optional(),
+					apiKey: z.string().optional(),
+					model: z.string().optional(),
+					enable: z.boolean().optional(),
+					disable: z.boolean().optional(),
+					ollamaBaseUrl: z.string().optional(),
+					openaiBaseUrl: z.string().optional(),
+				});
+				const options = schema.parse(args || {});
+
+				const cmd = new ConfigureAICommand(context);
+				const result = await cmd.execute(options);
+				return formatCommandResult(result);
+			}
+
+			case "upgrade_templates": {
+				const schema = z.object({
+					force: z.boolean().optional(),
+					auto: z.boolean().optional(),
+					diff: z.boolean().optional(),
+				});
+				const options = schema.parse(args || {});
+
+				const cmd = new UpgradeCommand(context);
+				const result = await cmd.execute(options);
 				return formatCommandResult(result);
 			}
 
