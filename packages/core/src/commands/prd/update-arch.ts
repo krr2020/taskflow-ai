@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
+import { LLMRequiredError } from "../../lib/errors.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class PrdUpdateArchCommand extends BaseCommand {
@@ -67,7 +68,7 @@ export class PrdUpdateArchCommand extends BaseCommand {
 		section?: string,
 	): Promise<CommandResult> {
 		if (!this.llmProvider) {
-			throw new Error("LLM provider not available");
+			throw new LLMRequiredError("LLM provider not available");
 		}
 
 		// Read current rules

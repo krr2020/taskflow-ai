@@ -10,6 +10,7 @@ import {
 	LLMProvider,
 	LLMProviderType,
 } from "../base.js";
+import { LLMError } from "../../lib/errors.js";
 
 export interface AnthropicConfig {
 	apiKey: string;
@@ -35,7 +36,7 @@ export class AnthropicProvider extends LLMProvider {
 		options?: LLMGenerationOptions,
 	): Promise<LLMGenerationResult> {
 		if (!this.isConfigured()) {
-			throw new Error("Anthropic provider is not configured properly");
+			throw new LLMError("Anthropic provider is not configured properly", "LLM_CONFIG_ERROR");
 		}
 
 		// Extract system message (Anthropic separates system message)
@@ -85,7 +86,7 @@ export class AnthropicProvider extends LLMProvider {
 
 		if (!response.ok) {
 			const error = await response.text();
-			throw new Error(`Anthropic API error: ${response.status} - ${error}`);
+			throw new LLMError(`Anthropic API error: ${response.status} - ${error}`, "LLM_API_ERROR");
 		}
 
 		const data = (await response.json()) as {
@@ -97,7 +98,7 @@ export class AnthropicProvider extends LLMProvider {
 
 		const contentItem = data.content[0];
 		if (!contentItem) {
-			throw new Error("No content returned from Anthropic API");
+			throw new LLMError("No content returned from Anthropic API", "LLM_EMPTY_RESPONSE");
 		}
 
 		return {

@@ -10,6 +10,18 @@ import { PrdCreateCommand } from "../../src/commands/prd/create.js";
 import { TasksGenerateCommand } from "../../src/commands/tasks/generate.js";
 import { type MCPContext, MCPDetector } from "../../src/lib/mcp-detector.js";
 
+vi.mock("../../src/lib/prd-interactive-session.js", () => ({
+	PRDInteractiveSession: class {
+		start(featureName: string) {
+			return Promise.resolve({
+				featureName: featureName || "Test Feature",
+				title: "Test Feature",
+				summary: "Test Summary",
+			});
+		}
+	},
+}));
+
 describe("Integration Workflow Tests", () => {
 	let testDir: string;
 	let mcpContext: MCPContext;

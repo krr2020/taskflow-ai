@@ -6,6 +6,8 @@ Common workflows, patterns, and best practices for daily use of Taskflow.
 
 ## Table of Contents
 
+- [PRD Creation](#prd-creation)
+- [Brownfield Development](#brownfield-development)
 - [Task Workflow](#task-workflow)
 - [Working with Dependencies](#working-with-dependencies)
 - [Handling Validation Failures](#handling-validation-failures)
@@ -15,6 +17,75 @@ Common workflows, patterns, and best practices for daily use of Taskflow.
 - [Commit Conventions](#commit-conventions)
 - [Retrospective System](#retrospective-system)
 - [Best Practices](#best-practices)
+
+---
+
+## PRD Creation
+
+Taskflow uses an interactive AI-driven process to help you create comprehensive Product Requirements Documents (PRDs).
+
+### Creating a PRD
+
+1. **Start the session**:
+   ```bash
+   taskflow prd create feature-name
+   ```
+
+2. **Provide Initial Details**:
+   - **Title**: Give your feature a clear, descriptive title.
+   - **Summary**: Enter a detailed description of what you want to build. You can paste multiple lines of text. Press Enter twice to finish.
+
+3. **Answer Clarifying Questions**:
+   The AI will analyze your summary and generate 3-5 clarifying questions to flesh out the requirements.
+   - You can answer all questions in a single block.
+   - Format: "1. Answer to first question... 2. Answer to second..."
+
+4. **Review Generated PRD**:
+   Taskflow generates a structured PRD file in `tasks/prds/` containing:
+   - User Stories
+   - Functional Requirements
+   - Non-Functional Requirements
+   - Success Metrics
+   - And more...
+
+---
+
+## Brownfield Development
+
+Taskflow supports "Brownfield" projects (existing codebases) by providing tools to analyze current state and plan changes.
+
+### 1. Feature Detection
+Scan your codebase to automatically detect implemented features (Auth, Payment, API, etc.).
+
+```bash
+taskflow prd detect
+```
+
+### 2. Gap Analysis
+Compare a PRD against your existing code to see what's missing.
+
+```bash
+taskflow prd analyze tasks/prds/my-feature.md
+```
+
+The analysis report provides:
+- **Implemented**: Requirements already met by existing code.
+- **Partial**: Requirements partially implemented (with evidence).
+- **Missing**: Requirements that need to be built.
+- **Effort Estimates**: High-level estimation for filling the gaps.
+
+### 3. Migration Planning
+Planning a major refactor or package switch? Generate a migration plan.
+
+```bash
+taskflow prd migrate --from="react-router-dom v5" --to="react-router-dom v6"
+```
+
+This generates a step-by-step plan including:
+- Breaking changes
+- Required code modifications
+- Risk assessment
+- Testing strategy
 
 ---
 

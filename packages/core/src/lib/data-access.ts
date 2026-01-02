@@ -5,7 +5,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { getFeatureFilePath, getProjectIndexPath } from "./config-paths.js";
-import { FileNotFoundError, InvalidFileFormatError } from "./errors.js";
+import {
+	FileNotFoundError,
+	InvalidFileFormatError,
+	TaskflowError,
+} from "./errors.js";
 import {
 	deleteFile,
 	ensureDir,
@@ -48,7 +52,8 @@ export function loadProjectIndex(tasksDir: string): ProjectIndex {
 
 	try {
 		const data = readJson(indexPath);
-		if (!data) throw new Error("Invalid JSON");
+		if (!data)
+			throw new TaskflowError("Invalid JSON in project index", "INVALID_JSON");
 		return validateProjectIndex(data);
 	} catch (error) {
 		if (error instanceof FileNotFoundError) throw error;
@@ -90,7 +95,7 @@ export function loadFeature(tasksDir: string, featurePath: string): Feature {
 
 	try {
 		const data = readJson(filePath);
-		if (!data) throw new Error("Invalid JSON");
+		if (!data) throw new TaskflowError("Invalid JSON in feature", "INVALID_JSON");
 		const feature = validateFeature(data);
 		feature.path = featurePath;
 		return feature;
@@ -105,7 +110,10 @@ export function loadFeature(tasksDir: string, featurePath: string): Feature {
 
 export function saveFeature(tasksDir: string, feature: Feature): void {
 	if (!feature.path) {
-		throw new Error("Feature path is required for saving");
+		throw new TaskflowError(
+			"Feature path is required for saving",
+			"FEATURE_PATH_REQUIRED",
+		);
 	}
 	const filePath = getFeatureFilePath(tasksDir, feature.path);
 

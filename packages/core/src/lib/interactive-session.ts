@@ -187,6 +187,73 @@ export abstract class InteractiveSession<T = unknown> {
 	}
 
 	/**
+	 * Prompt user for multi-line input
+	 */
+	protected async promptMultiline(
+		question: string,
+		hint: string = "Enter your summary (press Enter twice to finish)",
+		minLines: number = 1,
+	): Promise<PromptResult> {
+		const rl = this.createReadline();
+		const lines: string[] = [];
+		let emptyLineCount = 0;
+
+		console.log(question);
+		if (hint) {
+			console.log(`(${hint})`);
+		}
+
+		const askForLine = async (): Promise<void> => {
+			const answer = await new Promise<string>((resolve) => {
+				rl.question("> ", (input) => {
+					resolve(input.trimEnd());
+				});
+			});
+
+			// Check for quit
+			if (this.isQuit(answer.trim())) {
+				rl.close();
+				this.quit();
+			}
+
+			if (answer.trim() === "") {
+				emptyLineCount++;
+			} else {
+				emptyLineCount = 0;
+			}
+
+			// Two consecutive empty lines means done
+			if (emptyLineCount >= 2) {
+				rl.close();
+				return;
+			}
+
+			lines.push(answer);
+			await askForLine();
+		};
+
+		await askForLine();
+
+		// Remove trailing empty lines
+		while (lines.length > 0 && lines[lines.length - 1]?.trim() === "") {
+			lines.pop();
+		}
+
+		if (lines.length < minLines) {
+			console.log(`⚠ Please provide at least ${minLines} line(s).`);
+			return this.promptMultiline(question, hint, minLines);
+		}
+
+		const value = lines.join("\n");
+
+		return {
+			quit: false,
+			skipped: value === "",
+			value,
+		};
+	}
+
+	/**
 	 * Prompt user for multi-line input (list)
 	 */
 	protected async promptList(

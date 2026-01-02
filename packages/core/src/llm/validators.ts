@@ -16,24 +16,21 @@ export interface LLMValidationResult {
  * PRD Section names (required sections)
  */
 export const REQUIRED_PRD_SECTIONS = [
-	"Overview",
-	"Problem Statement",
+	"Introduction",
 	"Goals",
 	"User Stories",
 	"Functional Requirements",
-	"Success Criteria",
+	"Non-Goals",
+	"Success Metrics",
 ] as const;
 
 /**
  * Optional PRD sections
  */
 export const OPTIONAL_PRD_SECTIONS = [
-	"Non-Goals",
-	"Non-Functional Requirements",
+	"Design Considerations",
 	"Technical Considerations",
-	"Dependencies",
-	"Timeline",
-	"Risks",
+	"Open Questions",
 ] as const;
 
 /**
@@ -131,7 +128,18 @@ export function validatePRD(prdContent: string): LLMValidationResult {
 
 	// Check for required sections
 	for (const section of REQUIRED_PRD_SECTIONS) {
-		if (!hasPRDSection(prdContent, section)) {
+		let isPresent = hasPRDSection(prdContent, section);
+
+		// Handle aliases
+		if (!isPresent && section === "Introduction") {
+			isPresent = hasPRDSection(prdContent, "Overview");
+		}
+
+		if (!isPresent && section === "Success Metrics") {
+			isPresent = hasPRDSection(prdContent, "Success Criteria");
+		}
+
+		if (!isPresent) {
 			errors.push(`Missing required section: ${section}`);
 		}
 	}

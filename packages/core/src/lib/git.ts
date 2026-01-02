@@ -145,7 +145,10 @@ export function verifyBranch(story: Story): void {
 
 		const newCurrent = getCurrentBranch();
 		if (newCurrent !== expected) {
-			throw new Error(`Failed to switch to ${expected}`);
+			throw new GitOperationError(
+				"checkout",
+				`Failed to switch to ${expected}`,
+			);
 		}
 	} catch (_error) {
 		if (stashed) {

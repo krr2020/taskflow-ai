@@ -10,6 +10,7 @@ import {
 	LLMProvider,
 	LLMProviderType,
 } from "../base.js";
+import { LLMError } from "../../lib/errors.js";
 
 export interface OpenAICompatibleConfig {
 	baseUrl: string;
@@ -33,7 +34,7 @@ export class OpenAICompatibleProvider extends LLMProvider {
 		options?: LLMGenerationOptions,
 	): Promise<LLMGenerationResult> {
 		if (!this.isConfigured()) {
-			throw new Error("OpenAI-compatible provider is not configured properly");
+			throw new LLMError("OpenAI-compatible provider is not configured properly", "LLM_CONFIG_ERROR");
 		}
 
 		const response = await fetch(`${this.config.baseUrl}/chat/completions`, {
@@ -54,8 +55,9 @@ export class OpenAICompatibleProvider extends LLMProvider {
 
 		if (!response.ok) {
 			const error = await response.text();
-			throw new Error(
+			throw new LLMError(
 				`OpenAI-compatible API error: ${response.status} - ${error}`,
+				"LLM_API_ERROR"
 			);
 		}
 
@@ -71,7 +73,7 @@ export class OpenAICompatibleProvider extends LLMProvider {
 		const choice = data.choices[0];
 
 		if (!choice) {
-			throw new Error("No choice returned from OpenAI API");
+			throw new LLMError("No choice returned from OpenAI API", "LLM_EMPTY_RESPONSE");
 		}
 
 		return {

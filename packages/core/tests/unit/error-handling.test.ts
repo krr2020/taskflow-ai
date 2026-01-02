@@ -63,8 +63,7 @@ describe("Error Handling", () => {
 		command = new TestCommand({ projectRoot, mcpContext: mockMCPContext });
 
 		// Inject mock provider
-		// @ts-expect-error - accessing protected property
-		command.llmProvider = mockProvider;
+		(command as any).llmProvider = mockProvider;
 	});
 
 	afterEach(() => {
@@ -78,8 +77,7 @@ describe("Error Handling", () => {
 		});
 
 		it("should return invalid when provider is not initialized", async () => {
-			// @ts-expect-error
-			command.llmProvider = undefined;
+			(command as any).llmProvider = undefined;
 			const result = await command.testVerifyLLMConfiguration();
 			expect(result.valid).toBe(false);
 			expect(result.error).toContain("not initialized");

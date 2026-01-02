@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { TaskflowError } from "./errors.js";
 import { consoleOutput } from "./output.js";
 
 // ES module equivalent of __dirname
@@ -44,7 +45,7 @@ export function getTemplateDir(): string {
 		"Template directory not found. Checked locations:\n" +
 		possiblePaths.map((p) => `  - ${p}`).join("\n");
 	consoleOutput(error, { type: "error" });
-	throw new Error("Template directory not found");
+	throw new TaskflowError("Template directory not found", "TEMPLATE_DIR_NOT_FOUND");
 }
 
 /**

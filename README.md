@@ -16,8 +16,11 @@ npm install -g @krr2020/taskflow
 cd your-project
 taskflow init
 
-# Create a feature specification
+# Create a feature specification (Interactive AI)
 taskflow prd create user-authentication
+
+# Or analyze existing code
+taskflow prd detect
 
 # Generate tasks from the spec
 taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
@@ -110,10 +113,29 @@ not-started → setup → implementing → verifying → validating → committi
 
 ---
 
+## Brownfield Development
+
+Taskflow isn't just for new projects. It includes powerful tools for existing codebases:
+
+- **Feature Detection**: Automatically scan your codebase to detect implemented features.
+- **Gap Analysis**: Compare your code against a PRD to find missing requirements.
+- **Migration Planning**: Generate detailed plans for framework or library migrations.
+
+```bash
+# Scan current codebase
+taskflow prd detect
+
+# Check implementation status
+taskflow prd analyze tasks/prds/my-feature.md
+```
+
+---
+
 ## AI Integration (Optional)
 
 Taskflow supports optional LLM integration for:
 
+- Interactive PRD creation and refinement
 - Auto-generating tasks from PRD documents
 - Analyzing and fixing validation errors
 - Providing context-aware guidance

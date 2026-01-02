@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ConfigLoader } from "../../lib/config-loader.js";
+import { LLMRequiredError } from "../../lib/errors.js";
 import type { TasksProgress } from "../../lib/types.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
@@ -78,7 +79,7 @@ export class TasksRefineCommand extends BaseCommand {
 		tasksDir: string,
 	): Promise<CommandResult> {
 		if (!this.llmProvider) {
-			throw new Error("LLM provider not available");
+			throw new LLMRequiredError("LLM provider not available");
 		}
 
 		const systemPrompt = `You are an expert software architect helping to refine an existing task breakdown.

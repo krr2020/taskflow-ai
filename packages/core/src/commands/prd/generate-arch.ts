@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
+import { LLMRequiredError } from "../../lib/errors.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class PrdGenerateArchCommand extends BaseCommand {
@@ -357,7 +358,7 @@ export class PrdGenerateArchCommand extends BaseCommand {
 		instructions?: string,
 	): Promise<CommandResult> {
 		if (!this.llmProvider) {
-			throw new Error("LLM provider not available");
+			throw new LLMRequiredError("LLM provider not available");
 		}
 
 		// Load context files
@@ -436,7 +437,7 @@ export class PrdGenerateArchCommand extends BaseCommand {
 		instructions?: string,
 	): Promise<string> {
 		if (!this.llmProvider) {
-			throw new Error("LLM provider not available");
+			throw new LLMRequiredError("LLM provider not available");
 		}
 
 		// Provider is guaranteed to be available after the check
@@ -516,7 +517,7 @@ Create a detailed coding-standards.md file with all required sections. Output ON
 		instructions?: string,
 	): Promise<string> {
 		if (!this.llmProvider) {
-			throw new Error("LLM provider not available");
+			throw new LLMRequiredError("LLM provider not available");
 		}
 
 		// Provider is guaranteed to be available after the check

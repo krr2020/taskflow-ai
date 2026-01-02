@@ -12,7 +12,10 @@ import {
 	loadTasksProgress,
 	updateTaskStatus,
 } from "../../lib/data-access.js";
-import { NoActiveSessionError } from "../../lib/errors.js";
+import {
+	LLMRequiredError,
+	NoActiveSessionError,
+} from "../../lib/errors.js";
 import {
 	FileValidator,
 	type ValidationResult,
@@ -840,10 +843,10 @@ Be concise (max 150 words).`;
 			// Get AI config to create provider with correct settings
 			const config = this.configLoader.load();
 			if (!config?.ai || !config.ai.enabled) {
-				throw new Error("AI configuration not enabled");
+				throw new LLMRequiredError("AI configuration not enabled");
 			}
 			if (!config.ai.provider) {
-				throw new Error("AI provider not configured");
+				throw new LLMRequiredError("AI provider not configured");
 			}
 
 			// Create provider using actual config (cast to AIConfig)

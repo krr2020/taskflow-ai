@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { CONFIG_FILE, getProjectPaths } from "./config-paths.js";
+import { TaskflowError } from "./errors.js";
 import type { TaskflowConfig } from "./types.js";
 import { validateTaskflowConfig } from "./types.js";
 
@@ -19,9 +20,10 @@ export class ConfigLoader {
 
 	public load(): TaskflowConfig {
 		if (!fs.existsSync(this.configPath)) {
-			throw new Error(
+			throw new TaskflowError(
 				`Configuration file not found at: ${this.configPath}\n` +
 					`Run 'taskflow init' to create a configuration file.`,
+				"CONFIG_NOT_FOUND",
 			);
 		}
 
@@ -31,7 +33,10 @@ export class ConfigLoader {
 			return validateTaskflowConfig(json);
 		} catch (error) {
 			if (error instanceof Error) {
-				throw new Error(`Failed to load config: ${error.message}`);
+				throw new TaskflowError(
+					`Failed to load config: ${error.message}`,
+					"CONFIG_LOAD_ERROR",
+				);
 			}
 			throw error;
 		}

@@ -10,6 +10,7 @@ import {
 	LLMProvider,
 	LLMProviderType,
 } from "../base.js";
+import { LLMError } from "../../lib/errors.js";
 
 export interface MockResponse {
 	content: string;
@@ -60,16 +61,14 @@ export class MockLLMProvider extends LLMProvider {
 			this.config.rateLimitAfter &&
 			this.callCount > this.config.rateLimitAfter
 		) {
-			const error = new Error("Rate limit exceeded") as Error & {
-				status?: number;
-			};
-			error.status = 429;
+			const error = new LLMError("Rate limit exceeded", "LLM_RATE_LIMIT");
+			(error as any).status = 429;
 			throw error;
 		}
 
 		// Check for failure simulation
 		if (this.config.failAfter && this.callCount > this.config.failAfter) {
-			throw new Error("Mock provider failure");
+			throw new LLMError("Mock provider failure", "LLM_MOCK_FAILURE");
 		}
 
 		// Get response (either from list or default)

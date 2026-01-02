@@ -12,6 +12,7 @@ import {
 	SKILL_FILES,
 } from "../../lib/config-paths.js";
 import { saveFeature, saveProjectIndex } from "../../lib/data-access.js";
+import { LLMRequiredError } from "../../lib/errors.js";
 import type {
 	Feature,
 	TaskflowConfig,
@@ -530,7 +531,7 @@ export class TasksGenerateCommand extends BaseCommand {
 		projectName: string,
 	): Promise<CommandResult> {
 		if (!this.llmProvider) {
-			throw new Error("LLM provider not available");
+			throw new LLMRequiredError("LLM provider not available");
 		}
 
 		// Load context files
@@ -667,7 +668,7 @@ export class TasksGenerateCommand extends BaseCommand {
 	): Promise<TasksProgressWithDetails> {
 		const llmProvider = this.llmProvider;
 		if (!llmProvider) {
-			throw new Error("LLM provider not available");
+			throw new LLMRequiredError("LLM provider not available");
 		}
 
 		const systemPrompt = `You are an expert software architect and project planner.

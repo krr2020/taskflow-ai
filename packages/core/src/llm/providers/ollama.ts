@@ -10,6 +10,7 @@ import {
 	LLMProvider,
 	LLMProviderType,
 } from "../base.js";
+import { LLMError } from "../../lib/errors.js";
 
 export interface OllamaConfig {
 	baseUrl: string;
@@ -32,7 +33,7 @@ export class OllamaProvider extends LLMProvider {
 		options?: LLMGenerationOptions,
 	): Promise<LLMGenerationResult> {
 		if (!this.isConfigured()) {
-			throw new Error("Ollama provider is not configured properly");
+			throw new LLMError("Ollama provider is not configured properly", "LLM_CONFIG_ERROR");
 		}
 
 		// Convert messages to Ollama format
@@ -72,7 +73,7 @@ export class OllamaProvider extends LLMProvider {
 
 		if (!response.ok) {
 			const error = await response.text();
-			throw new Error(`Ollama API error: ${response.status} - ${error}`);
+			throw new LLMError(`Ollama API error: ${response.status} - ${error}`, "LLM_API_ERROR");
 		}
 
 		const data = (await response.json()) as {

@@ -169,7 +169,10 @@ export function runCommandWithLog(
 ): ValidationResult {
 	// Validate command is not empty
 	if (!cmd || cmd.trim() === "") {
-		throw new Error(`Command cannot be empty for label: ${label}`);
+		throw new ValidationFailedError(
+			[`Command cannot be empty for label: ${label}`],
+			logsDir,
+		);
 	}
 
 	// Execute command using shell mode for better cross-platform compatibility

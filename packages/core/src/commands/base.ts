@@ -6,6 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ConfigLoader } from "../lib/config-loader.js";
+import { LLMRequiredError } from "../lib/errors.js";
 import type { MCPContext } from "../lib/mcp-detector.js";
 import type { LLMProvider } from "../llm/base.js";
 import { Phase } from "../llm/base.js";
@@ -112,7 +113,7 @@ export abstract class BaseCommand {
 			const cmdName =
 				commandName ||
 				this.constructor.name.replace("Command", "").toLowerCase();
-			throw new Error(this.getLLMRequiredErrorMessage(cmdName));
+			throw new LLMRequiredError(this.getLLMRequiredErrorMessage(cmdName));
 		}
 	}
 

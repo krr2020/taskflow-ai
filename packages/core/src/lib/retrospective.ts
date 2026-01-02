@@ -4,6 +4,7 @@
 
 import fs from "node:fs";
 import { getRefFilePath, REF_FILES } from "./config-paths.js";
+import { TaskflowError } from "./errors.js";
 import type { ParsedError } from "./log-parser.js";
 import { colors, icons } from "./output.js";
 import type { Criticality, ErrorCategory, RetrospectiveItem } from "./types.js";
@@ -195,7 +196,7 @@ export function addRetrospectiveEntry(
 ): number {
 	const retroFile = getRetrospectiveFilePath(refDir);
 	if (!fs.existsSync(retroFile)) {
-		throw new Error("retrospective.md not found");
+		throw new TaskflowError("retrospective.md not found", "RETROSPECTIVE_NOT_FOUND");
 	}
 
 	const items = loadRetrospective(refDir);

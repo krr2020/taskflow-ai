@@ -15,7 +15,7 @@ import {
 	loadTasksProgress,
 	updateTaskStatus,
 } from "../../lib/data-access.js";
-import { NoActiveSessionError } from "../../lib/errors.js";
+import { NoActiveSessionError, TaskflowError } from "../../lib/errors.js";
 import type { TaskStatus } from "../../lib/types.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
@@ -154,7 +154,10 @@ export class ResumeCommand extends BaseCommand {
 
 		const guidance = statusGuidance[targetStatus];
 		if (!guidance) {
-			throw new Error(`No guidance found for status: ${targetStatus}`);
+			throw new TaskflowError(
+				`No guidance found for status: ${targetStatus}`,
+				"INVALID_STATUS_GUIDANCE",
+			);
 		}
 
 		return this.success(

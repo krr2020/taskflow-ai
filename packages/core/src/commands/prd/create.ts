@@ -4,8 +4,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import readline from "node:readline";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
+import { LLMRequiredError } from "../../lib/errors.js";
 import { ensureDir, exists } from "../../lib/file-utils.js";
 import { PRDInteractiveSession } from "../../lib/prd-interactive-session.js";
 import { buildPRDContext } from "../../llm/context-priorities.js";
@@ -18,10 +20,14 @@ import { BaseCommand, type CommandResult } from "../base.js";
 interface InteractiveInfo {
 	featureName: string;
 	title: string;
-	description: string;
-	targetUsers: string;
-	goals: string[];
-	successCriteria: string[];
+	summary: string;
+}
+
+interface Question {
+	number: number;
+	text: string;
+	type: "multiple-choice" | "open-ended";
+	options?: string[]; // ['A. Option 1', 'B. Option 2']
 }
 
 /**
@@ -37,10 +43,7 @@ async function gatherInteractiveInfo(
 	return {
 		featureName: sessionData.featureName,
 		title: sessionData.title,
-		description: sessionData.overview,
-		targetUsers: sessionData.targetAudience,
-		goals: sessionData.userStories || [],
-		successCriteria: sessionData.successCriteria || [],
+		summary: sessionData.summary,
 	};
 }
 
@@ -49,45 +52,19 @@ export class PrdCreateCommand extends BaseCommand {
 
 	async execute(
 		featureName: string,
-		description?: string,
-		title?: string,
-		interactive?: boolean,
+		// optional params kept for signature compatibility but unused/deprecated
+		_description?: string,
+		_title?: string,
+		_interactive?: boolean,
 	): Promise<CommandResult> {
 		// Validate LLM availability if not in MCP mode
 		this.validateLLM("prd:create");
 
-		// Interactive mode: gather information
-		if (interactive) {
-			const interactiveInfo = await gatherInteractiveInfo(this, featureName);
-			featureName = interactiveInfo.featureName;
-			title = interactiveInfo.title || title;
-			description = interactiveInfo.description || description;
-
-			// Add interactive details to description
-			const extraDetails: string[] = [];
-			if (interactiveInfo.targetUsers) {
-				extraDetails.push(`**Target Users:** ${interactiveInfo.targetUsers}`);
-			}
-			if (interactiveInfo.goals && interactiveInfo.goals.length > 0) {
-				extraDetails.push(
-					`**Key Goals:**\n${interactiveInfo.goals.map((g) => `- ${g}`).join("\n")}`,
-				);
-			}
-			if (
-				interactiveInfo.successCriteria &&
-				interactiveInfo.successCriteria.length > 0
-			) {
-				extraDetails.push(
-					`**Success Criteria:**\n${interactiveInfo.successCriteria.map((sc) => `- ${sc}`).join("\n")}`,
-				);
-			}
-
-			if (extraDetails.length > 0) {
-				description = description
-					? `${description}\n\n${extraDetails.join("\n\n")}`
-					: extraDetails.join("\n\n");
-			}
-		}
+		// Always interactive mode for title + summary
+		const interactiveInfo = await gatherInteractiveInfo(this, featureName);
+		featureName = interactiveInfo.featureName;
+		const title = interactiveInfo.title;
+		const summary = interactiveInfo.summary;
 
 		const configLoader = new ConfigLoader(this.context.projectRoot);
 		const paths = configLoader.getPaths();
@@ -147,36 +124,35 @@ export class PrdCreateCommand extends BaseCommand {
 				async () => {
 					const content = await this.generatePRDWithLLM(
 						featureName,
-						description || "",
-						paths,
 						title,
+						summary,
+						paths,
 					);
 					console.log("✓ PRD generated with LLM");
+
+					// Validate generated content
+					const validation = validatePRD(content);
+					if (!validation.valid) {
+						console.warn(
+							"⚠ Generated PRD has validation issues:",
+							validation.errors.join(", "),
+						);
+					}
+
 					return content;
 				},
 				() => {
 					console.warn("LLM generation failed, falling back to template.");
-					return this.generatePrdTemplate(featureName, description);
+					return this.generatePrdTemplate(featureName, title, summary);
 				},
 				"PRD Generation",
 			);
 		} else {
-			prdContent = this.generatePrdTemplate(featureName, description);
+			prdContent = this.generatePrdTemplate(featureName, title, summary);
 		}
 
 		// Write PRD file
 		fs.writeFileSync(prdFilePath, prdContent, "utf-8");
-
-		const initialRequirements = description
-			? [
-					"",
-					"INITIAL REQUIREMENTS PROVIDED:",
-					"───────────────────────────────",
-					description,
-					"",
-					"Use this as a starting point for the PRD.",
-				]
-			: [];
 
 		const nextStepsBase = [
 			`✓ PRD created: ${prdFilename}`,
@@ -184,12 +160,8 @@ export class PrdCreateCommand extends BaseCommand {
 			"",
 			"NEXT:",
 			"─".repeat(60),
-			"1. Fill out the PRD document with feature requirements",
+			"1. Review the generated PRD",
 		];
-
-		if (description) {
-			nextStepsBase.push("   (Initial requirements already provided)");
-		}
 
 		nextStepsBase.push("2. Generate coding standards and architecture rules");
 		nextStepsBase.push("3. Generate task breakdown from PRD");
@@ -197,24 +169,18 @@ export class PrdCreateCommand extends BaseCommand {
 		return this.success(
 			nextStepsBase.join("\n"),
 			[
-				"1. Edit the PRD file to add feature details:",
+				"1. Edit the PRD file if needed:",
 				`   Open: ${prdFilePath}`,
-				...initialRequirements,
 				"",
-				"2. Use AI to help fill out the PRD:",
-				"   - Read .taskflow/ref/prd-generator.md for guidance",
-				"   - Gather requirements through conversation",
-				"   - Document goals, user stories, and acceptance criteria",
-				"",
-				"3. When PRD is complete, generate project standards:",
+				"2. When PRD is complete, generate project standards:",
 				`   taskflow prd generate-arch ${prdFilename}`,
 				"",
-				"4. Then generate task breakdown:",
+				"3. Then generate task breakdown:",
 				`   taskflow tasks generate ${prdFilename}`,
 			].join("\n"),
 			{
 				aiGuidance: [
-					"PRD Created - Ready to Fill Out",
+					"PRD Created - Ready for Review",
 					"",
 					"WHAT IS A PRD?",
 					"───────────────",
@@ -227,27 +193,19 @@ export class PrdCreateCommand extends BaseCommand {
 					"",
 					"YOUR TASK:",
 					"───────────",
-					"Fill out the PRD template that was just created.",
+					"Review the PRD that was just created.",
 					"",
 					"CRITICAL - Read This First:",
 					"────────────────────────────",
 					`1. Read: ${getRefFilePath(paths.refDir, REF_FILES.prdGenerator)}`,
 					"   This contains the complete PRD creation process",
 					"",
-					"2. Gather information from the user:",
-					"   - What is the feature about?",
-					"   - Who will use it?",
-					"   - What problem does it solve?",
-					"   - What are the key requirements?",
-					"   - What are the acceptance criteria?",
+					"2. Verify the generated content:",
+					"   - Does it match the user's intent?",
+					"   - Are all sections complete?",
+					"   - Are the requirements clear?",
 					"",
-					"3. Structure the PRD following the template sections:",
-					"   - Overview and Goals",
-					"   - User Stories",
-					"   - Functional Requirements",
-					"   - Non-Functional Requirements",
-					"   - Technical Considerations",
-					"   - Success Criteria",
+					"3. Make any necessary manual edits.",
 					"",
 					"IMPORTANT:",
 					"───────────",
@@ -257,447 +215,386 @@ export class PrdCreateCommand extends BaseCommand {
 					"",
 					"WORKFLOW:",
 					"──────────",
-					"1. ✓ PRD template created",
-					"2. → Fill out PRD with requirements (you are here)",
+					"1. ✓ PRD created",
+					"2. → Review and refine PRD (you are here)",
 					"3. → Generate coding standards and architecture rules",
 					"4. → Generate task breakdown",
 					"5. → Start executing tasks",
 				].join("\n"),
 				contextFiles: [
-					`${prdFilePath} - PRD template to fill out`,
+					`${prdFilePath} - PRD to review`,
 					`${getRefFilePath(paths.refDir, REF_FILES.prdGenerator)} - PRD creation guidelines`,
 					`${getRefFilePath(paths.refDir, REF_FILES.aiProtocol)} - Core AI operating discipline`,
-				],
-				warnings: [
-					"DO NOT skip the prd-generator.md - it contains critical guidance",
-					"DO NOT guess at requirements - ask the user for clarification",
-					"DO NOT create coding standards yet - wait for generate-arch command",
-					"DO ensure PRD is complete before generating tasks",
 				],
 			},
 		);
 	}
 
 	/**
-	 * Generate PRD content using LLM with interactive Q&A
+	 * Generate PRD content using LLM with single-pass Q&A
 	 */
 	private async generatePRDWithLLM(
 		featureName: string,
-		description: string,
+		title: string,
+		summary: string,
 		paths: ReturnType<ConfigLoader["getPaths"]>,
-		title?: string,
 	): Promise<string> {
 		if (!this.llmProvider || !this.contextManager) {
-			throw new Error("LLM provider or context manager not available");
+			throw new LLMRequiredError("LLM provider or context manager not available");
 		}
 
-		// Provider is guaranteed to be available after the check
-		const llmProvider = this.llmProvider;
+		console.log(`Generating PRD for feature: ${featureName}`);
 
-		// Load context files
-		const prdGuidelinesPath = getRefFilePath(
-			paths.refDir,
-			REF_FILES.prdGenerator,
-		);
-		const codingStandardsPath = getRefFilePath(
-			paths.refDir,
-			REF_FILES.codingStandards,
-		);
-		const architectureRulesPath = getRefFilePath(
-			paths.refDir,
-			REF_FILES.architectureRules,
-		);
+		// Step 1: Generate questions
+		console.log("\nAnalyzing requirements...");
+		const questions = await this.generateQuestions(title, summary);
 
-		const prdGuidelines = fs.existsSync(prdGuidelinesPath)
-			? fs.readFileSync(prdGuidelinesPath, "utf-8")
-			: "";
-		const codingStandards = fs.existsSync(codingStandardsPath)
-			? fs.readFileSync(codingStandardsPath, "utf-8")
-			: "";
-		const architectureRules = fs.existsSync(architectureRulesPath)
-			? fs.readFileSync(architectureRulesPath, "utf-8")
-			: "";
-
-		// Build context with priorities
-		const contextParams: {
-			userRequest: string;
-			codingStandards?: string;
-			architectureRules?: string;
-		} = {
-			userRequest: `Feature: ${featureName}\nDescription: ${description || "No description provided"}`,
-		};
-
-		if (codingStandards) {
-			contextParams.codingStandards = codingStandards;
+		// If no questions, generate PRD directly
+		if (questions.length === 0) {
+			console.log("Requirements are clear. Generating PRD...");
+			return this.generatePRDDirectly(title, summary, paths);
 		}
 
-		if (architectureRules) {
-			contextParams.architectureRules = architectureRules;
-		}
+		// Step 2: Ask questions
+		console.log(`\nI have ${questions.length} clarifying questions:`);
+		this.displayQuestions(questions);
 
-		const contextItems = buildPRDContext(this.contextManager, contextParams);
+		// Step 3: Get answers
+		const answers = await this.getUserAnswersAllAtOnce(questions);
 
-		const { selectedItems, summary } =
-			this.contextManager.buildContext(contextItems);
-
-		console.log(`Context: ${summary}`);
-
-		// Build system prompt with Q&A capability
-		const systemPrompt = `You are a Product Requirements Document (PRD) generation specialist.
-
-${prdGuidelines ? `PRD GUIDELINES:\n${prdGuidelines}\n` : ""}
-
-INSTRUCTIONS:
-1. If you need more information to create a complete PRD, ask clarifying questions
-2. When asking questions, format them clearly with numbered list
-3. Once you have sufficient information, generate a complete PRD following the template structure
-4. Be specific and detailed based on the feature description
-5. Include all required sections: Overview, Goals, User Stories, Functional Requirements, Non-Functional Requirements, Technical Considerations, Success Criteria
-6. Use proper Markdown formatting
-7. Fill in realistic content based on the feature description - do NOT leave placeholder comments
-
-Q&A MODE:
-If you need clarification, respond with:
-QUESTIONS:
-1. [Your question]
-2. [Your question]
-...
-
-GENERATION MODE:
-When ready to generate the PRD, respond with the complete PRD in Markdown format, starting with the title.`;
-
-		// Build initial user prompt with context
-		let initialPrompt = `Generate a complete PRD for this feature:
-
-Title: ${title || featureName}
-Description: ${description || `Build a new feature called ${featureName}`}
-
-`;
-
-		// Add context items
-		for (const item of selectedItems) {
-			if (item.priority <= 2) {
-				// Essential, High, Medium
-				initialPrompt += `\n${item.content}\n`;
-			}
-		}
-
-		initialPrompt +=
-			"\nIf you need more information, ask clarifying questions. Otherwise, generate the complete PRD following the structure in the guidelines.";
-
-		// Interactive Q&A loop
-		const conversationHistory: Array<{
-			role: "system" | "user" | "assistant";
-			content: string;
-		}> = [
-			{ role: "system", content: systemPrompt },
-			{ role: "user", content: initialPrompt },
-		];
-
-		const maxIterations = 5;
-		let iteration = 0;
-
-		while (iteration < maxIterations) {
-			iteration++;
-
-			// Call LLM
-			const response = await this.retryWithBackoff(() =>
-				llmProvider.generate(conversationHistory, {
-					maxTokens: 4000,
-					temperature: 0.7,
-				}),
-			);
-
-			// Add response to conversation history
-			conversationHistory.push({
-				role: "assistant",
-				content: response.content,
-			});
-
-			// Check if this is a question or final PRD
-			if (this.isQuestionResponse(response.content)) {
-				// Extract and display questions
-				const questions = this.extractQuestions(response.content);
-
-				if (questions.length === 0) {
-					// No valid questions found, treat as final PRD
-					break;
-				}
-
-				console.log("\nThe AI has some questions to create a better PRD:");
-				console.log("─".repeat(60));
-				for (const question of questions) {
-					console.log(question);
-				}
-				console.log("─".repeat(60));
-
-				// Get user answers
-				const answers = await this.getUserAnswers(questions);
-
-				// Add answers to conversation
-				let answerText = "Here are my answers:\n\n";
-				for (let i = 0; i < questions.length; i++) {
-					answerText += `Q${i + 1}: ${questions[i]}\nA${i + 1}: ${answers[i]}\n\n`;
-				}
-				answerText +=
-					"Now please generate the complete PRD with this information.";
-
-				conversationHistory.push({ role: "user", content: answerText });
-			} else {
-				// This is the final PRD
-				// Validate response
-				const validation = validatePRD(response.content);
-				if (!validation.valid) {
-					console.warn("\nPRD validation warnings:");
-					for (const error of validation.errors) {
-						console.warn(`  - ${error}`);
-					}
-					// Continue anyway - warnings are acceptable
-				}
-
-				// Display cost
-				console.log(`\nCost: ${this.getCostSummary()}`);
-
-				return response.content;
-			}
-		}
-
-		// If we exhausted iterations, return the last response
-		console.warn(`\nReached maximum Q&A iterations (${maxIterations})`);
-		console.log(`Cost: ${this.getCostSummary()}`);
-
-		const lastResponse = conversationHistory[conversationHistory.length - 1];
-		if (lastResponse?.role === "assistant") {
-			return lastResponse.content;
-		}
-
-		throw new Error("Failed to generate PRD after maximum iterations");
+		// Step 4: Generate final PRD
+		console.log("\nGenerating final PRD...");
+		return this.generateFinalPRD(title, summary, questions, answers, paths);
 	}
 
 	/**
-	 * Check if LLM response contains questions
+	 * Generate clarifying questions
 	 */
-	private isQuestionResponse(content: string): boolean {
-		// Check for explicit QUESTIONS: marker
-		if (content.includes("QUESTIONS:")) {
-			return true;
+	private async generateQuestions(
+		title: string,
+		summary: string,
+	): Promise<Question[]> {
+		const systemPrompt = this.buildSystemPromptForQuestions();
+		const userPrompt = this.buildQuestionPrompt(title, summary);
+
+		// We assume buildQuestionPrompt no longer needs paths if not used
+		// If it needs paths for context, we should pass it.
+		// My implementation below removed paths from buildQuestionPrompt arguments.
+
+		const response = await this.llmProvider?.generate(
+			[
+				{ role: "system", content: systemPrompt },
+				{ role: "user", content: userPrompt },
+			],
+			{
+				maxTokens: 2000,
+				temperature: 0.7,
+			},
+		);
+
+		if (!response) {
+			return [];
 		}
 
-		// Check for question patterns
+		return this.parseAllQuestions(response.content);
+	}
+
+	/**
+	 * Generate PRD directly without questions
+	 */
+	private async generatePRDDirectly(
+		title: string,
+		summary: string,
+		paths: ReturnType<ConfigLoader["getPaths"]>,
+	): Promise<string> {
+		return this.generateFinalPRD(title, summary, [], [], paths);
+	}
+
+	/**
+	 * Generate final PRD with context and answers
+	 */
+	private async generateFinalPRD(
+		title: string,
+		summary: string,
+		questions: Question[],
+		answers: string[],
+		paths: ReturnType<ConfigLoader["getPaths"]>,
+	): Promise<string> {
+		const systemPrompt = this.buildSystemPromptForPRD(paths);
+		const userPrompt = this.buildPRDPrompt(title, summary, questions, answers);
+
+		const response = await this.llmProvider?.generate(
+			[
+				{ role: "system", content: systemPrompt },
+				{ role: "user", content: userPrompt },
+			],
+			{
+				maxTokens: 4000,
+				temperature: 0.7,
+			},
+		);
+
+		if (!response) {
+			throw new Error("Failed to generate PRD");
+		}
+
+		return response.content;
+	}
+
+	/**
+	 * Build system prompt for question generation
+	 */
+	private buildSystemPromptForQuestions(): string {
+		return `You are a Product Manager interviewing a stakeholder to create a PRD.
+Your goal is to ask at least 5 clarifying questions to gather necessary requirements.
+Do not ask about things already covered in the summary.
+Focus on:
+- Core functionality
+- Edge cases
+- Technical constraints
+- User roles
+- Success metrics
+
+Output format MUST be:
+QUESTIONS:
+1. [Question text] (Type: open-ended)
+2. [Question text] (Type: multiple-choice)
+   A. [Option 1] (Reason: [Short reason for recommendation])
+   B. [Option 2] (Reason: [Short reason for recommendation])
+...
+
+For multiple-choice questions, you MUST provide recommended options with a short reason for each option to guide the user.
+
+If the summary is comprehensive and no questions are needed, reply with:
+NO_QUESTIONS_NEEDED`;
+	}
+
+	/**
+	 * Build user prompt for question generation
+	 */
+	private buildQuestionPrompt(title: string, summary: string): string {
+		// Load context
+		const contextParams = {
+			userRequest: `Feature: ${title}\nSummary: ${summary}`,
+		};
+		let contextSummary = "";
+		if (this.contextManager) {
+			const contextItems = buildPRDContext(this.contextManager, contextParams);
+			const result = this.contextManager.buildContext(contextItems);
+			contextSummary = result.summary;
+		}
+
+		return `Feature Title: ${title}
+
+Feature Summary:
+${summary}
+
+Context:
+${contextSummary}
+
+Please analyze this feature and generate clarifying questions if needed.`;
+	}
+
+	/**
+	 * Parse questions from LLM response
+	 */
+	private parseAllQuestions(content: string): Question[] {
+		if (content.includes("NO_QUESTIONS_NEEDED")) {
+			return [];
+		}
+
+		const questions: Question[] = [];
 		const lines = content.split("\n");
-		let questionCount = 0;
+		let currentQuestion: Partial<Question> | null = null;
 
 		for (const line of lines) {
 			const trimmed = line.trim();
-			// Check for numbered questions or lines ending with ?
-			if (
-				(trimmed.match(/^\d+\.\s+.*\?/) || trimmed.match(/^-\s+.*\?/)) &&
-				!trimmed.toLowerCase().includes("# prd:")
-			) {
-				questionCount++;
+
+			// Match question line: "1. Question text (Type: ...)"
+			const questionMatch = trimmed.match(
+				/^(\d+)\.\s+(.+?)(?:\s+\(Type:\s*(.+?)\))?$/,
+			);
+			if (questionMatch) {
+				// Save previous question
+				if (currentQuestion?.text) {
+					questions.push(currentQuestion as Question);
+				}
+
+				currentQuestion = {
+					number: questionMatch[1] ? Number.parseInt(questionMatch[1], 10) : 0,
+					text: questionMatch[2] || "",
+					type:
+						(questionMatch[3]?.toLowerCase() as
+							| "multiple-choice"
+							| "open-ended") || "open-ended",
+					options: [],
+				};
+				continue;
+			}
+
+			// Match option line: "A. Option"
+			const optionMatch = trimmed.match(/^([A-Z])\.\s+(.+)$/);
+			if (optionMatch && currentQuestion) {
+				if (!currentQuestion.options) {
+					currentQuestion.options = [];
+				}
+				currentQuestion.options.push(trimmed);
 			}
 		}
 
-		// If we have 2+ questions and no PRD title, it's likely questions
-		const hasPRDTitle = content.match(/^#\s+PRD:/m);
-		return questionCount >= 2 && !hasPRDTitle;
-	}
-
-	/**
-	 * Extract questions from LLM response
-	 */
-	private extractQuestions(content: string): string[] {
-		const questions: string[] = [];
-
-		// Try to find QUESTIONS: section
-		const questionsMatch = content.match(/QUESTIONS:\s*\n([\s\S]*?)(?:\n\n|$)/);
-		if (questionsMatch?.[1]) {
-			const questionText = questionsMatch[1];
-			const lines = questionText.split("\n");
-
-			for (const line of lines) {
-				const trimmed = line.trim();
-				// Match numbered or bulleted questions
-				const match = trimmed.match(/^(?:\d+\.|-)\s+(.+)/);
-				if (match?.[1]) {
-					questions.push(match[1]);
-				}
-			}
-		} else {
-			// Fallback: extract any lines that look like questions
-			const lines = content.split("\n");
-			for (const line of lines) {
-				const trimmed = line.trim();
-				const match = trimmed.match(/^(?:\d+\.|-)\s+(.+\?)/);
-				if (match?.[1] && !trimmed.toLowerCase().includes("# prd:")) {
-					questions.push(match[1]);
-				}
-			}
+		// Push last question
+		if (currentQuestion?.text) {
+			questions.push(currentQuestion as Question);
 		}
 
 		return questions;
 	}
 
 	/**
-	 * Get user answers to questions
+	 * Display questions to user
 	 */
-	private async getUserAnswers(questions: string[]): Promise<string[]> {
-		const answers: string[] = [];
-		const readline = await import("node:readline");
+	private displayQuestions(questions: Question[]): void {
+		console.log("─".repeat(60));
+		for (const q of questions) {
+			console.log(`${q.number}. ${q.text}`);
+			if (q.options && q.options.length > 0) {
+				for (const opt of q.options) {
+					console.log(`   ${opt}`);
+				}
+			}
+			console.log("");
+		}
+		console.log("─".repeat(60));
+	}
+
+	/**
+	 * Get answers from user all at once
+	 */
+	private async getUserAnswersAllAtOnce(
+		questions: Question[],
+	): Promise<string[]> {
 		const rl = readline.createInterface({
 			input: process.stdin,
 			output: process.stdout,
 		});
 
-		for (let i = 0; i < questions.length; i++) {
-			const answer = await new Promise<string>((resolve) => {
-				rl.question(`\nAnswer to Q${i + 1}: `, (ans) => {
-					resolve(ans.trim());
-				});
+		console.log(
+			`Please answer the ${questions.length} questions above. You can provide answers in format:`,
+			"\n'1A, 2C, 3: My answer text'",
+			"\nOr just type your answers freely.",
+		);
+
+		const answerText = await new Promise<string>((resolve) => {
+			rl.question("\nYour answers:\n> ", (ans) => {
+				rl.close();
+				resolve(ans.trim());
 			});
-			answers.push(answer || "No specific answer provided");
+		});
+
+		return [answerText];
+	}
+
+	/**
+	 * Build system prompt for PRD generation
+	 */
+	private buildSystemPromptForPRD(
+		paths: ReturnType<ConfigLoader["getPaths"]>,
+	): string {
+		const prdGuidelinesPath = getRefFilePath(
+			paths.refDir,
+			REF_FILES.prdGenerator,
+		);
+		const prdGuidelines = fs.existsSync(prdGuidelinesPath)
+			? fs.readFileSync(prdGuidelinesPath, "utf-8")
+			: "";
+
+		return `You are a Product Requirements Document (PRD) generation specialist.
+
+${prdGuidelines ? `PRD GUIDELINES:\n${prdGuidelines}\n` : ""}
+
+INSTRUCTIONS:
+1. Generate a complete PRD following the template structure
+2. Be specific and detailed based on the feature description and Q&A
+3. Include all required sections:
+   - Introduction/Overview
+   - Goals
+   - User Stories
+   - Functional Requirements
+   - Non-Goals
+   - Success Metrics
+4. Use proper Markdown formatting
+5. Fill in realistic content - do NOT leave placeholder comments`;
+	}
+
+	/**
+	 * Build user prompt for PRD generation
+	 */
+	private buildPRDPrompt(
+		title: string,
+		summary: string,
+		questions: Question[],
+		answers: string[],
+	): string {
+		let prompt = `Generate a complete PRD for this feature:
+
+Title: ${title}
+Summary: ${summary}
+`;
+
+		if (questions.length > 0) {
+			prompt += "\nCLARIFICATION Q&A:\n";
+			for (let i = 0; i < questions.length; i++) {
+				const q = questions[i];
+				if (!q) continue;
+
+				prompt += `Q: ${q.text}\n`;
+				if (q.options) {
+					prompt += `Options: ${q.options.join(", ")}\n`;
+				}
+			}
+
+			prompt += `\nUser Answers:\n${answers[0]}\n`;
 		}
 
-		rl.close();
-		return answers;
+		return prompt;
 	}
 
 	private generatePrdTemplate(
 		featureName: string,
-		description?: string,
+		title: string,
+		summary: string,
 	): string {
-		const problemStatement = description
-			? description.trim()
-			: "<!-- What problem does this feature solve? -->";
-
-		return `# PRD: ${featureName}
+		return `# PRD: ${title || featureName}
 
 **Created:** ${new Date().toISOString().split("T")[0]}
 **Status:** Draft
-**Owner:** TBD
 
----
+## 1. Introduction
+${summary || "<!-- Overview of the feature -->"}
 
-## 1. Overview
-
-### Problem Statement
-${problemStatement}
-
-### Goals
+## 2. Goals
 <!-- What are we trying to achieve? -->
 
-### Non-Goals
-<!-- What is explicitly out of scope? -->
+## 3. User Stories
+<!-- As a <user>, I want <action>, so that <benefit> -->
 
----
-
-## 2. User Stories
-
-### Primary User Stories
-<!-- Format: As a [type of user], I want [goal] so that [benefit] -->
-
-1.
-2.
-3.
-
-### Secondary User Stories
-<!-- Nice-to-have stories -->
-
-1.
-2.
-
----
-
-## 3. Functional Requirements
-
-### Core Features
+## 4. Functional Requirements
 <!-- What must this feature do? -->
 
-1.
-2.
-3.
+## 5. Non-Goals
+<!-- What is explicitly out of scope? -->
 
-### User Flows
-<!-- Describe key user interactions -->
+## 6. Design Considerations
+<!-- UI/UX requirements -->
 
-#### Flow 1: [Name]
-1.
-2.
-3.
+## 7. Technical Considerations
+<!-- Technical constraints, dependencies, API design -->
 
----
-
-## 4. Non-Functional Requirements
-
-### Performance
-<!-- Response times, throughput, scalability -->
-
-### Security
-<!-- Authentication, authorization, data protection -->
-
-### Usability
-<!-- User experience considerations -->
-
-### Reliability
-<!-- Uptime, error handling, recovery -->
-
----
-
-## 5. Technical Considerations
-
-### Architecture
-<!-- High-level technical approach -->
-
-### Dependencies
-<!-- External systems, libraries, APIs -->
-
-### Data Model
-<!-- Key entities and relationships -->
-
-### API Design
-<!-- Endpoints, requests, responses -->
-
----
-
-## 6. Success Criteria
-
-### Acceptance Criteria
-<!-- How do we know when this is done? -->
-
-1.
-2.
-3.
-
-### Metrics
+## 8. Success Metrics
 <!-- How do we measure success? -->
 
--
--
-
----
-
-## 7. Open Questions
-
-<!-- Unresolved questions that need answers -->
-
-1.
-2.
-
----
-
-## 8. Timeline and Phasing
-
-### Phase 1 (MVP)
-<!-- What's in the minimum viable product? -->
-
-### Phase 2 (Enhancements)
-<!-- What comes after MVP? -->
-
----
-
-## Notes
-
-<!-- Additional context, links, references -->
+## 9. Open Questions
+<!-- Unresolved questions -->
 `;
 	}
 }

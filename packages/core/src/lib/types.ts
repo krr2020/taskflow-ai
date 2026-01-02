@@ -374,3 +374,70 @@ export function parseTaskId(taskId: string): {
 		taskNumber: match[3] as string,
 	};
 }
+
+// ============================================================================
+// Brownfield Types
+// ============================================================================
+
+export interface ScanConfig {
+	rootDir: string;
+	ignore?: string[];
+	fileTypes?: string[];
+}
+
+export interface CodePattern {
+	pattern: string;
+	matches: Array<{ file: string; line: number; snippet: string }>;
+}
+
+export interface DiscoveredFeature {
+	name: string;
+	type: "auth" | "payment" | "api" | "ui" | "generic";
+	files: string[];
+	confidence: "high" | "medium" | "low";
+	patterns: CodePattern[];
+}
+
+export interface Requirement {
+	id: string;
+	text: string;
+	type: "functional" | "non-functional";
+}
+
+export interface RequirementMatch {
+	requirement: Requirement;
+	status: "implemented" | "partial" | "missing";
+	confidence: number;
+	evidence: Array<{ file: string; line: number; reason: string }>;
+}
+
+export interface GapAnalysis {
+	summary: {
+		total: number;
+		implemented: number;
+		partial: number;
+		missing: number;
+		percentComplete: number;
+	};
+	gaps: Array<{
+		requirement: Requirement;
+		priority: "high" | "medium" | "low";
+		effort: "small" | "medium" | "large";
+		suggestion: string;
+	}>;
+}
+
+export interface MigrationStep {
+	type: "install" | "uninstall" | "modify" | "create" | "delete";
+	target: string;
+	description: string;
+	code?: string;
+}
+
+export interface MigrationPlan {
+	from: string;
+	to: string;
+	steps: MigrationStep[];
+	risks: string[];
+	estimatedEffort: string;
+}

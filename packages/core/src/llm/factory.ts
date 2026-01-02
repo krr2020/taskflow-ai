@@ -10,6 +10,7 @@ import {
 	type LLMProvider,
 	LLMProviderType,
 } from "./base.js";
+import { LLMError } from "../lib/errors.js";
 import { type AIConfig, ModelSelector } from "./model-selector.js";
 import { AnthropicProvider } from "./providers/anthropic.js";
 import { MockLLMProvider } from "./providers/mock.js";
@@ -71,7 +72,7 @@ export const ProviderFactory = {
 			}
 
 			default:
-				throw new Error(`Unknown provider type: ${type}`);
+				throw new LLMError(`Unknown provider type: ${type}`, "UNKNOWN_PROVIDER");
 		}
 	},
 

@@ -5,6 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { ConfigLoader } from "../../lib/config-loader.js";
+import { LLMRequiredError } from "../../lib/errors.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 interface ProgressTask {
@@ -175,7 +176,7 @@ export class TasksAddCommand extends BaseCommand {
 		story: ProgressStory,
 	): Promise<CommandResult> {
 		if (!this.llmProvider) {
-			throw new Error("LLM provider not available");
+			throw new LLMRequiredError("LLM provider not available");
 		}
 
 		const systemPrompt = `You are an expert software architect helping to add a new task to an existing task breakdown.

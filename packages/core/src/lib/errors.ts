@@ -198,6 +198,20 @@ export class StoryInProgressError extends TaskflowError {
 	}
 }
 
+export class LLMRequiredError extends TaskflowError {
+	constructor(message: string) {
+		super(message, "LLM_REQUIRED");
+		this.name = "LLMRequiredError";
+	}
+}
+
+export class LLMError extends TaskflowError {
+	constructor(message: string, code = "LLM_ERROR") {
+		super(message, code);
+		this.name = "LLMError";
+	}
+}
+
 export class DependencyNotMetError extends TaskflowError {
 	constructor(
 		taskId: string,
@@ -258,6 +272,11 @@ export function isTaskflowError(error: unknown): error is TaskflowError {
 
 export function formatError(error: unknown): string {
 	if (isTaskflowError(error)) {
+		// Special case for LLMRequiredError to avoid double prefix
+		if (error.name === "LLMRequiredError") {
+			return error.message;
+		}
+
 		let msg = `${error.name}: ${error.message}`;
 		if (error.recoveryHint) {
 			msg += `\nHint: ${error.recoveryHint}`;
