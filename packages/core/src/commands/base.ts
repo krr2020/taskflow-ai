@@ -5,11 +5,19 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import pc from "picocolors";
+import { AICallLogger } from "../lib/ai-call-logger.js";
 import { ConfigLoader } from "../lib/config-loader.js";
 import { LLMRequiredError } from "../lib/errors.js";
 import type { MCPContext } from "../lib/mcp-detector.js";
-import type { LLMProvider } from "../llm/base.js";
-import { Phase } from "../llm/base.js";
+import { UsageDisplay } from "../lib/usage-display.js";
+import {
+	type LLMGenerationOptions,
+	type LLMGenerationResult,
+	type LLMMessage,
+	type LLMProvider,
+	Phase,
+} from "../llm/base.js";
 import { LLMCache } from "../llm/cache.js";
 import { CheckpointManager } from "../llm/checkpoint-manager.js";
 import { ContextManager } from "../llm/context-manager.js";
@@ -41,6 +49,7 @@ export abstract class BaseCommand {
 	protected rateLimiter: RateLimiter;
 	protected checkpointManager: CheckpointManager;
 	protected mcpContext: MCPContext;
+	protected aiLogger: AICallLogger;
 
 	// Commands that require LLM (set in subclasses)
 	protected requiresLLM: boolean = false;
@@ -54,7 +63,18 @@ export abstract class BaseCommand {
 		this.checkpointManager = new CheckpointManager({
 			checkpointDir: `${context.projectRoot}/.taskflow/checkpoints`,
 		});
+
+		const debugEnabled = process.env.TASKFLOW_DEBUG === "true";
+		this.aiLogger = new AICallLogger(context.projectRoot, debugEnabled);
+
 		this.initializeLLMProvider();
+	}
+
+	/**
+	 * Get project root directory
+	 */
+	getProjectRoot(): string {
+		return this.context.projectRoot;
 	}
 
 	/**
@@ -158,6 +178,163 @@ For more info: https://github.com/krr2020/taskflow
 	}
 
 	/**
+	 * Generate text stream with cost tracking and error handling
+	 */
+	protected async *generateStream(
+		messages: LLMMessage[],
+		options?: LLMGenerationOptions,
+	): AsyncGenerator<string, string, unknown> {
+		if (!this.isLLMAvailable() || !this.llmProvider) {
+			return "";
+		}
+
+		const startTime = Date.now();
+
+		try {
+			// Check cache first
+			const cached = this.llmCache.get(messages, options);
+			if (cached) {
+				yield cached.content;
+				return cached.content;
+			}
+
+			// Call provider stream
+			const generator = this.llmProvider.generateStream(messages, options);
+			let fullContent = "";
+
+			// Iterate through stream and capture return value
+			let next = await generator.next();
+			while (!next.done) {
+				const chunk = next.value;
+				fullContent += chunk;
+				yield chunk;
+				next = await generator.next();
+			}
+
+			// Process result (cost tracking and caching)
+			const result = next.value as LLMGenerationResult;
+
+			// Cache the response
+			this.llmCache.set(messages, options, result);
+
+			// Track cost
+			this.costTracker.trackUsage(result);
+
+			// Log AI call
+			await this.aiLogger.logCall({
+				timestamp: new Date().toISOString(),
+				command: this.constructor.name,
+				provider: "llm", // We don't have provider name easily accessible here without casting, but 'llm' is fine or we can try to get it
+				model: result.model,
+				prompt: {
+					system: messages.find((m) => m.role === "system")?.content || "",
+					user: messages.find((m) => m.role === "user")?.content || "",
+				},
+				response: {
+					content: fullContent,
+					usage: {
+						promptTokens: result.promptTokens || 0,
+						completionTokens: result.completionTokens || 0,
+						totalTokens: result.tokensUsed || 0,
+					},
+				},
+				duration: Date.now() - startTime,
+			});
+
+			return fullContent;
+		} catch (error) {
+			this.logError(error, "generateStream failed");
+			throw error;
+		}
+	}
+
+	/**
+	 * Compact context using AI summarization if it exceeds limits
+	 */
+	protected async compactContextWithAI(
+		content: string,
+		contextDescription: string,
+	): Promise<string> {
+		if (!this.llmProvider || !this.contextManager) {
+			return content;
+		}
+
+		const currentTokens = this.contextManager.estimateTokens(content);
+		const availableTokens = this.contextManager.getAvailableTokens();
+
+		// If we're using less than 70% of available tokens, don't compact
+		if (currentTokens < availableTokens * 0.7) {
+			return content;
+		}
+
+		UsageDisplay.showContextWarning(currentTokens, availableTokens);
+
+		try {
+			// Target 50% of original size
+			const prompt = `Summarize the following ${contextDescription} to reduce its size by 50% while retaining all critical technical details, constraints, and requirements.
+			
+			Original Content:
+			${content}`;
+
+			const messages: LLMMessage[] = [
+				{
+					role: "system",
+					content:
+						"You are an expert technical summarizer. Reduce content length while preserving 100% of technical meaning.",
+				},
+				{
+					role: "user",
+					content: prompt,
+				},
+			];
+
+			// Use a fast model for summarization if possible, or current provider
+			// We intentionally don't stream this to keep it internal
+			const startTime = Date.now();
+			const result = await this.llmProvider.generate(messages, {
+				maxTokens: Math.floor(availableTokens * 0.5), // Limit output
+			});
+
+			// Log AI call
+			await this.aiLogger.logCall({
+				timestamp: new Date().toISOString(),
+				command: this.constructor.name,
+				provider: "llm",
+				model: result.model,
+				prompt: {
+					system: messages.find((m) => m.role === "system")?.content || "",
+					user: messages.find((m) => m.role === "user")?.content || "",
+				},
+				response: {
+					content: result.content,
+					usage: {
+						promptTokens: result.promptTokens || 0,
+						completionTokens: result.completionTokens || 0,
+						totalTokens: result.tokensUsed || 0,
+					},
+				},
+				duration: Date.now() - startTime,
+			});
+
+			this.costTracker.trackUsage(result);
+
+			// Show usage for compaction
+			const modelUsage = this.costTracker.getModelUsage(result.model);
+			if (modelUsage) {
+				UsageDisplay.show(modelUsage, this.costTracker.getCurrentSession(), {
+					verbose: true,
+				});
+			}
+
+			return result.content;
+		} catch (error) {
+			this.logError(error, "Context compaction failed");
+			// Fallback to original content if summarization fails
+			return content;
+		}
+	}
+
+	/**
 	 * Get LLM guidance for a given context
 	 * Keeps guidance concise (200 words max)
 	 */
@@ -211,9 +388,31 @@ Be concise and actionable.`;
 			}
 
 			// Cache miss - call LLM
+			const startTime = Date.now();
 			const response = await this.retryWithBackoff(() =>
 				llmProvider.generate(messages, options),
 			);
+
+			// Log AI call
+			await this.aiLogger.logCall({
+				timestamp: new Date().toISOString(),
+				command: this.constructor.name,
+				provider: "llm",
+				model: response.model,
+				prompt: {
+					system: messages.find((m) => m.role === "system")?.content || "",
+					user: messages.find((m) => m.role === "user")?.content || "",
+				},
+				response: {
+					content: response.content,
+					usage: {
+						promptTokens: response.promptTokens || 0,
+						completionTokens: response.completionTokens || 0,
+						totalTokens: response.tokensUsed || 0,
+					},
+				},
+				duration: Date.now() - startTime,
+			});
 
 			// Cache the response
 			this.llmCache.set(messages, options, response);
@@ -321,9 +520,31 @@ Be concise and actionable.`;
 			}
 
 			// Cache miss - call LLM
+			const startTime = Date.now();
 			const response = await this.retryWithBackoff(() =>
 				llmProvider.generate(messages, options),
 			);
+
+			// Log AI call
+			await this.aiLogger.logCall({
+				timestamp: new Date().toISOString(),
+				command: this.constructor.name,
+				provider: "llm",
+				model: response.model,
+				prompt: {
+					system: messages.find((m) => m.role === "system")?.content || "",
+					user: messages.find((m) => m.role === "user")?.content || "",
+				},
+				response: {
+					content: response.content,
+					usage: {
+						promptTokens: response.promptTokens || 0,
+						completionTokens: response.completionTokens || 0,
+						totalTokens: response.tokensUsed || 0,
+					},
+				},
+				duration: Date.now() - startTime,
+			});
 
 			// Cache the response
 			this.llmCache.set(messages, options, response);
@@ -605,6 +826,17 @@ Be concise and actionable.`;
 			sections.push(separator);
 			for (const error of result.errors) {
 				sections.push(`✗ ${error}`);
+			}
+			sections.push("");
+		}
+
+		// COST SUMMARY section (only if LLM was used)
+		if (this.costTracker.getTotalTokens() > 0) {
+			sections.push("SESSION USAGE:");
+			sections.push(separator);
+			sections.push(this.costTracker.getSummary());
+			if (this.costTracker.isOverBudget()) {
+				sections.push(pc.yellow("⚠️  Session budget exceeded"));
 			}
 			sections.push("");
 		}

@@ -12,10 +12,7 @@ import {
 	loadTasksProgress,
 	updateTaskStatus,
 } from "../../lib/data-access.js";
-import {
-	LLMRequiredError,
-	NoActiveSessionError,
-} from "../../lib/errors.js";
+import { LLMRequiredError, NoActiveSessionError } from "../../lib/errors.js";
 import {
 	FileValidator,
 	type ValidationResult,
@@ -26,6 +23,7 @@ import {
 	formatNewPatternForDisplay,
 	processValidationOutput,
 } from "../../lib/retrospective.js";
+import { TerminalFormatter } from "../../lib/terminal-formatter.js";
 import type {
 	Subtask,
 	TaskFileContent,
@@ -142,8 +140,8 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				`✓ Status advanced: setup → planning`,
-				`✓ Task ${taskId}: ${content.title}`,
+				TerminalFormatter.success("Status advanced: setup → planning"),
+				`Task ${taskId}: ${content.title}`,
 				"",
 				"Now create your execution plan before writing code.",
 			].join("\n"),
@@ -237,8 +235,8 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				`✓ Status advanced: planning → implementing`,
-				`✓ Task ${taskId}: ${content.title}`,
+				TerminalFormatter.success("Status advanced: planning → implementing"),
+				`Task ${taskId}: ${content.title}`,
 				"",
 				"You may now write code to implement this task based on your plan.",
 			].join("\n"),
@@ -294,7 +292,7 @@ export class CheckCommand extends BaseCommand {
 					"",
 					"LEARNINGS TRACKING:",
 					"────────────────────",
-					"Track learnings for future tasks: capture only general, project-wide insights (not implementation details, not what you did but what you learned, prevent repeated mistakes).",
+					"Track learnings for future tasks: capture only general, project-wide insights (not implementation details, not what you did but what you learned, prevent repeated mistakes in future tasks).",
 					"",
 					"TECH DEBT REPORTING:",
 					"────────────────────────",
@@ -328,8 +326,8 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				`✓ Status advanced: implementing → verifying`,
-				`✓ Task ${taskId}: ${content.title}`,
+				TerminalFormatter.success("Status advanced: implementing → verifying"),
+				`Task ${taskId}: ${content.title}`,
 				"",
 				"Now perform self-review of your implementation.",
 			].join("\n"),
@@ -414,8 +412,8 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				`✓ Status advanced: verifying → validating`,
-				`✓ Task ${taskId}: ${content.title}`,
+				TerminalFormatter.success("Status advanced: verifying → validating"),
+				`Task ${taskId}: ${content.title}`,
 				"",
 				"Ready to run automated validation checks.",
 			].join("\n"),
@@ -500,11 +498,9 @@ export class CheckCommand extends BaseCommand {
 			refDir,
 		);
 		if (preValidationGuidance) {
-			console.log("\n📋 Pre-Validation Checklist:");
-			console.log("─".repeat(60));
+			console.log(TerminalFormatter.section("Pre-Validation Checklist"));
 			console.log(preValidationGuidance);
-			console.log("─".repeat(60));
-			console.log();
+			console.log("");
 		}
 
 		// Run AI-powered validation if configured
@@ -521,7 +517,7 @@ export class CheckCommand extends BaseCommand {
 		}
 
 		// Run traditional validations
-		console.log("\n🧪 Running validations...\n");
+		console.log(TerminalFormatter.info("Running validations..."));
 
 		const summary = runValidations(logsDir, taskId, validationCommands);
 
@@ -667,9 +663,9 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				"✓ All validations passed!",
-				`✓ Status advanced: validating → committing`,
-				`✓ Task ${taskId}: ${content.title}`,
+				TerminalFormatter.success("All validations passed!"),
+				"Status advanced: validating → committing",
+				`Task ${taskId}: ${content.title}`,
 				"",
 				"Ready to commit and complete the task.",
 			].join("\n"),
@@ -837,7 +833,9 @@ Be concise (max 150 words).`;
 		phase: Phase,
 		refDir?: string,
 	): Promise<{ passed: boolean; result: CommandResult }> {
-		console.log("\n🤖 Running AI-powered file validation...\n");
+		console.log(
+			TerminalFormatter.info("Running AI-powered file validation..."),
+		);
 
 		try {
 			// Get AI config to create provider with correct settings

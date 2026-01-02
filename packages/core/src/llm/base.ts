@@ -59,6 +59,14 @@ export abstract class LLMProvider {
 	): Promise<LLMGenerationResult>;
 
 	/**
+	 * Generate text stream from the LLM
+	 */
+	abstract generateStream(
+		messages: LLMMessage[],
+		options?: LLMGenerationOptions,
+	): AsyncGenerator<string, LLMGenerationResult, unknown>;
+
+	/**
 	 * Check if the provider is properly configured
 	 */
 	abstract isConfigured(): boolean;

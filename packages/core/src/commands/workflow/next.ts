@@ -9,6 +9,7 @@ import {
 	findNextAvailableTask,
 	loadTasksProgress,
 } from "../../lib/data-access.js";
+import { TerminalFormatter } from "../../lib/terminal-formatter.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class NextCommand extends BaseCommand {
@@ -31,10 +32,9 @@ export class NextCommand extends BaseCommand {
 
 			return this.success(
 				[
-					"🎉 All tasks completed!",
+					TerminalFormatter.success("🎉 All tasks completed!"),
 					"",
-					"PROGRESS:",
-					"─".repeat(60),
+					TerminalFormatter.section("PROGRESS"),
 					`Features: ${stats.completedFeatures}/${stats.totalFeatures} completed`,
 					`Stories:  ${stats.completedStories}/${stats.totalStories} completed`,
 					`Tasks:    ${stats.completedTasks}/${stats.totalTasks} completed`,
@@ -83,8 +83,7 @@ export class NextCommand extends BaseCommand {
 			if (nextTask.isIntermittent) {
 				return this.success(
 					[
-						"NEXT AVAILABLE TASK (Side Task):",
-						"─".repeat(60),
+						TerminalFormatter.header("NEXT AVAILABLE TASK (Side Task)"),
 						`Task:    T${task.id} - ${task.title} 🔄`,
 						`Story:   S${story.id} - ${story.title}`,
 						`Feature: F${feature.id} - ${feature.title}`,
@@ -143,8 +142,7 @@ export class NextCommand extends BaseCommand {
 			// Non-intermittent task
 			return this.success(
 				[
-					"NEXT AVAILABLE TASK:",
-					"─".repeat(60),
+					TerminalFormatter.header("NEXT AVAILABLE TASK"),
 					`Task:    T${task.id} - ${task.title}`,
 					`Story:   S${story.id} - ${story.title}`,
 					`Feature: F${feature.id} - ${feature.title}`,
@@ -221,8 +219,7 @@ export class NextCommand extends BaseCommand {
 			return this.success(
 				"Active Task Found",
 				[
-					"CURRENT TASK:",
-					"─".repeat(60),
+					TerminalFormatter.header("CURRENT TASK"),
 					`Task:    T${activeTask.taskId}`,
 					`Status:  ${activeTask.content.status}`,
 					`Title:   ${activeTask.content.title}`,

@@ -5,7 +5,10 @@ import { PRDInteractiveSession } from "../../src/lib/prd-interactive-session.js"
 // Mock BaseCommand
 class MockCommand extends BaseCommand {
 	constructor() {
-		super({} as any);
+		super({
+			projectRoot: "/tmp/test",
+			mcpContext: { isMCP: false },
+		} as any);
 	}
 	async execute() {
 		return this.success("ok", "next steps");
@@ -46,6 +49,7 @@ describe("PRDInteractiveSession", () => {
 
 		expect((session as any).prompt).toHaveBeenCalledWith(
 			"What is the title of the feature?",
+			undefined,
 		);
 		expect((session as any).promptMultiline).toHaveBeenCalled();
 	});

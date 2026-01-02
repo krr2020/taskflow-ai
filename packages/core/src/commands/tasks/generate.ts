@@ -4,6 +4,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import pc from "picocolors";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import {
 	getRefFilePath,
@@ -13,6 +14,8 @@ import {
 } from "../../lib/config-paths.js";
 import { saveFeature, saveProjectIndex } from "../../lib/data-access.js";
 import { LLMRequiredError } from "../../lib/errors.js";
+import { StreamDisplay } from "../../lib/stream-display.js";
+import { TerminalFormatter } from "../../lib/terminal-formatter.js";
 import type {
 	Feature,
 	TaskflowConfig,
@@ -96,53 +99,67 @@ export class TasksGenerateCommand extends BaseCommand {
 		const outputParts: string[] = [];
 
 		if (availablePrds.length > 1 && !prdFile) {
+			outputParts.push(TerminalFormatter.header("AVAILABLE PRDs"));
+
+			availablePrds.forEach((p, i) => {
+				const isGenerated = fs.existsSync(progressFilePath);
+				const status = isGenerated ? pc.green("(tasks generated ✓)") : "";
+				outputParts.push(TerminalFormatter.question(i + 1, `${p} ${status}`));
+			});
+
+			outputParts.push("");
+			outputParts.push(TerminalFormatter.section("DECISION NEEDED"));
+			outputParts.push(pc.dim("AI Agent should:"));
+			outputParts.push(pc.dim("  1. Analyze project context"));
 			outputParts.push(
-				[
-					"AVAILABLE PRDs:",
-					"─────────────────",
-					...availablePrds.map(
-						(p, i) =>
-							`  [${i + 1}] ${p} ${fs.existsSync(progressFilePath) ? "(tasks generated ✓)" : ""}`,
-					),
-					"",
-					"DECISION NEEDED:",
-					"─────────────────",
-					"AI Agent should:",
-					"  1. Analyze project context",
-					"  2. Determine which PRD(s) to generate tasks for",
-					"  3. Consider: Is this adding features to existing project?",
-					"  4. Select appropriate PRD or combine multiple PRDs",
-					"",
-					"OPTIONS:",
-					"─────────",
-					"  - Generate tasks for specific PRD: taskflow tasks generate <filename>",
-					"  - Generate for all ready PRDs (if appropriate)",
-					"  - Combine related PRDs into one feature set",
-				].join("\n"),
+				pc.dim("  2. Determine which PRD(s) to generate tasks for"),
+			);
+			outputParts.push(
+				pc.dim("  3. Consider: Is this adding features to existing project?"),
+			);
+			outputParts.push(
+				pc.dim("  4. Select appropriate PRD or combine multiple PRDs"),
+			);
+
+			outputParts.push("");
+			outputParts.push(TerminalFormatter.section("OPTIONS"));
+			outputParts.push(pc.white("  • Generate tasks for specific PRD:"));
+			outputParts.push(pc.cyan("    taskflow tasks generate <filename>"));
+			outputParts.push(
+				pc.white("  • Generate for all ready PRDs (if appropriate)"),
+			);
+			outputParts.push(
+				pc.white("  • Combine related PRDs into one feature set"),
 			);
 		} else if (prdFile) {
-			outputParts.push(`PRD loaded: ${prdFile}`);
+			outputParts.push(TerminalFormatter.header(`PRD LOADED: ${prdFile}`));
+
 			if (!codingStandardsExist || !architectureRulesExist) {
 				outputParts.push(
-					"⚠️  Architecture files missing - Run: taskflow prd generate-arch",
+					TerminalFormatter.warning(
+						"Architecture files missing - Run: taskflow prd generate-arch",
+					),
 				);
 			}
+
 			outputParts.push(
-				[
-					codingStandardsExist
-						? "✓ coding-standards.md found"
-						: "⚠️  coding-standards.md missing",
-					architectureRulesExist
-						? "✓ architecture-rules.md found"
-						: "⚠️  architecture-rules.md missing",
-				].join("\n"),
+				codingStandardsExist
+					? TerminalFormatter.success("coding-standards.md found")
+					: TerminalFormatter.warning("coding-standards.md missing"),
 			);
-			outputParts.push("");
-			outputParts.push("TASK:");
-			outputParts.push("─".repeat(60));
 			outputParts.push(
-				"Generate a complete task breakdown from PRD.",
-				"Create features, stories, and tasks with proper dependencies.",
+				architectureRulesExist
+					? TerminalFormatter.success("architecture-rules.md found")
+					: TerminalFormatter.warning("architecture-rules.md missing"),
+			);
+
+			outputParts.push("");
+			outputParts.push(TerminalFormatter.section("TASK"));
+			outputParts.push(
+				pc.white("Generate a complete task breakdown from PRD."),
+			);
+			outputParts.push(
+				pc.dim("Create features, stories, and tasks with proper dependencies."),
 			);
 		}
 
@@ -150,21 +167,28 @@ export class TasksGenerateCommand extends BaseCommand {
 		const existingTasks = fs.existsSync(progressFilePath);
 		if (existingTasks) {
 			outputParts.push("");
-			outputParts.push("⚠️  EXISTING TASKS DETECTED:");
-			outputParts.push("───────────────────────────────");
-			outputParts.push(`File: ${progressFilePath} exists`);
+			outputParts.push(TerminalFormatter.header("EXISTING TASKS DETECTED"));
+			outputParts.push(pc.yellow(`File: ${progressFilePath} exists`));
 			outputParts.push("");
-			outputParts.push("OPTIONS:");
-			outputParts.push("────────");
-			outputParts.push("1. APPEND: Add new PRDs to existing structure");
-			outputParts.push("2. MERGE: Combine new PRDs with existing tasks");
+
+			outputParts.push(TerminalFormatter.section("OPTIONS"));
 			outputParts.push(
-				"3. RESET: Delete existing and regenerate (CAUTION: loses progress)",
+				pc.white("1. APPEND: Add new PRDs to existing structure"),
 			);
-			outputParts.push("4. SELECTIVE: Generate only specific PRDs");
+			outputParts.push(
+				pc.white("2. MERGE: Combine new PRDs with existing tasks"),
+			);
+			outputParts.push(
+				pc.white(
+					"3. RESET: Delete existing and regenerate (CAUTION: loses progress)",
+				),
+			);
+			outputParts.push(pc.white("4. SELECTIVE: Generate only specific PRDs"));
 			outputParts.push("");
 			outputParts.push(
-				"AI Agent should decide based on project state and user intent.",
+				pc.dim(
+					"AI Agent should decide based on project state and user intent.",
+				),
 			);
 		}
 
@@ -632,16 +656,20 @@ export class TasksGenerateCommand extends BaseCommand {
 
 		return this.success(
 			[
-				`✓ Generated task breakdown from ${prdFile}`,
+				TerminalFormatter.success(`Generated task breakdown from ${prdFile}`),
 				"",
-				"Task hierarchy created:",
-				`  Features: ${tasksData.features.length}`,
-				`  Stories: ${tasksData.features.reduce((sum, f) => sum + f.stories.length, 0)}`,
-				`  Tasks: ${tasksData.features.reduce((sum, f) => sum + f.stories.reduce((s, st) => s + st.tasks.length, 0), 0)}`,
+				TerminalFormatter.section("TASK HIERARCHY"),
+				pc.white(`  Features: ${tasksData.features.length}`),
+				pc.white(
+					`  Stories: ${tasksData.features.reduce((sum, f) => sum + f.stories.length, 0)}`,
+				),
+				pc.white(
+					`  Tasks: ${tasksData.features.reduce((sum, f) => sum + f.stories.reduce((s, st) => s + st.tasks.length, 0), 0)}`,
+				),
 				"",
-				`Files created:`,
-				`  - ${path.join(tasksDir, "tasks-progress.json")}`,
-				`  - Task files in ${tasksDir}/F*/S*/`,
+				TerminalFormatter.section("FILES CREATED"),
+				pc.cyan(`  - ${path.join(tasksDir, "tasks-progress.json")}`),
+				pc.cyan(`  - Task files in ${tasksDir}/F*/S*/`),
 			].join("\n"),
 			[
 				"Next steps:",
@@ -675,17 +703,44 @@ export class TasksGenerateCommand extends BaseCommand {
 
 Your mission is to analyze a PRD and break it down into a structured, executable task hierarchy.
 
-CRITICAL RULES:
-1. Each task must be atomic (1-4 hours of work)
-2. Each task must be independently testable
-3. Each task must have clear acceptance criteria
-4. Use proper dependency management
-5. Follow the coding standards and architecture rules provided
+CRITICAL RULES FOR TASK GRANULARITY:
+1. CREATE FEWER, LARGER TASKS (not many small ones)
+2. Each task should be a MEANINGFUL UNIT (30-90 minutes of work)
+3. Tasks should touch MULTIPLE files and implement a complete sub-feature
+4. AVOID creating separate tasks for simple steps like "create file", "add validation"
+5. COMBINE related steps into single tasks (e.g., "Implement user persistence" includes migration + model + repository + service)
+
+BAD (too granular):
+  - Task 1.1.0: Create migration file
+  - Task 1.1.1: Create User model
+  - Task 1.1.2: Add validation to User model
+  - Task 1.1.3: Create repository
+  - Task 1.1.4: Add tests
+
+GOOD (proper granularity):
+  - Task 1.1.0: Implement user persistence layer (includes migration, model, validation, repository, tests)
+
+TARGET:
+- Simple features: 2-4 tasks total
+- Medium features: 5-8 tasks total
+- Complex features: 10-15 tasks total
+
+For a "Simple Sudoku Website" you should create approximately:
+- 1-2 features (e.g., "Game UI", "Game Logic")
+- 2-3 stories per feature (e.g., "Initial board display", "User input", "Solution validation")
+- 1-3 tasks per story
+- TOTAL: ~6-10 tasks maximum
 
 Task Hierarchy:
 - Features: Major functional areas (ID: 1, 2, 3...)
 - Stories: User-facing scenarios (ID: 1.1, 1.2, 2.1...)
 - Tasks: Atomic implementation units (ID: 1.1.0, 1.1.1, 1.2.0...)
+
+Each task must:
+- Be independently testable
+- Implement a complete sub-feature
+- Have clear acceptance criteria
+- Include multiple related files/changes
 
 Available skills: backend, frontend, fullstack, devops, docs, mobile
 
@@ -739,17 +794,24 @@ ${file.content}
 			)
 			.join("\n");
 
+		// Compact PRD if needed (it's the largest component)
+		const compactedPrd = await this.compactContextWithAI(
+			prdContent,
+			"PRD Content",
+		);
+
 		const userPrompt = `Generate a complete task breakdown for this PRD:
 
 === PRD ===
-${prdContent}
+${compactedPrd}
 
 ${contextSection}
 
 IMPORTANT:
 - Output ONLY the JSON structure, no markdown code blocks or additional text
 - Ensure all IDs follow the correct format (N, N.M, N.M.K)
-- Keep tasks atomic (1-4 hours each)
+- Keep tasks MEANINGFUL (30-90 minutes each)
+- AVOID micro-tasks (combine related steps)
 - Include clear acceptance criteria for each task
 - Set appropriate dependencies between tasks`;
 
@@ -763,18 +825,20 @@ IMPORTANT:
 			temperature: 0.2,
 		};
 
-		const response = await this.retryWithBackoff(() =>
-			llmProvider.generate(messages, options),
-		);
-
-		// Track cost
-		this.costTracker.trackUsage(response);
+		const stream = this.generateStream(messages, options);
+		const display = new StreamDisplay("Generating Task Breakdown");
+		let content = "";
+		for await (const chunk of stream) {
+			display.handleChunk(chunk);
+			content += chunk;
+		}
+		display.finish();
 
 		// Parse JSON response
 		let tasksData: TasksProgressWithDetails;
 		try {
 			// Clean up response (remove markdown code blocks if present)
-			let jsonContent = response.content.trim();
+			let jsonContent = content.trim();
 			if (jsonContent.startsWith("```")) {
 				jsonContent = jsonContent
 					.replace(/```json\n?/g, "")

@@ -4,9 +4,23 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import readline from "node:readline";
+import pc from "picocolors";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
 import { LLMRequiredError } from "../../lib/errors.js";
+import { ProgressIndicator } from "../../lib/progress-indicator.js";
+import { StreamDisplay } from "../../lib/stream-display.js";
+import {
+	type TechStack,
+	TechStackDetector,
+} from "../../lib/tech-stack-detector.js";
+import { TechStackGenerator } from "../../lib/tech-stack-generator.js";
+import {
+	type TechStackOption,
+	TechStackSuggester,
+} from "../../lib/tech-stack-suggester.js";
+import { TerminalFormatter } from "../../lib/terminal-formatter.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class PrdGenerateArchCommand extends BaseCommand {
@@ -91,38 +105,314 @@ export class PrdGenerateArchCommand extends BaseCommand {
 		// Read PRD content
 		const prdContent = fs.readFileSync(prdFilePath, "utf-8");
 
-		// Try to generate with LLM if available
-		if (this.isLLMAvailable()) {
-			return await this.executeWithFallback(
-				() =>
-					this.generateStandardsWithLLM(
-						prdContent,
-						prdFile,
-						paths.refDir,
-						instructions,
-					),
-				() => {
-					console.error("LLM generation failed, falling back to guidance.");
-					return this.getGuidanceResult(
-						prdFile,
-						prdFilePath,
-						codingStandardsPath,
-						architectureRulesPath,
-						paths,
-					);
-				},
-				"Architecture Generation",
+		// If LLM is not available, fallback to guidance
+		if (!this.isLLMAvailable()) {
+			return this.getGuidanceResult(
+				prdFile,
+				prdFilePath,
+				getRefFilePath(paths.refDir, REF_FILES.codingStandards),
+				getRefFilePath(paths.refDir, REF_FILES.architectureRules),
+				paths,
 			);
 		}
 
-		// Fallback to guidance (original behavior)
-		return this.getGuidanceResult(
-			prdFile,
-			prdFilePath,
-			codingStandardsPath,
-			architectureRulesPath,
-			paths,
+		// STEP 1: Detect existing tech stack
+		console.log(TerminalFormatter.header("TECH STACK DETECTION"));
+		const progress = new ProgressIndicator();
+		progress.start("Scanning codebase for existing technologies...");
+
+		const detector = new TechStackDetector(this.context.projectRoot);
+		const detectedStack = await detector.detect();
+		const isGreenfield = detector.isGreenfield();
+
+		progress.stop();
+
+		if (
+			!isGreenfield &&
+			Object.keys(detectedStack).some((k) => {
+				const key = k as keyof TechStack;
+				const items = detectedStack[key];
+				return items && items.length > 0;
+			})
+		) {
+			// Brownfield: Show detected stack
+			console.log(TerminalFormatter.success("Detected existing tech stack:"));
+			const formatted = detector.formatStack(detectedStack);
+			formatted.forEach((line) => {
+				console.log(pc.cyan(line));
+			});
+
+			// Ask for confirmation
+			const useDetected = await this.confirm(
+				"\nUse detected stack for architecture generation?",
+				"yes",
+			);
+
+			if (useDetected) {
+				// Use detected stack
+				// Create a synthetic option from detected stack
+				const syntheticOption: TechStackOption = {
+					id: "detected",
+					name: "Detected Stack",
+					description: "Stack detected from existing codebase",
+					technologies: {
+						frontend:
+							detectedStack.frontend?.map((t) => ({
+								name: `${t.name} ${t.version || ""}`.trim(),
+							})) || [],
+						backend:
+							detectedStack.backend?.map((t) => ({
+								name: `${t.name} ${t.version || ""}`.trim(),
+							})) || [],
+						database:
+							detectedStack.database?.map((t) => ({
+								name: `${t.name} ${t.version || ""}`.trim(),
+							})) || [],
+						devops:
+							detectedStack.devops?.map((t) => ({
+								name: `${t.name} ${t.version || ""}`.trim(),
+							})) || [],
+					},
+					pros: ["Matches existing codebase"],
+					cons: [],
+					bestFor: ["Consistency"],
+					recommended: true,
+				};
+
+				return this.generateArchitectureFiles(
+					prdContent,
+					syntheticOption,
+					prdFile,
+					paths,
+					instructions,
+				);
+			}
+		}
+
+		// STEP 2: Suggest tech stack options (greenfield or user rejected detected)
+		console.log("");
+		console.log(TerminalFormatter.header("TECH STACK SELECTION"));
+		progress.start("Analyzing PRD to suggest appropriate tech stacks...");
+
+		if (!this.llmProvider) {
+			throw new LLMRequiredError("LLM provider not available");
+		}
+		const suggester = new TechStackSuggester(
+			this.llmProvider,
+			undefined,
+			undefined,
+			true,
+			this.aiLogger,
 		);
+		const options = await suggester.suggest(prdContent);
+		progress.stop();
+
+		// Display options
+		console.log(TerminalFormatter.section("RECOMMENDED STACKS"));
+		options.forEach((option, i) => {
+			const marker = option.recommended ? pc.green("✓ RECOMMENDED") : "";
+			console.log(pc.bold(`[${i + 1}] ${option.name} ${marker}`));
+			console.log(pc.dim(`    ${option.description}\n`));
+
+			console.log("    Technologies:");
+			if (
+				option.technologies.frontend &&
+				option.technologies.frontend.length > 0
+			) {
+				console.log(
+					pc.cyan(
+						`      Frontend: ${option.technologies.frontend
+							.map((t) => t.name)
+							.join(", ")}`,
+					),
+				);
+			}
+			if (
+				option.technologies.backend &&
+				option.technologies.backend.length > 0
+			) {
+				console.log(
+					pc.cyan(
+						`      Backend: ${option.technologies.backend
+							.map((t) => t.name)
+							.join(", ")}`,
+					),
+				);
+			}
+			if (
+				option.technologies.database &&
+				option.technologies.database.length > 0
+			) {
+				console.log(
+					pc.cyan(
+						`      Database: ${option.technologies.database
+							.map((t) => t.name)
+							.join(", ")}`,
+					),
+				);
+			}
+
+			console.log("\n    Pros:");
+			option.pros.forEach((pro) => {
+				console.log(pc.green(`      ✓ ${pro}`));
+			});
+
+			console.log("\n    Cons:");
+			option.cons.forEach((con) => {
+				console.log(pc.yellow(`      ⚠ ${con}`));
+			});
+
+			console.log("\n    Best for:");
+			option.bestFor.forEach((use) => {
+				console.log(pc.dim(`      • ${use}`));
+			});
+
+			console.log(`\n${"─".repeat(60)}\n`);
+		});
+
+		// Get user choice
+		const selected = await this.promptChoice(
+			`Select tech stack [1-${options.length}]:`,
+			options.length,
+		);
+
+		const selectedOption = options[selected - 1];
+
+		if (!selectedOption) {
+			return this.failure(
+				"Invalid selection",
+				["Selected option not found"],
+				"Run the command again and select a valid option",
+			);
+		}
+
+		// STEP 3: Generate architecture files
+		return this.generateArchitectureFiles(
+			prdContent,
+			selectedOption,
+			prdFile,
+			paths,
+			instructions,
+		);
+	}
+
+	private async promptChoice(
+		question: string,
+		maxChoice: number,
+	): Promise<number> {
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
+
+		const answer = await new Promise<string>((resolve) => {
+			rl.question(`${pc.cyan(question)} `, (ans) => {
+				rl.close();
+				resolve(ans.trim());
+			});
+		});
+
+		const choice = parseInt(answer, 10);
+		if (Number.isNaN(choice) || choice < 1 || choice > maxChoice) {
+			console.log(
+				TerminalFormatter.error(`Invalid choice. Please select 1-${maxChoice}`),
+			);
+			return this.promptChoice(question, maxChoice);
+		}
+
+		return choice;
+	}
+
+	private async generateArchitectureFiles(
+		prdContent: string,
+		selectedOption: TechStackOption,
+		prdFile: string,
+		paths: ReturnType<ConfigLoader["getPaths"]>,
+		instructions?: string,
+	): Promise<CommandResult> {
+		if (!this.llmProvider) {
+			throw new LLMRequiredError("LLM provider not available");
+		}
+
+		// Generate tech-stack.md
+		console.log(
+			`\n${TerminalFormatter.section("GENERATING TECH STACK DOCUMENTATION")}`,
+		);
+
+		const techStackGenerator = new TechStackGenerator(
+			this.llmProvider,
+			this.aiLogger,
+		);
+
+		const progress = new ProgressIndicator();
+		progress.start("Generating tech stack documentation...");
+
+		const techStackContent = await techStackGenerator.generate(
+			selectedOption,
+			prdContent,
+		);
+		progress.stop();
+
+		const techStackPath = path.join(paths.refDir, "tech-stack.md");
+		fs.writeFileSync(techStackPath, techStackContent, "utf-8");
+
+		console.log(
+			TerminalFormatter.success(
+				`Generated tech-stack.md (${techStackContent.split("\n").length} lines)`,
+			),
+		);
+
+		// Now generate the other files with tech stack context
+		return await this.executeWithFallback(
+			() =>
+				this.generateStandardsWithLLM(
+					prdContent,
+					prdFile,
+					paths.refDir,
+					techStackContent,
+					instructions,
+				),
+			() => {
+				console.error(
+					TerminalFormatter.error(
+						"LLM generation failed, falling back to guidance.",
+					),
+				);
+				return this.getGuidanceResult(
+					prdFile,
+					path.join(paths.tasksDir, "prds", prdFile),
+					getRefFilePath(paths.refDir, REF_FILES.codingStandards),
+					getRefFilePath(paths.refDir, REF_FILES.architectureRules),
+					paths,
+				);
+			},
+			"Architecture Generation",
+		);
+	}
+
+	private async confirm(
+		question: string,
+		defaultAnswer: "yes" | "no" = "yes",
+	): Promise<boolean> {
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
+
+		const suffix = defaultAnswer === "yes" ? "[Y/n]" : "[y/N]";
+
+		const answer = await new Promise<string>((resolve) => {
+			rl.question(`${pc.cyan(question)} ${pc.dim(suffix)} `, (ans) => {
+				rl.close();
+				resolve(ans.trim().toLowerCase());
+			});
+		});
+
+		if (answer === "") {
+			return defaultAnswer === "yes";
+		}
+
+		return answer === "y" || answer === "yes";
 	}
 
 	private getGuidanceResult(
@@ -134,10 +424,9 @@ export class PrdGenerateArchCommand extends BaseCommand {
 	): CommandResult {
 		return this.success(
 			[
-				`PRD loaded: ${prdFile}`,
+				TerminalFormatter.header(`PRD LOADED: ${prdFile}`),
 				"",
-				"TASK:",
-				"─".repeat(60),
+				TerminalFormatter.section("TASK"),
 				"Generate project-specific coding standards and architecture rules",
 				"based on the PRD and existing codebase patterns.",
 			].join("\n"),
@@ -355,6 +644,7 @@ export class PrdGenerateArchCommand extends BaseCommand {
 		prdContent: string,
 		prdFile: string,
 		refDir: string,
+		techStackContent: string,
 		instructions?: string,
 	): Promise<CommandResult> {
 		if (!this.llmProvider) {
@@ -390,6 +680,7 @@ export class PrdGenerateArchCommand extends BaseCommand {
 		const codingStandardsContent = await this.generateCodingStandards(
 			prdContent,
 			contextFiles,
+			techStackContent,
 			instructions,
 		);
 
@@ -401,6 +692,7 @@ export class PrdGenerateArchCommand extends BaseCommand {
 		const architectureRulesContent = await this.generateArchitectureRules(
 			prdContent,
 			contextFiles,
+			techStackContent,
 			instructions,
 		);
 
@@ -410,12 +702,12 @@ export class PrdGenerateArchCommand extends BaseCommand {
 
 		return this.success(
 			[
-				`✓ Generated coding-standards.md`,
-				`✓ Generated architecture-rules.md`,
+				TerminalFormatter.success(`Generated coding-standards.md`),
+				TerminalFormatter.success(`Generated architecture-rules.md`),
 				"",
-				"Files created:",
-				`  - ${codingStandardsPath}`,
-				`  - ${architectureRulesPath}`,
+				TerminalFormatter.section("FILES CREATED"),
+				TerminalFormatter.listItem(codingStandardsPath),
+				TerminalFormatter.listItem(architectureRulesPath),
 			].join("\n"),
 			[
 				"Next steps:",
@@ -434,18 +726,26 @@ export class PrdGenerateArchCommand extends BaseCommand {
 	private async generateCodingStandards(
 		prdContent: string,
 		contextFiles: Array<{ name: string; content: string }>,
+		techStackContent: string,
 		instructions?: string,
 	): Promise<string> {
 		if (!this.llmProvider) {
 			throw new LLMRequiredError("LLM provider not available");
 		}
 
-		// Provider is guaranteed to be available after the check
-		const llmProvider = this.llmProvider;
+		console.log("");
+		const progress = new ProgressIndicator();
+		progress.start("Generating coding-standards.md...");
 
 		const systemPrompt = `You are an expert software architect tasked with creating project-specific coding standards.
 
 Your mission is to analyze the PRD and create a comprehensive coding-standards.md file that will guide all development work.
+
+CRITICAL CONSTRAINTS:
+1. MAX 125 LINES TOTAL - Be extremely concise.
+2. Use bullet points for rules.
+3. No long prose or introductions.
+4. Focus ONLY on high-level standards.
 
 CRITICAL RULES:
 1. DO NOT invent patterns - base standards on real-world best practices
@@ -453,6 +753,11 @@ CRITICAL RULES:
 3. DO include concrete examples and DO/DON'T scenarios
 4. DO make rules enforceable and measurable
 5. DO align with the PRD requirements and technology stack
+
+TECH STACK CONTEXT:
+${techStackContent}
+
+Generate rules SPECIFIC to this stack (not generic).
 
 Required sections:
 1. File Organization
@@ -479,14 +784,14 @@ ${file.content}
 			)
 			.join("\n");
 
-		const userPrompt = `Generate a comprehensive coding-standards.md file based on the following PRD:
+		const userPrompt = `Generate a CONCISE coding-standards.md file (max 125 lines) based on the following PRD:
 
 === PRD ===
 ${prdContent}
 
 ${contextSection}
 
-Create a detailed coding-standards.md file with all required sections. Output ONLY the markdown content, no additional commentary.`;
+Create a detailed but CONCISE coding-standards.md file with all required sections. Output ONLY the markdown content, no additional commentary.`;
 
 		const messages = [
 			{ role: "system" as const, content: systemPrompt },
@@ -494,18 +799,40 @@ Create a detailed coding-standards.md file with all required sections. Output ON
 		];
 
 		const options = {
-			maxTokens: 4000,
+			maxTokens: 2000,
 			temperature: 0.3,
 		};
 
-		const response = await this.retryWithBackoff(() =>
-			llmProvider.generate(messages, options),
-		);
+		const stream = this.generateStream(messages, options);
+		const display = new StreamDisplay("Generating Coding Standards");
+		let content = "";
+		let isFirstChunk = true;
 
-		// Track cost
-		this.costTracker.trackUsage(response);
+		for await (const chunk of stream) {
+			if (isFirstChunk) {
+				progress.stop();
+				isFirstChunk = false;
+			}
+			display.handleChunk(chunk);
+			content += chunk;
+		}
+		display.finish();
 
-		return response.content;
+		if (!content) {
+			throw new Error("Failed to generate coding standards");
+		}
+
+		// Check length warning
+		const lineCount = content.split("\n").length;
+		if (lineCount > 125) {
+			console.warn(
+				TerminalFormatter.warning(
+					`coding-standards.md is ${lineCount} lines (limit: 125). Consider simplifying.`,
+				),
+			);
+		}
+
+		return content;
 	}
 
 	/**
@@ -514,40 +841,40 @@ Create a detailed coding-standards.md file with all required sections. Output ON
 	private async generateArchitectureRules(
 		prdContent: string,
 		contextFiles: Array<{ name: string; content: string }>,
+		techStackContent: string,
 		instructions?: string,
 	): Promise<string> {
 		if (!this.llmProvider) {
 			throw new LLMRequiredError("LLM provider not available");
 		}
 
-		// Provider is guaranteed to be available after the check
-		const llmProvider = this.llmProvider;
+		console.log("");
+		const progress = new ProgressIndicator();
+		progress.start("Generating architecture-rules.md...");
 
 		const systemPrompt = `You are an expert software architect tasked with creating project-specific architecture rules.
 
-Your mission is to analyze the PRD and create a comprehensive architecture-rules.md file that will guide all architectural decisions.
+Your mission is to analyze the PRD and create a concise, enforceable architecture-rules.md file.
 
-CRITICAL RULES:
-1. DO NOT invent architecture - base rules on the PRD requirements
-2. DO NOT write generic rules - be specific to the project's architecture
-3. DO include concrete examples and forbidden patterns
-4. DO make rules enforceable and measurable
-5. DO align with the PRD's technical requirements
+CRITICAL CONSTRAINTS:
+1. MAX 125 LINES TOTAL - Be extremely concise.
+2. Use bullet points for rules.
+3. No long prose or introductions.
+4. Focus ONLY on high-level architectural constraints.
+
+TECH STACK CONTEXT:
+${techStackContent}
 
 Required sections:
-1. Project Structure
-2. Dependency Rules
-3. Data Flow
-4. API Design
-5. Security
-6. Performance
-7. Feature-Specific Rules (from PRD)
+1. System Boundaries (What is internal vs external)
+2. Data Flow & State Management (Single source of truth)
+3. Component/Module Responsibilities (Strict separation of concerns)
+4. Critical Paths (Auth, Payment, etc.)
+5. Security Constraints
 
-For each section, provide:
-- Clear architectural constraints
-- Allowed and forbidden patterns
-- Integration points and boundaries
-- How to verify compliance
+For each section:
+- Provide clear architectural constraints
+- Explicit forbidden patterns
 
 ${instructions ? `\nAdditional instructions: ${instructions}` : ""}`;
 
@@ -560,14 +887,15 @@ ${file.content}
 			)
 			.join("\n");
 
-		const userPrompt = `Generate a comprehensive architecture-rules.md file based on the following PRD:
+		const userPrompt = `Generate a CONCISE architecture-rules.md (max 125 lines) based on:
 
 === PRD ===
 ${prdContent}
 
 ${contextSection}
 
-Create a detailed architecture-rules.md file with all required sections. Output ONLY the markdown content, no additional commentary.`;
+The architecture MUST be compatible with the tech stack defined in tech-stack.md.
+Output ONLY markdown content.`;
 
 		const messages = [
 			{ role: "system" as const, content: systemPrompt },
@@ -575,17 +903,39 @@ Create a detailed architecture-rules.md file with all required sections. Output 
 		];
 
 		const options = {
-			maxTokens: 4000,
+			maxTokens: 2000,
 			temperature: 0.3,
 		};
 
-		const response = await this.retryWithBackoff(() =>
-			llmProvider.generate(messages, options),
-		);
+		const stream = this.generateStream(messages, options);
+		const display = new StreamDisplay("Generating Architecture Rules");
+		let content = "";
+		let isFirstChunk = true;
 
-		// Track cost
-		this.costTracker.trackUsage(response);
+		for await (const chunk of stream) {
+			if (isFirstChunk) {
+				progress.stop();
+				isFirstChunk = false;
+			}
+			display.handleChunk(chunk);
+			content += chunk;
+		}
+		display.finish();
 
-		return response.content;
+		if (!content) {
+			throw new Error("Failed to generate architecture rules");
+		}
+
+		// Check length warning
+		const lineCount = content.split("\n").length;
+		if (lineCount > 125) {
+			console.warn(
+				TerminalFormatter.warning(
+					`architecture-rules.md is ${lineCount} lines (limit: 125). Consider simplifying.`,
+				),
+			);
+		}
+
+		return content;
 	}
 }

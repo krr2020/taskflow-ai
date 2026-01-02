@@ -67,9 +67,48 @@ tasks/
 
 ## Task Granularity
 
-**CRITICAL:** Optimize for MINIMAL tasks (fewer, larger > many small). Good design: meaningful unit (30-60 min), touches multiple files. Anti-patterns: one task per file/function, separating simple steps (merge them).
+**CRITICAL PRINCIPLE: FEWER, LARGER TASKS**
 
-**Example:** Instead of `create migration`, `create model`, `create repo`, `create service` → DO: `T1.1.0-implement-user-persistence` (includes all).
+Optimize for MINIMAL number of tasks. Each task should be a meaningful unit (30-90 min) that implements a complete sub-feature across multiple files.
+
+### Target Task Counts
+
+| Project Complexity | Total Tasks |
+|-------------------|-------------|
+| Simple (Sudoku game, calculator) | 6-10 tasks |
+| Medium (Todo app, blog) | 15-25 tasks |
+| Large (E-commerce, CRM) | 30-50 tasks |
+
+### Anti-Patterns (DON'T DO THIS)
+
+❌ One task per file:
+- Task 1.1.0: Create migration
+- Task 1.1.1: Create model
+- Task 1.1.2: Create repository
+- Task 1.1.3: Add tests
+
+❌ Separating simple steps:
+- Task 2.1.0: Add input field
+- Task 2.1.1: Add validation
+- Task 2.1.2: Style input
+
+### Good Patterns (DO THIS)
+
+✅ Complete sub-feature:
+- Task 1.1.0: Implement user persistence (migration + model + repository + tests)
+
+✅ Meaningful UI component:
+- Task 2.1.0: Implement validated user input form (fields + validation + styling + error handling)
+
+### Rule of Thumb
+
+Before creating a task, ask:
+1. Can this be combined with adjacent tasks? → If yes, combine them
+2. Does this touch <3 files? → Probably too small, combine it
+3. Is this a single-line change? → Definitely combine it
+4. Will this take <20 minutes? → Combine it
+
+Good task size: 30-90 minutes, touches 3-10 files, implements a complete sub-feature.
 
 ## Requirements & Approvals
 

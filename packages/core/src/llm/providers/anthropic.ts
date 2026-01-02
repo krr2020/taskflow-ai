@@ -3,6 +3,7 @@
  * Supports Claude models via Anthropic API
  */
 
+import { LLMError } from "../../lib/errors.js";
 import {
 	type LLMGenerationOptions,
 	type LLMGenerationResult,
@@ -10,7 +11,6 @@ import {
 	LLMProvider,
 	LLMProviderType,
 } from "../base.js";
-import { LLMError } from "../../lib/errors.js";
 
 export interface AnthropicConfig {
 	apiKey: string;
@@ -36,7 +36,10 @@ export class AnthropicProvider extends LLMProvider {
 		options?: LLMGenerationOptions,
 	): Promise<LLMGenerationResult> {
 		if (!this.isConfigured()) {
-			throw new LLMError("Anthropic provider is not configured properly", "LLM_CONFIG_ERROR");
+			throw new LLMError(
+				"Anthropic provider is not configured properly",
+				"LLM_CONFIG_ERROR",
+			);
 		}
 
 		// Extract system message (Anthropic separates system message)
@@ -86,7 +89,10 @@ export class AnthropicProvider extends LLMProvider {
 
 		if (!response.ok) {
 			const error = await response.text();
-			throw new LLMError(`Anthropic API error: ${response.status} - ${error}`, "LLM_API_ERROR");
+			throw new LLMError(
+				`Anthropic API error: ${response.status} - ${error}`,
+				"LLM_API_ERROR",
+			);
 		}
 
 		const data = (await response.json()) as {
@@ -98,7 +104,10 @@ export class AnthropicProvider extends LLMProvider {
 
 		const contentItem = data.content[0];
 		if (!contentItem) {
-			throw new LLMError("No content returned from Anthropic API", "LLM_EMPTY_RESPONSE");
+			throw new LLMError(
+				"No content returned from Anthropic API",
+				"LLM_EMPTY_RESPONSE",
+			);
 		}
 
 		return {
@@ -109,6 +118,134 @@ export class AnthropicProvider extends LLMProvider {
 			promptTokens: data.usage?.input_tokens ?? 0,
 			completionTokens: data.usage?.output_tokens ?? 0,
 			finishReason: data.stop_reason,
+		};
+	}
+
+	/**
+	 * Generate text stream using Anthropic Claude API
+	 */
+	async *generateStream(
+		messages: LLMMessage[],
+		options?: LLMGenerationOptions,
+	): AsyncGenerator<string, LLMGenerationResult, unknown> {
+		if (!this.isConfigured()) {
+			throw new LLMError(
+				"Anthropic provider is not configured properly",
+				"LLM_CONFIG_ERROR",
+			);
+		}
+
+		// Extract system message
+		let systemMessage = "";
+		const apiMessages: LLMMessage[] = [];
+
+		for (const msg of messages) {
+			if (msg.role === "system") {
+				systemMessage = msg.content;
+			} else {
+				apiMessages.push(msg);
+			}
+		}
+
+		const requestBody: Record<string, unknown> = {
+			model: this.config.model,
+			messages: apiMessages,
+			max_tokens: options?.maxTokens || this.config.maxTokens,
+			stream: true,
+		};
+
+		if (systemMessage) {
+			requestBody.system = systemMessage;
+		}
+
+		if (options?.temperature !== undefined) {
+			requestBody.temperature = options.temperature;
+		}
+
+		if (options?.topP !== undefined) {
+			requestBody.top_p = options.topP;
+		}
+
+		if (options?.topK !== undefined) {
+			requestBody.top_k = options.topK;
+		}
+
+		const response = await fetch("https://api.anthropic.com/v1/messages", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				"x-api-key": this.config.apiKey,
+				"anthropic-version": "2023-06-01",
+			},
+			body: JSON.stringify(requestBody),
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new LLMError(
+				`Anthropic API error: ${response.status} - ${error}`,
+				"LLM_API_ERROR",
+			);
+		}
+
+		if (!response.body) {
+			throw new LLMError("No response body", "LLM_EMPTY_RESPONSE");
+		}
+
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder();
+		let buffer = "";
+
+		let fullContent = "";
+		let finishReason = "";
+		let inputTokens = 0;
+		let outputTokens = 0;
+
+		try {
+			while (true) {
+				const { done, value } = await reader.read();
+				if (done) break;
+
+				buffer += decoder.decode(value, { stream: true });
+				const lines = buffer.split("\n");
+				buffer = lines.pop() || "";
+
+				for (const line of lines) {
+					if (line.trim() === "") continue;
+					if (!line.startsWith("data: ")) continue;
+
+					const data = line.slice(6);
+					try {
+						const parsed = JSON.parse(data);
+
+						if (parsed.type === "message_start") {
+							inputTokens = parsed.message?.usage?.input_tokens || 0;
+						} else if (parsed.type === "content_block_delta") {
+							const text = parsed.delta?.text;
+							if (text) {
+								fullContent += text;
+								yield text;
+							}
+						} else if (parsed.type === "message_delta") {
+							finishReason = parsed.delta?.stop_reason;
+							outputTokens = parsed.usage?.output_tokens || 0;
+						}
+					} catch (e) {
+						console.error("Error parsing SSE data:", e);
+					}
+				}
+			}
+		} finally {
+			reader.releaseLock();
+		}
+
+		return {
+			content: fullContent,
+			model: this.config.model,
+			tokensUsed: inputTokens + outputTokens,
+			promptTokens: inputTokens,
+			completionTokens: outputTokens,
+			finishReason: finishReason || "stop",
 		};
 	}
 

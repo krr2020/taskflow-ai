@@ -23,7 +23,10 @@
 	],
 	"scripts": {
 		"build": "tsc",
-		"test": "vitest"
+		"test": "vitest run",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"type-check": "tsc --noEmit"
 	},
 	"exports": {
 		".": {
@@ -36,14 +39,18 @@
 		}
 	},
 	"dependencies": {
-		"zod": "4.3.2",
-		"execa": "9.6.1",
+		"chalk": "^5.6.2",
 		"commander": "14.0.2",
-		"picocolors": "1.1.1"
+		"execa": "9.6.1",
+		"ora": "^9.0.0",
+		"picocolors": "1.1.1",
+		"semver": "^7.7.3",
+		"zod": "4.3.2"
 	},
 	"devDependencies": {
+		"@types/node": "25.0.3",
+		"@types/semver": "^7.7.1",
 		"typescript": "5.9.3",
-		"vitest": "4.0.16",
-		"@types/node": "25.0.3"
+		"vitest": "4.0.16"
 	}
 }

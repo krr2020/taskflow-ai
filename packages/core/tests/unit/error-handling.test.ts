@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BaseCommand, type CommandResult } from "../../src/commands/base.js";
 import type { MCPContext } from "../../src/lib/mcp-detector";
-import { LLMProvider } from "../../src/llm/base.js";
+import { type LLMGenerationResult, LLMProvider } from "../../src/llm/base.js";
 
 // Mock implementation of BaseCommand for testing
 class TestCommand extends BaseCommand {
@@ -40,6 +40,20 @@ class MockProvider extends LLMProvider {
 
 	generate = vi.fn();
 	isConfigured = vi.fn().mockReturnValue(true);
+	async *generateStream(): AsyncGenerator<
+		string,
+		LLMGenerationResult,
+		unknown
+	> {
+		yield "mock stream content";
+		return {
+			content: "mock stream content",
+			model: "test-model",
+			promptTokens: 0,
+			completionTokens: 0,
+			tokensUsed: 0,
+		};
+	}
 }
 
 describe("Error Handling", () => {

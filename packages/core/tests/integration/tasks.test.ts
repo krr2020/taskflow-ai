@@ -95,7 +95,7 @@ describe("Task Commands Integration", () => {
 			const result = await cmd.execute("test-prd.md");
 
 			expect(result.success).toBe(true);
-			expect(result.output).toContain("PRD loaded: test-prd.md");
+			expect(result.output).toContain("PRD LOADED: test-prd.md");
 			expect(result.aiGuidance).toBeDefined();
 			expect(result.aiGuidance).toContain("Generate Task Breakdown from PRD");
 		});
@@ -117,7 +117,7 @@ describe("Task Commands Integration", () => {
 			const result = await cmd.execute();
 
 			expect(result.success).toBe(true);
-			expect(result.output).toContain("AVAILABLE PRDs:");
+			expect(result.output).toContain("AVAILABLE PRDs");
 			expect(result.output).toContain("prd1.md");
 			expect(result.output).toContain("prd2.md");
 		});

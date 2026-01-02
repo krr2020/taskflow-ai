@@ -34,14 +34,28 @@ export class PRDInteractiveSession extends InteractiveSession<PRDSessionData> {
 	override async start(
 		initialDataOrName?: Partial<PRDSessionData> | string,
 	): Promise<PRDSessionData> {
+		let featureName: string | undefined;
+
 		// Handle string argument (feature name)
 		if (typeof initialDataOrName === "string") {
-			this.data.featureName = initialDataOrName;
-			return super.start();
+			featureName = initialDataOrName;
+			this.data.featureName = featureName;
+		} else if (initialDataOrName?.featureName) {
+			featureName = initialDataOrName.featureName;
+		}
+
+		if (featureName) {
+			// Set session ID based on feature name for persistence
+			this.sessionId = `prd-create-${featureName
+				.toLowerCase()
+				.replace(/[^a-z0-9]/g, "-")}`;
+			this.config.sessionId = this.sessionId;
 		}
 
 		// Handle object argument or undefined
-		return super.start(initialDataOrName);
+		return super.start(
+			typeof initialDataOrName === "string" ? undefined : initialDataOrName,
+		);
 	}
 
 	/**
@@ -69,12 +83,16 @@ export class PRDInteractiveSession extends InteractiveSession<PRDSessionData> {
 		// Feature name (already set if provided)
 		if (this.data.featureName) {
 			this.data.title = this.data.featureName;
+			this.saveState();
 			return;
 		}
 
 		this.showStep("FEATURE TITLE");
 
-		const result = await this.prompt("What is the title of the feature?");
+		const result = await this.prompt(
+			"What is the title of the feature?",
+			this.data.title,
+		);
 
 		// Check if user wants to quit
 		if (result.quit) {
@@ -91,6 +109,7 @@ export class PRDInteractiveSession extends InteractiveSession<PRDSessionData> {
 
 		this.data.featureName = title;
 		this.data.title = title;
+		this.saveState();
 	}
 
 	/**
@@ -98,6 +117,13 @@ export class PRDInteractiveSession extends InteractiveSession<PRDSessionData> {
 	 */
 	private async askSummary(): Promise<void> {
 		this.showStep("FEATURE SUMMARY");
+
+		if (this.data.summary) {
+			console.log("Current summary:");
+			console.log(this.data.summary);
+			const keep = await this.confirm("Keep this summary?", "yes");
+			if (keep) return;
+		}
 
 		const result = await this.promptMultiline(
 			"Please provide a detailed summary of the feature.",
@@ -110,5 +136,6 @@ export class PRDInteractiveSession extends InteractiveSession<PRDSessionData> {
 		}
 
 		this.data.summary = result.value;
+		this.saveState();
 	}
 }

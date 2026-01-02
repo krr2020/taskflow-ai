@@ -3,6 +3,7 @@
  * Provides deterministic responses without making actual API calls
  */
 
+import { LLMError } from "../../lib/errors.js";
 import {
 	type LLMGenerationOptions,
 	type LLMGenerationResult,
@@ -10,7 +11,6 @@ import {
 	LLMProvider,
 	LLMProviderType,
 } from "../base.js";
-import { LLMError } from "../../lib/errors.js";
 
 export interface MockResponse {
 	content: string;
@@ -62,6 +62,7 @@ export class MockLLMProvider extends LLMProvider {
 			this.callCount > this.config.rateLimitAfter
 		) {
 			const error = new LLMError("Rate limit exceeded", "LLM_RATE_LIMIT");
+			// biome-ignore lint/suspicious/noExplicitAny: Mocking internal property
 			(error as any).status = 429;
 			throw error;
 		}
@@ -103,6 +104,28 @@ export class MockLLMProvider extends LLMProvider {
 			completionTokens: estimatedCompletionTokens,
 			finishReason: "stop",
 		};
+	}
+
+	/**
+	 * Generate mock stream response
+	 */
+	async *generateStream(
+		messages: LLMMessage[],
+		options?: LLMGenerationOptions,
+	): AsyncGenerator<string, LLMGenerationResult, unknown> {
+		// Use existing generate logic to get the full response
+		const result = await this.generate(messages, options);
+
+		// Split content into chunks to simulate streaming
+		const chunkSize = 10;
+		const content = result.content;
+
+		for (let i = 0; i < content.length; i += chunkSize) {
+			yield content.substring(i, i + chunkSize);
+			await this.sleep(10); // Simulate network delay
+		}
+
+		return result;
 	}
 
 	/**

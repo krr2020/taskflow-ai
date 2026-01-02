@@ -45,7 +45,10 @@ export function getTemplateDir(): string {
 		"Template directory not found. Checked locations:\n" +
 		possiblePaths.map((p) => `  - ${p}`).join("\n");
 	consoleOutput(error, { type: "error" });
-	throw new TaskflowError("Template directory not found", "TEMPLATE_DIR_NOT_FOUND");
+	throw new TaskflowError(
+		"Template directory not found",
+		"TEMPLATE_DIR_NOT_FOUND",
+	);
 }
 
 /**

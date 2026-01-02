@@ -3,8 +3,8 @@
  * Selects the appropriate model for each phase (planning, execution, analysis)
  */
 
-import { type LLMProvider, LLMProviderType, Phase } from "./base.js";
 import { LLMError } from "../lib/errors.js";
+import { type LLMProvider, LLMProviderType, Phase } from "./base.js";
 import { AnthropicProvider } from "./providers/anthropic.js";
 import { MockLLMProvider } from "./providers/mock.js";
 import { OllamaProvider } from "./providers/ollama.js";
@@ -136,7 +136,10 @@ export class ModelSelector {
 			}
 
 			default:
-				throw new LLMError(`Unknown provider type: ${providerType}`, "UNKNOWN_PROVIDER");
+				throw new LLMError(
+					`Unknown provider type: ${providerType}`,
+					"UNKNOWN_PROVIDER",
+				);
 		}
 	}
 

@@ -10,7 +10,11 @@ import {
 	FileValidator,
 	type ValidationIssue,
 } from "../../src/lib/file-validator.js";
-import { type LLMProvider, LLMProviderType } from "../../src/llm/base.js";
+import {
+	type LLMGenerationResult,
+	type LLMProvider,
+	LLMProviderType,
+} from "../../src/llm/base.js";
 
 // Mock LLM Provider
 const createMockProvider = (
@@ -29,7 +33,26 @@ const createMockProvider = (
 			return {
 				content: response,
 				model: "gpt-4o-mini",
-				usage: { inputTokens: 100, outputTokens: 50 },
+				tokensUsed: 150,
+				promptTokens: 100,
+				completionTokens: 50,
+			};
+		}),
+		generateStream: vi.fn(async function* (): AsyncGenerator<
+			string,
+			LLMGenerationResult,
+			unknown
+		> {
+			if (shouldFail) {
+				throw new Error("LLM API error");
+			}
+			yield response;
+			return {
+				content: response,
+				model: "gpt-4o-mini",
+				tokensUsed: 150,
+				promptTokens: 100,
+				completionTokens: 50,
 			};
 		}),
 	};
@@ -440,6 +463,20 @@ describe("FileValidator", () => {
 						usage: { inputTokens: 100, outputTokens: 50 },
 					};
 				}),
+				generateStream: vi.fn(async function* (): AsyncGenerator<
+					string,
+					LLMGenerationResult,
+					unknown
+				> {
+					yield "";
+					return {
+						content: "",
+						model: "gpt-4o-mini",
+						promptTokens: 100,
+						completionTokens: 50,
+						tokensUsed: 150,
+					};
+				}),
 			};
 
 			const validator = new FileValidator({ provider });
@@ -491,6 +528,10 @@ describe("FileValidator", () => {
 				generate: vi.fn(async () => {
 					throw new Error("Network timeout");
 				}),
+				generateStream: vi.fn(async function* () {
+					yield "";
+					throw new Error("Network timeout");
+				}),
 			};
 
 			const validator = new FileValidator({ provider });
@@ -509,6 +550,10 @@ describe("FileValidator", () => {
 				isConfigured: () => true,
 				getModelForPhase: () => "gpt-4o-mini",
 				generate: vi.fn(async () => {
+					throw new Error("Request timeout");
+				}),
+				generateStream: vi.fn(async function* () {
+					yield "";
 					throw new Error("Request timeout");
 				}),
 			};

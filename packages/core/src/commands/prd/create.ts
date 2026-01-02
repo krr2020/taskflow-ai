@@ -5,11 +5,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import readline from "node:readline";
+import pc from "picocolors";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
 import { LLMRequiredError } from "../../lib/errors.js";
 import { ensureDir, exists } from "../../lib/file-utils.js";
 import { PRDInteractiveSession } from "../../lib/prd-interactive-session.js";
+import { ProgressIndicator } from "../../lib/progress-indicator.js";
+import { StreamDisplay } from "../../lib/stream-display.js";
+import { TerminalFormatter } from "../../lib/terminal-formatter.js";
 import { buildPRDContext } from "../../llm/context-priorities.js";
 import { validatePRD } from "../../llm/validators.js";
 import { BaseCommand, type CommandResult } from "../base.js";
@@ -119,34 +123,47 @@ export class PrdCreateCommand extends BaseCommand {
 		let prdContent: string;
 
 		if (this.isLLMAvailable()) {
-			console.log("Generating PRD with LLM...");
-			prdContent = await this.executeWithFallback(
-				async () => {
-					const content = await this.generatePRDWithLLM(
-						featureName,
-						title,
-						summary,
-						paths,
-					);
-					console.log("✓ PRD generated with LLM");
+			const progress = new ProgressIndicator();
+			progress.start("Generating PRD with LLM...");
 
-					// Validate generated content
-					const validation = validatePRD(content);
-					if (!validation.valid) {
-						console.warn(
-							"⚠ Generated PRD has validation issues:",
-							validation.errors.join(", "),
+			try {
+				prdContent = await this.executeWithFallback(
+					async () => {
+						progress.stop(); // Stop spinner before interactive parts
+						const content = await this.generatePRDWithLLM(
+							featureName,
+							title,
+							summary,
+							paths,
 						);
-					}
 
-					return content;
-				},
-				() => {
-					console.warn("LLM generation failed, falling back to template.");
-					return this.generatePrdTemplate(featureName, title, summary);
-				},
-				"PRD Generation",
-			);
+						progress.start("Validating generated PRD...");
+						// Validate generated content
+						const validation = validatePRD(content);
+						if (!validation.valid) {
+							progress.warn("Generated PRD has validation issues");
+							console.log(
+								TerminalFormatter.warning(
+									`Issues: ${validation.errors.join(", ")}`,
+								),
+							);
+						} else {
+							progress.succeed("PRD generated and validated");
+						}
+
+						return content;
+					},
+					() => {
+						progress.fail("LLM generation failed");
+						console.log(TerminalFormatter.warning("Falling back to template"));
+						return this.generatePrdTemplate(featureName, title, summary);
+					},
+					"PRD Generation",
+				);
+			} catch (error) {
+				progress.fail("Error during PRD generation");
+				throw error;
+			}
 		} else {
 			prdContent = this.generatePrdTemplate(featureName, title, summary);
 		}
@@ -155,16 +172,23 @@ export class PrdCreateCommand extends BaseCommand {
 		fs.writeFileSync(prdFilePath, prdContent, "utf-8");
 
 		const nextStepsBase = [
-			`✓ PRD created: ${prdFilename}`,
-			`✓ Location: ${prdFilePath}`,
+			TerminalFormatter.success(`PRD created: ${prdFilename}`),
+			TerminalFormatter.listItem(`Location: ${prdFilePath}`),
 			"",
-			"NEXT:",
-			"─".repeat(60),
-			"1. Review the generated PRD",
+			TerminalFormatter.section("NEXT STEPS"),
 		];
 
-		nextStepsBase.push("2. Generate coding standards and architecture rules");
-		nextStepsBase.push("3. Generate task breakdown from PRD");
+		nextStepsBase.push(
+			TerminalFormatter.listItem("1. Review the generated PRD"),
+		);
+		nextStepsBase.push(
+			TerminalFormatter.listItem(
+				"2. Generate coding standards and architecture rules",
+			),
+		);
+		nextStepsBase.push(
+			TerminalFormatter.listItem("3. Generate task breakdown from PRD"),
+		);
 
 		return this.success(
 			nextStepsBase.join("\n"),
@@ -240,30 +264,35 @@ export class PrdCreateCommand extends BaseCommand {
 		paths: ReturnType<ConfigLoader["getPaths"]>,
 	): Promise<string> {
 		if (!this.llmProvider || !this.contextManager) {
-			throw new LLMRequiredError("LLM provider or context manager not available");
+			throw new LLMRequiredError(
+				"LLM provider or context manager not available",
+			);
 		}
 
-		console.log(`Generating PRD for feature: ${featureName}`);
+		console.log(
+			TerminalFormatter.info(`Generating PRD for feature: ${featureName}`),
+		);
 
 		// Step 1: Generate questions
-		console.log("\nAnalyzing requirements...");
 		const questions = await this.generateQuestions(title, summary);
 
 		// If no questions, generate PRD directly
 		if (questions.length === 0) {
-			console.log("Requirements are clear. Generating PRD...");
+			console.log(
+				TerminalFormatter.success("Requirements are clear. Generating PRD..."),
+			);
 			return this.generatePRDDirectly(title, summary, paths);
 		}
 
 		// Step 2: Ask questions
-		console.log(`\nI have ${questions.length} clarifying questions:`);
+		console.log("");
 		this.displayQuestions(questions);
 
 		// Step 3: Get answers
 		const answers = await this.getUserAnswersAllAtOnce(questions);
 
 		// Step 4: Generate final PRD
-		console.log("\nGenerating final PRD...");
+		console.log("");
 		return this.generateFinalPRD(title, summary, questions, answers, paths);
 	}
 
@@ -274,29 +303,41 @@ export class PrdCreateCommand extends BaseCommand {
 		title: string,
 		summary: string,
 	): Promise<Question[]> {
+		const progress = new ProgressIndicator();
+		progress.start("Analyzing requirements and generating questions...");
+
 		const systemPrompt = this.buildSystemPromptForQuestions();
 		const userPrompt = this.buildQuestionPrompt(title, summary);
 
-		// We assume buildQuestionPrompt no longer needs paths if not used
-		// If it needs paths for context, we should pass it.
-		// My implementation below removed paths from buildQuestionPrompt arguments.
+		const messages = [
+			{ role: "system" as const, content: systemPrompt },
+			{ role: "user" as const, content: userPrompt },
+		];
 
-		const response = await this.llmProvider?.generate(
-			[
-				{ role: "system", content: systemPrompt },
-				{ role: "user", content: userPrompt },
-			],
-			{
-				maxTokens: 2000,
-				temperature: 0.7,
-			},
-		);
+		const stream = this.generateStream(messages, {
+			maxTokens: 2000,
+			temperature: 0.7,
+		});
 
-		if (!response) {
+		const display = new StreamDisplay("Generating Questions");
+		let content = "";
+		let isFirstChunk = true;
+
+		for await (const chunk of stream) {
+			if (isFirstChunk) {
+				progress.stop();
+				isFirstChunk = false;
+			}
+			display.handleChunk(chunk);
+			content += chunk;
+		}
+		display.finish();
+
+		if (!content || content.includes("NO_QUESTIONS_NEEDED")) {
 			return [];
 		}
 
-		return this.parseAllQuestions(response.content);
+		return this.parseAllQuestions(content);
 	}
 
 	/**
@@ -323,22 +364,29 @@ export class PrdCreateCommand extends BaseCommand {
 		const systemPrompt = this.buildSystemPromptForPRD(paths);
 		const userPrompt = this.buildPRDPrompt(title, summary, questions, answers);
 
-		const response = await this.llmProvider?.generate(
-			[
-				{ role: "system", content: systemPrompt },
-				{ role: "user", content: userPrompt },
-			],
-			{
-				maxTokens: 4000,
-				temperature: 0.7,
-			},
-		);
+		const messages = [
+			{ role: "system" as const, content: systemPrompt },
+			{ role: "user" as const, content: userPrompt },
+		];
 
-		if (!response) {
+		const stream = this.generateStream(messages, {
+			maxTokens: 4000,
+			temperature: 0.7,
+		});
+
+		const display = new StreamDisplay("Generating PRD");
+		let content = "";
+		for await (const chunk of stream) {
+			display.handleChunk(chunk);
+			content += chunk;
+		}
+		display.finish();
+
+		if (!content) {
 			throw new Error("Failed to generate PRD");
 		}
 
-		return response.content;
+		return content;
 	}
 
 	/**
@@ -454,17 +502,31 @@ Please analyze this feature and generate clarifying questions if needed.`;
 	 * Display questions to user
 	 */
 	private displayQuestions(questions: Question[]): void {
-		console.log("─".repeat(60));
+		console.log(TerminalFormatter.header("CLARIFYING QUESTIONS"));
+
+		console.log(
+			pc.dim(
+				"Please answer the following questions to help generate a comprehensive PRD.\n",
+			),
+		);
+
 		for (const q of questions) {
-			console.log(`${q.number}. ${q.text}`);
+			console.log(TerminalFormatter.question(q.number, q.text));
+
 			if (q.options && q.options.length > 0) {
 				for (const opt of q.options) {
-					console.log(`   ${opt}`);
+					console.log(TerminalFormatter.option(opt));
 				}
 			}
-			console.log("");
+
+			if (q.type === "multiple-choice") {
+				console.log(pc.dim(`   Type: Multiple Choice`));
+			} else {
+				console.log(pc.dim(`   Type: Open-ended`));
+			}
 		}
-		console.log("─".repeat(60));
+
+		console.log(pc.bold(pc.white(`\n${"─".repeat(60)}`)));
 	}
 
 	/**
@@ -478,18 +540,34 @@ Please analyze this feature and generate clarifying questions if needed.`;
 			output: process.stdout,
 		});
 
-		console.log(
-			`Please answer the ${questions.length} questions above. You can provide answers in format:`,
-			"\n'1A, 2C, 3: My answer text'",
-			"\nOr just type your answers freely.",
-		);
+		console.log(TerminalFormatter.section("HOW TO ANSWER"));
+		console.log(pc.dim("You can provide answers in the following formats:"));
+		console.log(pc.white("  • Multiple choice: 1A, 2C, 3B"));
+		console.log(pc.white("  • Open-ended: 3: My detailed answer here"));
+		console.log(pc.white("  • Mixed: 1A, 2C, 3: My answer, 4B\n"));
+
+		console.log(TerminalFormatter.prompt("Enter your answers:"));
 
 		const answerText = await new Promise<string>((resolve) => {
-			rl.question("\nYour answers:\n> ", (ans) => {
+			rl.question("", (ans) => {
 				rl.close();
 				resolve(ans.trim());
 			});
 		});
+
+		// Validate answers
+		if (!answerText) {
+			console.log(
+				TerminalFormatter.error("No answers provided. Please try again."),
+			);
+			return this.getUserAnswersAllAtOnce(questions);
+		}
+
+		console.log(
+			TerminalFormatter.success(
+				`Received answers for ${questions.length} questions`,
+			),
+		);
 
 		return [answerText];
 	}

@@ -88,13 +88,12 @@ describe("PrdCreateCommand", () => {
 
 	it("should include minimum 5 questions and reasoning requirement in system prompt", async () => {
 		// Mock LLM Provider
-		const mockGenerate = vi.fn().mockResolvedValue({
-			content: "NO_QUESTIONS_NEEDED",
-			usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+		const mockGenerateStream = vi.fn().mockImplementation(async function* () {
+			yield "NO_QUESTIONS_NEEDED";
 		});
 
 		const mockLLMProvider = {
-			generate: mockGenerate,
+			generateStream: mockGenerateStream,
 			isConfigured: vi.fn().mockReturnValue(true),
 		};
 
@@ -110,11 +109,11 @@ describe("PrdCreateCommand", () => {
 		// Execute
 		await command.execute("my-feature", undefined, undefined, true);
 
-		// Verify generate was called
-		expect(mockGenerate).toHaveBeenCalled();
+		// Verify generateStream was called
+		expect(mockGenerateStream).toHaveBeenCalled();
 
 		// Check the system prompt (first call, first arg is messages array, first message is system)
-		const calls = mockGenerate.mock.calls;
+		const calls = mockGenerateStream.mock.calls;
 		expect(calls[0]).toBeDefined();
 		const messages = calls[0]![0];
 		const systemMessage = messages.find((m: any) => m.role === "system");

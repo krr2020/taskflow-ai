@@ -3,6 +3,7 @@
  * Factory for creating LLM providers and model selectors
  */
 
+import { LLMError } from "../lib/errors.js";
 import {
 	type LLMGenerationOptions,
 	type LLMGenerationResult,
@@ -10,7 +11,6 @@ import {
 	type LLMProvider,
 	LLMProviderType,
 } from "./base.js";
-import { LLMError } from "../lib/errors.js";
 import { type AIConfig, ModelSelector } from "./model-selector.js";
 import { AnthropicProvider } from "./providers/anthropic.js";
 import { MockLLMProvider } from "./providers/mock.js";
@@ -72,7 +72,10 @@ export const ProviderFactory = {
 			}
 
 			default:
-				throw new LLMError(`Unknown provider type: ${type}`, "UNKNOWN_PROVIDER");
+				throw new LLMError(
+					`Unknown provider type: ${type}`,
+					"UNKNOWN_PROVIDER",
+				);
 		}
 	},
 

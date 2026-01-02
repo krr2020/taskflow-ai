@@ -95,7 +95,8 @@ export function loadFeature(tasksDir: string, featurePath: string): Feature {
 
 	try {
 		const data = readJson(filePath);
-		if (!data) throw new TaskflowError("Invalid JSON in feature", "INVALID_JSON");
+		if (!data)
+			throw new TaskflowError("Invalid JSON in feature", "INVALID_JSON");
 		const feature = validateFeature(data);
 		feature.path = featurePath;
 		return feature;

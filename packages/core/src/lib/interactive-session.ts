@@ -8,6 +8,8 @@
 
 import readline from "node:readline";
 import type { BaseCommand } from "../commands/base.js";
+import { SessionManager } from "./session-manager.js";
+import { TerminalFormatter } from "./terminal-formatter.js";
 
 /**
  * Result of a prompt
@@ -49,6 +51,11 @@ export interface SessionConfig {
 	 * Whether to allow quit at any time
 	 */
 	allowQuit?: boolean;
+
+	/**
+	 * Session ID for persistence (optional)
+	 */
+	sessionId?: string;
 }
 
 /**
@@ -59,6 +66,8 @@ export abstract class InteractiveSession<T = unknown> {
 	protected config: SessionConfig;
 	protected data: Partial<T> = {};
 	protected step = 0;
+	protected sessionManager: SessionManager;
+	protected sessionId: string;
 
 	constructor(command: BaseCommand, config: SessionConfig) {
 		this.command = command;
@@ -67,12 +76,32 @@ export abstract class InteractiveSession<T = unknown> {
 			allowQuit: true,
 			...config,
 		};
+		this.sessionManager = new SessionManager(command.getProjectRoot());
+		this.sessionId = config.sessionId || `session-${Date.now()}`;
 	}
 
 	/**
 	 * Start the interactive session
 	 */
 	async start(initialData?: Partial<T>): Promise<T> {
+		// Check for existing session
+		if (this.config.sessionId) {
+			const savedSession = this.sessionManager.loadSession<T>(this.sessionId);
+			if (savedSession && !savedSession.completed) {
+				console.log(
+					TerminalFormatter.info(
+						`Found existing session from ${new Date(savedSession.timestamp).toLocaleString()}`,
+					),
+				);
+				const resume = await this.confirm("Resume this session?", "yes");
+				if (resume) {
+					this.data = { ...this.data, ...savedSession.data };
+					this.step = savedSession.step;
+					console.log(TerminalFormatter.success("Session resumed."));
+				}
+			}
+		}
+
 		// Initialize data
 		if (initialData) {
 			this.data = { ...this.data, ...initialData };
@@ -92,7 +121,26 @@ export abstract class InteractiveSession<T = unknown> {
 			process.exit(0);
 		}
 
+		// Mark session as complete
+		if (this.config.sessionId) {
+			this.sessionManager.completeSession(this.sessionId);
+		}
+
 		return this.data as T;
+	}
+
+	/**
+	 * Save current session state
+	 */
+	protected saveState(): void {
+		if (this.config.sessionId) {
+			this.sessionManager.saveSession(
+				this.sessionId,
+				this.constructor.name,
+				this.step,
+				this.data,
+			);
+		}
 	}
 
 	/**

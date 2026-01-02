@@ -25,7 +25,7 @@ import {
 	TaskNotFoundError,
 } from "../../lib/errors.js";
 import { verifyBranch } from "../../lib/git.js";
-import { consoleOutput } from "../../lib/output.js";
+import { TerminalFormatter } from "../../lib/terminal-formatter.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class StartCommand extends BaseCommand {
@@ -59,8 +59,10 @@ export class StartCommand extends BaseCommand {
 
 		// If active task exists and we're starting an intermittent task, show warning
 		if (activeTask && isSwitchingToIntermittent) {
-			consoleOutput(
-				`\n⚠️  Switching to intermittent task. Main task ${activeTask.taskId} is paused.\n`,
+			console.log(
+				TerminalFormatter.warning(
+					`Switching to intermittent task. Main task ${activeTask.taskId} is paused.`,
+				),
 			);
 		}
 
@@ -134,13 +136,12 @@ export class StartCommand extends BaseCommand {
 
 		return this.success(
 			[
-				`✓ Task ${taskId} started: ${task.title}`,
+				TerminalFormatter.success(`Task ${taskId} started: ${task.title}`),
 				`✓ Status: not-started → setup`,
 				`✓ Branch: story/S${story.id}-${story.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
 				`✓ Skill: ${taskContent.skill || "backend"}`,
 				"",
-				"TASK DETAILS:",
-				"─".repeat(60),
+				TerminalFormatter.section("TASK DETAILS"),
 				`Title: ${taskContent.title}`,
 				`Description: ${taskContent.description}`,
 				"",

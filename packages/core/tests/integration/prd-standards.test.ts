@@ -89,8 +89,12 @@ describe("PRD Standards Integration", () => {
 
 			// Delete template files created by init
 			const refDir = path.join(testDir, ".taskflow", "ref");
-			fs.unlinkSync(path.join(refDir, "coding-standards.md"));
-			fs.unlinkSync(path.join(refDir, "architecture-rules.md"));
+			if (fs.existsSync(path.join(refDir, "coding-standards.md"))) {
+				fs.unlinkSync(path.join(refDir, "coding-standards.md"));
+			}
+			if (fs.existsSync(path.join(refDir, "architecture-rules.md"))) {
+				fs.unlinkSync(path.join(refDir, "architecture-rules.md"));
+			}
 
 			// Create a PRD file
 			const prdsDir = path.join(testDir, "tasks", "prds");
@@ -107,7 +111,7 @@ describe("PRD Standards Integration", () => {
 			const result = await cmd.execute("test-prd.md");
 
 			expect(result.success).toBe(true);
-			expect(result.output).toContain("PRD loaded: test-prd.md");
+			expect(result.output).toContain("PRD LOADED: test-prd.md");
 			expect(result.aiGuidance).toBeDefined();
 			expect(result.aiGuidance).toContain(
 				"Generate Coding Standards and Architecture Rules",
@@ -127,8 +131,12 @@ describe("PRD Standards Integration", () => {
 
 			// Delete template files created by init
 			const refDir = path.join(testDir, ".taskflow", "ref");
-			fs.unlinkSync(path.join(refDir, "coding-standards.md"));
-			fs.unlinkSync(path.join(refDir, "architecture-rules.md"));
+			if (fs.existsSync(path.join(refDir, "coding-standards.md"))) {
+				fs.unlinkSync(path.join(refDir, "coding-standards.md"));
+			}
+			if (fs.existsSync(path.join(refDir, "architecture-rules.md"))) {
+				fs.unlinkSync(path.join(refDir, "architecture-rules.md"));
+			}
 
 			// Create a PRD file
 			const prdsDir = path.join(testDir, "tasks", "prds");
@@ -145,7 +153,7 @@ describe("PRD Standards Integration", () => {
 			);
 
 			expect(result.success).toBe(true);
-			expect(result.output).toContain("PRD loaded: test-prd.md");
+			expect(result.output).toContain("PRD LOADED: test-prd.md");
 		});
 	});
 
@@ -171,7 +179,9 @@ describe("PRD Standards Integration", () => {
 			// Delete the coding-standards.md file created by init
 			const refDir = path.join(testDir, ".taskflow", "ref");
 			const codingStandardsPath = path.join(refDir, "coding-standards.md");
-			fs.unlinkSync(codingStandardsPath);
+			if (fs.existsSync(codingStandardsPath)) {
+				fs.unlinkSync(codingStandardsPath);
+			}
 
 			// Try to update non-existent standards
 			const cmd = new PrdUpdateStandardsCommand(context);
@@ -248,7 +258,9 @@ describe("PRD Standards Integration", () => {
 			// Delete architecture-rules.md file created by init
 			const refDir = path.join(testDir, ".taskflow", "ref");
 			const architectureRulesPath = path.join(refDir, "architecture-rules.md");
-			fs.unlinkSync(architectureRulesPath);
+			if (fs.existsSync(architectureRulesPath)) {
+				fs.unlinkSync(architectureRulesPath);
+			}
 
 			// Try to update non-existent rules
 			const cmd = new PrdUpdateArchCommand(context);
@@ -328,8 +340,12 @@ describe("PRD Standards Integration", () => {
 
 			// Delete template files created by init so generation doesn't fail
 			const refDir = path.join(testDir, ".taskflow", "ref");
-			fs.unlinkSync(path.join(refDir, "coding-standards.md"));
-			fs.unlinkSync(path.join(refDir, "architecture-rules.md"));
+			if (fs.existsSync(path.join(refDir, "coding-standards.md"))) {
+				fs.unlinkSync(path.join(refDir, "coding-standards.md"));
+			}
+			if (fs.existsSync(path.join(refDir, "architecture-rules.md"))) {
+				fs.unlinkSync(path.join(refDir, "architecture-rules.md"));
+			}
 
 			// 3. Generate standards (should provide guidance)
 			const generateCmd = new PrdGenerateArchCommand(context);
