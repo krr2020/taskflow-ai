@@ -9,6 +9,7 @@ Common workflows, patterns, and best practices for daily use of Taskflow.
 - [PRD Creation](#prd-creation)
 - [Brownfield Development](#brownfield-development)
 - [Task Workflow](#task-workflow)
+- [Using the Dashboard](#using-the-dashboard)
 - [Working with Dependencies](#working-with-dependencies)
 - [Handling Validation Failures](#handling-validation-failures)
 - [Blocking and Resuming Tasks](#blocking-and-resuming-tasks)
@@ -159,6 +160,36 @@ not-started → setup → implementing → verifying → validating → committi
 - Taskflow creates a conventional commit and pushes to remote
 
 **Result**: Task is marked `completed` and you can start the next task.
+
+---
+
+## Using the Dashboard
+
+The Taskflow Dashboard provides a visual overview of your project's progress, including features, stories, and tasks.
+
+### Starting the Dashboard
+
+```bash
+# Start in foreground (blocks terminal)
+taskflow ui
+
+# Start in background
+taskflow ui > logs.txt &
+```
+
+Once started, open your browser to `http://localhost:4500` (or the port shown in the terminal).
+
+### Dashboard Features
+
+1.  **Project Overview**: See total completion percentage across all features.
+2.  **Feature Status**: View individual feature progress (Not Started, In Progress, Completed, Blocked).
+3.  **Real-time Updates**: The dashboard reflects changes made via the CLI immediately (on page refresh).
+
+### Managing the Server
+
+- **Check Status**: `taskflow ui --status`
+- **Stop Server**: `taskflow ui --stop`
+- **Custom Port**: `taskflow ui --port 5000`
 
 ---
 

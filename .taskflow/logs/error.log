@@ -1,0 +1,32 @@
+[2026-01-02T21:47:38.899Z] LLM provider initialization failed
+Error: Configuration file not found at: /Users/rk/workspace/taskflow/taskflow.config.json
+Run 'taskflow init' to create a configuration file.
+TaskflowError: Configuration file not found at: /Users/rk/workspace/taskflow/taskflow.config.json
+Run 'taskflow init' to create a configuration file.
+    at ConfigLoader.load (file:///Users/rk/workspace/taskflow/packages/core/dist/lib/config-loader.js:18:19)
+    at UiCommand.initializeLLMProvider (file:///Users/rk/workspace/taskflow/packages/core/dist/commands/base.js:57:46)
+    at new BaseCommand (file:///Users/rk/workspace/taskflow/packages/core/dist/commands/base.js:44:14)
+    at new UiCommand (file:///Users/rk/workspace/taskflow/packages/core/dist/commands/ui.js:4:8)
+    at Command.<anonymous> (file:///Users/rk/workspace/taskflow/packages/core/dist/cli/index.js:477:25)
+    at Command.listener [as _actionHandler] (/Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:568:17)
+    at /Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1604:14
+    at Command._chainOrCall (/Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1488:12)
+    at Command._parseCommand (/Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1603:27)
+    at /Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1367:27
+-------------------
+[2026-01-02T21:48:01.010Z] LLM provider initialization failed
+Error: Configuration file not found at: /Users/rk/workspace/taskflow/taskflow.config.json
+Run 'taskflow init' to create a configuration file.
+TaskflowError: Configuration file not found at: /Users/rk/workspace/taskflow/taskflow.config.json
+Run 'taskflow init' to create a configuration file.
+    at ConfigLoader.load (file:///Users/rk/workspace/taskflow/packages/core/dist/lib/config-loader.js:18:19)
+    at UiCommand.initializeLLMProvider (file:///Users/rk/workspace/taskflow/packages/core/dist/commands/base.js:57:46)
+    at new BaseCommand (file:///Users/rk/workspace/taskflow/packages/core/dist/commands/base.js:44:14)
+    at new UiCommand (file:///Users/rk/workspace/taskflow/packages/core/dist/commands/ui.js:4:8)
+    at Command.<anonymous> (file:///Users/rk/workspace/taskflow/packages/core/dist/cli/index.js:477:25)
+    at Command.listener [as _actionHandler] (/Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:568:17)
+    at /Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1604:14
+    at Command._chainOrCall (/Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1488:12)
+    at Command._parseCommand (/Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1603:27)
+    at /Users/rk/workspace/taskflow/node_modules/.pnpm/commander@14.0.2/node_modules/commander/lib/command.js:1367:27
+-------------------

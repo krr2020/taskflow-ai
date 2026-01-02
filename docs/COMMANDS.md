@@ -215,7 +215,25 @@ taskflow commit "- Add login endpoint
 
 ---
 
-## Navigation
+## Navigation & UI
+
+### `taskflow ui [options]`
+
+Start the Taskflow Dashboard server.
+
+```bash
+taskflow ui                    # Start server (foreground)
+taskflow ui --stop             # Stop background server
+taskflow ui --status           # Check server status
+taskflow ui --port 5000        # Run on specific port
+```
+
+- **Foreground**: Default mode, blocks terminal, shows logs.
+- **Background**: Use `taskflow ui > logs.txt &` or system tools.
+- **Status**: Shows running PID and port.
+- **Stop**: Gracefully shuts down the background process.
+
+---
 
 ### `taskflow status [id]`
 
@@ -313,7 +331,8 @@ Workflow (Main Loop)
 
 Navigation
 ├─ status [id]                 View progress
-└─ next                        Find next task
+├─ next                        Find next task
+└─ ui [options]                Start dashboard
 
 Recovery
 ├─ resume [status]             Resume interrupted task

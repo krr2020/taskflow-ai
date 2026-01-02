@@ -179,14 +179,26 @@ You can manually create task files following the JSON schema. See [Architecture]
 ---
 
 ## Step 5: View Your Tasks
-
-Check the status of your project:
-
-```bash
-taskflow status
-```
-
-Output:
+ 
+ Check the status of your project using the CLI or the Dashboard.
+ 
+ ### Using CLI
+ 
+ ```bash
+ taskflow status
+ ```
+ 
+ ### Using Dashboard (New)
+ 
+ Start the visual dashboard to see an overview of your project:
+ 
+ ```bash
+ taskflow ui
+ ```
+ 
+ This opens a web interface at `http://localhost:4500` where you can see all features and tasks at a glance.
+ 
+ Output:
 
 ```
 PROJECT: your-project

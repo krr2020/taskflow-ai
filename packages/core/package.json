@@ -39,9 +39,11 @@
 		}
 	},
 	"dependencies": {
+		"@hono/node-server": "^1.19.7",
 		"chalk": "^5.6.2",
 		"commander": "14.0.2",
 		"execa": "9.6.1",
+		"hono": "^4.11.3",
 		"ora": "^9.0.0",
 		"picocolors": "1.1.1",
 		"semver": "^7.7.3",

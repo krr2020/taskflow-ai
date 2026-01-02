@@ -40,6 +40,7 @@ taskflow commit "- Implemented login endpoint"
 Taskflow helps development teams maintain consistent workflows by:
 
 - **Enforcing quality gates**: Every task goes through setup → implementing → verifying → validating → committing
+- **Visual Dashboard**: Manage projects, track progress, and view tasks in a modern web UI (`taskflow ui`)
 - **Automating validations**: Runs lint, type-check, and tests before allowing commits
 - **Managing Git branches**: Automatic branch creation and conventional commit messages
 - **Supporting AI agents**: Works with Claude Desktop, Cursor, and other AI coding assistants
@@ -105,6 +106,7 @@ not-started → setup → implementing → verifying → validating → committi
 **Common commands:**
 
 - `taskflow status` - View project progress
+- `taskflow ui` - Start visual dashboard
 - `taskflow next` - Find next available task
 - `taskflow start <id>` - Begin a task
 - `taskflow do` - Show instructions for current state
@@ -176,6 +178,7 @@ See [docs/CONFIG.md](./docs/CONFIG.md) for detailed AI configuration.
 taskflow/
 ├── packages/
 │   ├── core/           # Main CLI package
+│   ├── ui/             # Dashboard web application
 │   └── mcp-server/     # MCP server for Claude Desktop
 └── docs/               # Documentation
 ```

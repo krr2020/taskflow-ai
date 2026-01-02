@@ -18,6 +18,7 @@ import { TasksAddCommand } from "../commands/tasks/add.js";
 import { TaskCreateCommand } from "../commands/tasks/create.js";
 import { TasksGenerateCommand } from "../commands/tasks/generate.js";
 import { TasksRefineCommand } from "../commands/tasks/refine.js";
+import { UiCommand } from "../commands/ui.js";
 import { UpgradeCommand } from "../commands/upgrade.js";
 import { CheckCommand } from "../commands/workflow/check.js";
 import { CommitCommand } from "../commands/workflow/commit.js";
@@ -586,6 +587,29 @@ export async function runCLI() {
 				const result = await cmd.execute(category);
 				console.log(formatSuccess(result));
 				process.exit(0);
+			} catch (error) {
+				handleError(error);
+			}
+		});
+
+	// ========================================
+	// UI COMMAND
+	// ========================================
+	program
+		.command("ui")
+		.description("Start the Taskflow UI dashboard")
+		.option("--stop", "Stop the running UI server")
+		.option("--status", "Check if UI server is running")
+		.option("--port <port>", "Port to run on (default: 4500)")
+		.action(async (options) => {
+			try {
+				const cmd = new UiCommand(context);
+				const result = await cmd.execute(options);
+				console.log(formatSuccess(result));
+				// Don't exit if running server (execute returns pending promise)
+				if (options.stop || options.status) {
+					process.exit(0);
+				}
 			} catch (error) {
 				handleError(error);
 			}

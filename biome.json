@@ -32,6 +32,16 @@
 					}
 				}
 			}
+		},
+		{
+			"includes": ["packages/ui/src/index.css"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noUnknownAtRules": "off"
+					}
+				}
+			}
 		}
 	]
 }

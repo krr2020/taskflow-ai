@@ -81,6 +81,7 @@ not-started → setup → planning → implementing → verifying → validating
 
 **Key commands:**
 - `taskflow status [id]` - View project/feature/story/task status
+- `taskflow ui` - Start visual dashboard
 - `taskflow next` - Find next available task
 - `taskflow start <id>` - Begin a task
 - `taskflow do` - Show instructions for current state
