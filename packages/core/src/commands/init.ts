@@ -2,11 +2,31 @@
  * Init command - Initialize taskflow in a project
  */
 
-import fs from "node:fs";
 import path from "node:path";
 import { ConfigLoader } from "../lib/config-loader.js";
 import { getProjectPaths, TEMPLATE_FILES } from "../lib/config-paths.js";
+import { VERSIONS } from "../lib/constants.js";
+import {
+	copyFile,
+	ensureDir,
+	exists,
+	readJson,
+	writeJson,
+} from "../lib/file-utils.js";
+import { ensureAllDirs } from "../lib/path-utils.js";
+import { getTemplateDir } from "../lib/template-utils.js";
 import { BaseCommand, type CommandResult } from "./base.js";
+
+interface VersionInfo {
+	templateVersion: string;
+	installedAt: string;
+	customized: string[];
+}
+
+interface PackageJson {
+	name?: string;
+	scripts?: Record<string, string>;
+}
 
 export class InitCommand extends BaseCommand {
 	async execute(projectName?: string): Promise<CommandResult> {
@@ -28,12 +48,10 @@ export class InitCommand extends BaseCommand {
 		let detectedProjectName: string | undefined;
 
 		const packageJsonPath = path.join(this.context.projectRoot, "package.json");
-		if (fs.existsSync(packageJsonPath)) {
+		if (exists(packageJsonPath)) {
 			try {
-				const packageJson = JSON.parse(
-					fs.readFileSync(packageJsonPath, "utf-8"),
-				);
-				detectedProjectName = packageJson.name;
+				const packageJson = readJson(packageJsonPath) as PackageJson;
+				detectedProjectName = packageJson?.name;
 			} catch (_error) {
 				// If package.json is invalid, continue to fallback
 			}
@@ -45,21 +63,17 @@ export class InitCommand extends BaseCommand {
 			path.basename(this.context.projectRoot);
 
 		// Add task script to package.json if it exists
-		if (fs.existsSync(packageJsonPath)) {
+		if (exists(packageJsonPath)) {
 			try {
-				const packageJson = JSON.parse(
-					fs.readFileSync(packageJsonPath, "utf-8"),
-				);
-				if (!packageJson.scripts) {
-					packageJson.scripts = {};
-				}
-				if (!packageJson.scripts.task) {
-					packageJson.scripts.task = "taskflow";
-					fs.writeFileSync(
-						packageJsonPath,
-						`${JSON.stringify(packageJson, null, 2)}\n`,
-						"utf-8",
-					);
+				const packageJson = readJson(packageJsonPath) as PackageJson;
+				if (packageJson) {
+					if (!packageJson.scripts) {
+						packageJson.scripts = {};
+					}
+					if (!packageJson.scripts.task) {
+						packageJson.scripts.task = "taskflow";
+						writeJson(packageJsonPath, packageJson);
+					}
 				}
 			} catch (_error) {
 				// If package.json is invalid or cannot be updated, continue
@@ -73,27 +87,11 @@ export class InitCommand extends BaseCommand {
 		// Create directory structure
 		const paths = getProjectPaths(this.context.projectRoot);
 
-		// Create tasks directory
-		if (!fs.existsSync(paths.tasksDir)) {
-			fs.mkdirSync(paths.tasksDir, { recursive: true });
-		}
-
-		// Create .taskflow directory structure
-		if (!fs.existsSync(paths.taskflowDir)) {
-			fs.mkdirSync(paths.taskflowDir, { recursive: true });
-		}
-		if (!fs.existsSync(paths.refDir)) {
-			fs.mkdirSync(paths.refDir, { recursive: true });
-		}
-		if (!fs.existsSync(paths.logsDir)) {
-			fs.mkdirSync(paths.logsDir, { recursive: true });
-		}
+		// Create all directories
+		ensureAllDirs(this.context.projectRoot);
 
 		// Copy template files to .taskflow/ref/
-		const templatesDir = path.join(
-			path.dirname(new URL(import.meta.url).pathname),
-			"../../templates",
-		);
+		const templatesDir = getTemplateDir();
 
 		let copiedFiles = 0;
 
@@ -102,8 +100,8 @@ export class InitCommand extends BaseCommand {
 			const fullSourcePath = path.join(templatesDir, sourcePath);
 			const destPath = path.join(paths.refDir, path.basename(sourcePath));
 
-			if (fs.existsSync(fullSourcePath)) {
-				fs.copyFileSync(fullSourcePath, destPath);
+			if (exists(fullSourcePath)) {
+				copyFile(fullSourcePath, destPath);
 				copiedFiles++;
 			}
 		}
@@ -113,22 +111,15 @@ export class InitCommand extends BaseCommand {
 			const fullSourcePath = path.join(templatesDir, sourcePath);
 			const destPath = path.join(paths.refDir, path.basename(sourcePath));
 
-			if (fs.existsSync(fullSourcePath)) {
-				fs.copyFileSync(fullSourcePath, destPath);
+			if (exists(fullSourcePath)) {
+				copyFile(fullSourcePath, destPath);
 				copiedFiles++;
 			}
 		}
 
-		// Copy project files
-		for (const [_key, sourcePath] of Object.entries(TEMPLATE_FILES.project)) {
-			const fullSourcePath = path.join(templatesDir, sourcePath);
-			const destPath = path.join(paths.refDir, path.basename(sourcePath));
-
-			if (fs.existsSync(fullSourcePath)) {
-				fs.copyFileSync(fullSourcePath, destPath);
-				copiedFiles++;
-			}
-		}
+		// Note: coding-standards.md and architecture-rules.md are NOT copied during init
+		// These should be generated via: taskflow prd generate-arch <prd-file>
+		// Skipping project template files to allow generate-arch command to work correctly
 
 		// Copy retrospective file
 		for (const [_key, sourcePath] of Object.entries(
@@ -137,36 +128,34 @@ export class InitCommand extends BaseCommand {
 			const fullSourcePath = path.join(templatesDir, sourcePath);
 			const destPath = path.join(paths.refDir, path.basename(sourcePath));
 
-			if (fs.existsSync(fullSourcePath)) {
-				fs.copyFileSync(fullSourcePath, destPath);
+			if (exists(fullSourcePath)) {
+				copyFile(fullSourcePath, destPath);
 				copiedFiles++;
 			}
 		}
 
 		// Copy skill files
 		const skillsDestDir = path.join(paths.refDir, "skills");
-		if (!fs.existsSync(skillsDestDir)) {
-			fs.mkdirSync(skillsDestDir, { recursive: true });
-		}
+		ensureDir(skillsDestDir);
 
 		for (const [_key, sourcePath] of Object.entries(TEMPLATE_FILES.skills)) {
 			const fullSourcePath = path.join(templatesDir, sourcePath);
 			const destPath = path.join(paths.refDir, sourcePath);
 
-			if (fs.existsSync(fullSourcePath)) {
-				fs.copyFileSync(fullSourcePath, destPath);
+			if (exists(fullSourcePath)) {
+				copyFile(fullSourcePath, destPath);
 				copiedFiles++;
 			}
 		}
 
 		// Create version file
 		const versionFile = path.join(paths.taskflowDir, ".version");
-		const versionInfo = {
-			templateVersion: "0.1.0",
+		const versionInfo: VersionInfo = {
+			templateVersion: VERSIONS.TEMPLATE,
 			installedAt: new Date().toISOString(),
 			customized: [],
 		};
-		fs.writeFileSync(versionFile, JSON.stringify(versionInfo, null, 2));
+		writeJson(versionFile, versionInfo);
 
 		return this.success(
 			[
@@ -174,9 +163,7 @@ export class InitCommand extends BaseCommand {
 				"✓ Created tasks/ directory",
 				"✓ Created .taskflow/ref/ directory",
 				"✓ Created .taskflow/logs/ directory",
-				fs.existsSync(packageJsonPath)
-					? "✓ Added 'task' script to package.json"
-					: "",
+				exists(packageJsonPath) ? "✓ Added 'task' script to package.json" : "",
 				`✓ Copied ${copiedFiles} template files`,
 			]
 				.filter(Boolean)

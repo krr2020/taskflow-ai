@@ -3,9 +3,12 @@
  */
 
 import fs from "node:fs";
+import path from "node:path";
 import { execaSync } from "execa";
 import { getExpectedBranchName } from "./config-paths.js";
+import { MESSAGES } from "./constants.js";
 import { GitOperationError, WrongBranchError } from "./errors.js";
+import { consoleOutput, icons } from "./output.js";
 import type { Story } from "./types.js";
 
 // ============================================================================
@@ -56,7 +59,9 @@ export function verifyBranch(story: Story): void {
 	const current = getCurrentBranch();
 
 	if (current === expected) {
-		console.log(`✓ Already on correct branch: ${expected}`);
+		consoleOutput(`✓ Already on correct branch: ${expected}`, {
+			icon: icons.success,
+		});
 		return;
 	}
 
@@ -65,73 +70,77 @@ export function verifyBranch(story: Story): void {
 	let stashed = false;
 
 	if (needsStash) {
-		console.log("\n⚠️  UNCOMMITTED CHANGES DETECTED");
-		console.log("─".repeat(50));
+		consoleOutput("\n⚠️  UNCOMMITTED CHANGES DETECTED");
+		consoleOutput("─".repeat(50));
 
 		const statusResult = execaSync("git", ["status", "--porcelain"]);
 		const modifiedFiles = statusResult.stdout.split("\n").filter(Boolean);
-		console.log(`${modifiedFiles.length} files modified:`);
+		consoleOutput(`${modifiedFiles.length} files modified:`);
 		for (const file of modifiedFiles.slice(0, 10)) {
 			const statusPrefix = file.substring(0, 2);
 			const filePath = file.substring(3);
-			console.log(`  ${statusPrefix} ${filePath}`);
+			consoleOutput(`  ${statusPrefix} ${filePath}`);
 		}
 		if (modifiedFiles.length > 10) {
-			console.log(`  ... and ${modifiedFiles.length - 10} more`);
+			consoleOutput(`  ... and ${modifiedFiles.length - 10} more`);
 		}
-		console.log();
+		consoleOutput("");
 
-		console.log("💾 STASHING CHANGES");
-		console.log("─".repeat(50));
-		console.log('Stash message: "Auto-stash by taskflow before branch switch"');
+		consoleOutput("💾 STASHING CHANGES");
+		consoleOutput("─".repeat(50));
+		consoleOutput(
+			'Stash message: "Auto-stash by taskflow before branch switch"',
+		);
 
-		stashed = gitStashPush("Auto-stash by taskflow before branch switch");
+		stashed = gitStashPush(MESSAGES.AUTO_STASH_MESSAGE);
 		if (stashed) {
-			console.log("✓ Changes stashed successfully");
+			consoleOutput("✓ Changes stashed successfully");
 		}
 	}
 
 	try {
-		console.log("\n🔄 SWITCHING BRANCH");
-		console.log("─".repeat(50));
-		console.log(`Current: ${current}`);
-		console.log(`Required: ${expected}`);
-		console.log();
+		consoleOutput("\n🔄 SWITCHING BRANCH");
+		consoleOutput("─".repeat(50));
+		consoleOutput(`Current: ${current}`);
+		consoleOutput(`Required: ${expected}`);
+		consoleOutput("");
 
 		if (branchExists(expected)) {
-			console.log(`Switching to branch: ${expected}`);
+			consoleOutput(`Switching to branch: ${expected}`);
 			execaSync("git", ["checkout", expected], { stdio: "inherit" });
-			console.log("✓ Branch checked out");
+			consoleOutput("✓ Branch checked out");
 		} else {
-			console.log(`Creating branch: ${expected}`);
+			consoleOutput(`Creating branch: ${expected}`);
 
 			// If we're not on main/master, try to switch to it first
 			if (current !== "main" && current !== "master") {
 				if (branchExists("main")) {
-					console.log("Switching to main first...");
+					consoleOutput("Switching to main first...");
 					execaSync("git", ["checkout", "main"], { stdio: "inherit" });
 				} else if (branchExists("master")) {
-					console.log("Switching to master first...");
+					consoleOutput("Switching to master first...");
 					execaSync("git", ["checkout", "master"], { stdio: "inherit" });
 				}
 			}
 
 			// Pull latest
 			try {
-				console.log("Pulling latest changes...");
+				consoleOutput("Pulling latest changes...");
 				execaSync("git", ["pull"], { stdio: "inherit" });
 			} catch (error) {
 				// Warn but proceed - branch may be outdated or have no upstream
-				console.warn(
+				consoleOutput(
 					`Warning: git pull failed - ${error instanceof Error ? error.message : String(error)}`,
+					{ type: "warn" },
 				);
-				console.warn(
+				consoleOutput(
 					"Branch may be outdated. Consider pulling manually before merging.",
+					{ type: "warn" },
 				);
 			}
 
 			execaSync("git", ["checkout", "-b", expected], { stdio: "inherit" });
-			console.log("✓ Branch created and checked out");
+			consoleOutput("✓ Branch created and checked out");
 		}
 
 		const newCurrent = getCurrentBranch();
@@ -140,10 +149,10 @@ export function verifyBranch(story: Story): void {
 		}
 	} catch (_error) {
 		if (stashed) {
-			console.log(
+			consoleOutput(
 				"\n⚠️  WARNING: Changes were stashed but branch switch failed",
 			);
-			console.log('Run "git stash pop" to restore your changes.');
+			consoleOutput('Run "git stash pop" to restore your changes.');
 		}
 		const switchCmd = getBranchSwitchCommand(current, expected);
 		throw new WrongBranchError(current, expected, switchCmd);
@@ -151,36 +160,36 @@ export function verifyBranch(story: Story): void {
 
 	// Restore stashed changes if any
 	if (stashed) {
-		console.log("\n📦 RESTORING STASHED CHANGES");
-		console.log("─".repeat(50));
+		consoleOutput("\n📦 RESTORING STASHED CHANGES");
+		consoleOutput("─".repeat(50));
 
 		try {
 			gitStashPop();
 			const statusResult = execaSync("git", ["status", "--porcelain"]);
 			const restoredFiles = statusResult.stdout.split("\n").filter(Boolean);
-			console.log(
+			consoleOutput(
 				`✓ Changes restored (${restoredFiles.length} files modified)`,
 			);
 			for (const file of restoredFiles.slice(0, 10)) {
 				const statusPrefix = file.substring(0, 2);
 				const filePath = file.substring(3);
-				console.log(`  ${statusPrefix} ${filePath}`);
+				consoleOutput(`  ${statusPrefix} ${filePath}`);
 			}
 			if (restoredFiles.length > 10) {
-				console.log(`  ... and ${restoredFiles.length - 10} more`);
+				consoleOutput(`  ... and ${restoredFiles.length - 10} more`);
 			}
 		} catch (_error) {
-			console.log("\n⚠️  WARNING: Failed to pop stash");
-			console.log(
+			consoleOutput("\n⚠️  WARNING: Failed to pop stash");
+			consoleOutput(
 				'You may need to resolve conflicts manually. Run "git stash pop".',
 			);
 		}
 	}
 
-	console.log("\nℹ️  BRANCH STATUS");
-	console.log("─".repeat(50));
-	console.log("You are now on the correct branch for this task.");
-	console.log(`Current branch: ${expected}`);
+	consoleOutput("\nℹ️  BRANCH STATUS");
+	consoleOutput("─".repeat(50));
+	consoleOutput("You are now on the correct branch for this task.");
+	consoleOutput(`Current branch: ${expected}`);
 }
 
 // ============================================================================
@@ -201,7 +210,10 @@ export function gitAdd(paths: string | string[] = "."): void {
 
 export function gitCommit(message: string): void {
 	// Write message to temp file to handle multiline messages properly
-	const commitFile = "/tmp/taskflow-commit-msg.txt";
+	const commitFile = path.join(
+		MESSAGES.COMMIT_TEMP_DIR,
+		MESSAGES.COMMIT_TEMP_FILE,
+	);
 	try {
 		fs.writeFileSync(commitFile, message);
 		execaSync("git", ["commit", "-F", commitFile], { stdio: "inherit" });

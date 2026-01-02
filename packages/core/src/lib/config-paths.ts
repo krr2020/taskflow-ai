@@ -4,6 +4,7 @@
  */
 
 import path from "node:path";
+import { DIR_NAMES, FILE_NAMES, VALIDATION_LIMITS } from "./constants.js";
 
 // ============================================================================
 // Path Helpers (relative to user's project root)
@@ -19,11 +20,11 @@ export interface ProjectPaths {
 }
 
 export function getProjectPaths(projectRoot: string): ProjectPaths {
-	const tasksDir = path.join(projectRoot, "tasks");
-	const taskflowDir = path.join(projectRoot, ".taskflow");
-	const refDir = path.join(taskflowDir, "ref");
-	const logsDir = path.join(taskflowDir, "logs");
-	const configPath = path.join(projectRoot, "taskflow.config.json");
+	const tasksDir = path.join(projectRoot, DIR_NAMES.TASKS);
+	const taskflowDir = path.join(projectRoot, DIR_NAMES.TASKFLOW);
+	const refDir = path.join(taskflowDir, DIR_NAMES.REF);
+	const logsDir = path.join(taskflowDir, DIR_NAMES.LOGS);
+	const configPath = path.join(projectRoot, FILE_NAMES.CONFIG);
 
 	return {
 		projectRoot,
@@ -39,9 +40,9 @@ export function getProjectPaths(projectRoot: string): ProjectPaths {
 // File Names
 // ============================================================================
 
-export const PROJECT_INDEX_FILE = "project-index.json";
+export const PROJECT_INDEX_FILE = FILE_NAMES.PROJECT_INDEX;
 export const RETROSPECTIVE_FILE = "retrospective.md";
-export const CONFIG_FILE = "taskflow.config.json";
+export const CONFIG_FILE = FILE_NAMES.CONFIG;
 
 // ============================================================================
 // Template Structure (source paths in package)
@@ -101,9 +102,9 @@ export const SKILL_FILES = {
 // Output Limits
 // ============================================================================
 
-export const MAX_SUMMARY_LINES = 50;
-export const MAX_OUTPUT_BUFFER = 10 * 1024 * 1024; // 10MB
-export const CACHE_TTL = 60000; // 1 minute
+export const MAX_SUMMARY_LINES = VALIDATION_LIMITS.MAX_SUMMARY_LINES;
+export const MAX_OUTPUT_BUFFER = VALIDATION_LIMITS.MAX_OUTPUT_BUFFER;
+export const CACHE_TTL = VALIDATION_LIMITS.CACHE_TTL;
 
 // ============================================================================
 // Commit Message Format

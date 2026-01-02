@@ -6,6 +6,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { getFeatureFilePath, getProjectIndexPath } from "./config-paths.js";
 import { FileNotFoundError, InvalidFileFormatError } from "./errors.js";
+import {
+	deleteFile,
+	ensureDir,
+	exists,
+	listFiles,
+	readJson,
+	readText,
+	writeJson,
+} from "./file-utils.js";
+import { consoleOutput } from "./output.js";
 import type {
 	ActiveTask,
 	Feature,
@@ -32,13 +42,13 @@ import {
 
 export function loadProjectIndex(tasksDir: string): ProjectIndex {
 	const indexPath = getProjectIndexPath(tasksDir);
-	if (!fs.existsSync(indexPath)) {
+	if (!exists(indexPath)) {
 		throw new FileNotFoundError(indexPath);
 	}
 
 	try {
-		const content = fs.readFileSync(indexPath, "utf-8");
-		const data = JSON.parse(content);
+		const data = readJson(indexPath);
+		if (!data) throw new Error("Invalid JSON");
 		return validateProjectIndex(data);
 	} catch (error) {
 		if (error instanceof FileNotFoundError) throw error;
@@ -65,7 +75,7 @@ export function saveProjectIndex(
 				`F${f.id}-${f.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
 		})),
 	};
-	fs.writeFileSync(indexPath, `${JSON.stringify(index, null, 2)}\n`);
+	writeJson(indexPath, index);
 }
 
 // ============================================================================
@@ -74,13 +84,13 @@ export function saveProjectIndex(
 
 export function loadFeature(tasksDir: string, featurePath: string): Feature {
 	const filePath = getFeatureFilePath(tasksDir, featurePath);
-	if (!fs.existsSync(filePath)) {
+	if (!exists(filePath)) {
 		throw new FileNotFoundError(filePath);
 	}
 
 	try {
-		const content = fs.readFileSync(filePath, "utf-8");
-		const data = JSON.parse(content);
+		const data = readJson(filePath);
+		if (!data) throw new Error("Invalid JSON");
 		const feature = validateFeature(data);
 		feature.path = featurePath;
 		return feature;
@@ -125,34 +135,50 @@ export function getTaskFilePath(
 	taskId: string,
 ): string | null {
 	const location = findTaskLocation(tasksProgress, taskId);
-	if (!location) return null;
+	if (!location) {
+		consoleOutput(`Debug: Task location not found for ${taskId}`);
+		return null;
+	}
 
 	const { feature, story, task } = location;
 	const featureDir = path.join(tasksDir, feature.path || "");
 
-	if (!fs.existsSync(featureDir)) return null;
+	if (!exists(featureDir)) {
+		consoleOutput(`Debug: Feature dir not found: ${featureDir}`);
+		return null;
+	}
 
 	// Find story directory by ID prefix (handles variable naming)
-	const dirs = fs
-		.readdirSync(featureDir)
-		.filter((d) => d.startsWith(`S${story.id}-`));
-	if (dirs.length === 0) return null;
+	const dirs = listFiles(featureDir).filter((d) =>
+		d.startsWith(`S${story.id}-`),
+	);
+	if (dirs.length === 0) {
+		consoleOutput(
+			`Debug: Story dir not found in ${featureDir} starting with S${story.id}-`,
+		);
+		return null;
+	}
 
 	const storyDir = path.join(featureDir, dirs[0] as string);
 
 	// Find task file by ID prefix
-	const files = fs
-		.readdirSync(storyDir)
-		.filter((f) => f.startsWith(`T${task.id}`));
-	return files.length > 0 ? path.join(storyDir, files[0] as string) : null;
+	const files = listFiles(storyDir).filter((f) => f.startsWith(`T${task.id}`));
+	if (files.length === 0) {
+		consoleOutput(
+			`Debug: Task file not found in ${storyDir} starting with T${task.id}`,
+		);
+		return null;
+	}
+
+	return path.join(storyDir, files[0] as string);
 }
 
 export function loadTaskFile(filePath: string): TaskFileContent | null {
-	if (!fs.existsSync(filePath)) return null;
+	if (!exists(filePath)) return null;
 
 	try {
-		const content = fs.readFileSync(filePath, "utf-8");
-		const data = JSON.parse(content);
+		const data = readJson(filePath);
+		if (!data) return null;
 		return validateTaskFileContent(data);
 	} catch {
 		return null;
@@ -160,7 +186,7 @@ export function loadTaskFile(filePath: string): TaskFileContent | null {
 }
 
 export function saveTaskFile(filePath: string, content: TaskFileContent): void {
-	fs.writeFileSync(filePath, `${JSON.stringify(content, null, 2)}\n`);
+	writeJson(filePath, content);
 }
 
 // ============================================================================
@@ -177,8 +203,9 @@ export function loadTasksProgress(tasksDir: string): TasksProgress {
 			features.push(feature);
 		} catch (error) {
 			// Create placeholder for missing features
-			console.warn(
+			consoleOutput(
 				`Warning: Could not load feature ${featureRef.title}: ${error}`,
+				{ type: "warn" },
 			);
 			features.push({
 				id: featureRef.id,
@@ -560,9 +587,10 @@ export function getUnmetDependencies(
 // ============================================================================
 
 export function loadReferenceFile(filePath: string): string {
-	if (!fs.existsSync(filePath)) return "";
+	if (!exists(filePath)) return "";
 	try {
-		return fs.readFileSync(filePath, "utf-8");
+		const content = readText(filePath);
+		return content ?? "";
 	} catch {
 		return "";
 	}
@@ -573,19 +601,19 @@ export function loadReferenceFile(filePath: string): string {
 // ============================================================================
 
 export function ensureLogsDir(logsDir: string): void {
-	if (!fs.existsSync(logsDir)) {
-		fs.mkdirSync(logsDir, { recursive: true });
+	if (!exists(logsDir)) {
+		ensureDir(logsDir);
 	}
 }
 
 export function cleanupTaskLogs(logsDir: string, taskId: string): number {
-	if (!fs.existsSync(logsDir)) return 0;
+	if (!exists(logsDir)) return 0;
 
 	const prefix = taskId.replace(/\./g, "-");
-	const files = fs.readdirSync(logsDir).filter((f) => f.startsWith(prefix));
+	const files = listFiles(logsDir).filter((f) => f.startsWith(prefix));
 
 	for (const file of files) {
-		fs.unlinkSync(path.join(logsDir, file));
+		deleteFile(path.join(logsDir, file));
 	}
 
 	return files.length;

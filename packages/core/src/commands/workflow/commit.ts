@@ -21,6 +21,7 @@ import {
 	gitPush,
 	hasUncommittedChanges,
 } from "../../lib/git.js";
+import { consoleOutput } from "../../lib/output.js";
 import { parseTaskId } from "../../lib/types.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
@@ -97,17 +98,17 @@ export class CommitCommand extends BaseCommand {
 
 		try {
 			// Git add all changes
-			console.log("\n📝 Committing changes...\n");
+			consoleOutput("\n📝 Committing changes...\n");
 			gitAdd();
 
 			// Commit
 			gitCommit(commitMessage);
 
 			// Push
-			console.log("\n📤 Pushing to remote...\n");
+			consoleOutput("\n📤 Pushing to remote...\n");
 			gitPush();
 
-			console.log("\n✅ Commit successful!\n");
+			consoleOutput("\n✅ Commit successful!\n");
 		} catch (error) {
 			if (error instanceof Error && error.message.includes("push")) {
 				throw new CommitError("push_failed", error.message);

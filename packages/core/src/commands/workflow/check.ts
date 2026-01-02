@@ -491,11 +491,25 @@ export class CheckCommand extends BaseCommand {
 		const configLoader = new ConfigLoader(this.context.projectRoot);
 		const config = configLoader.load();
 
+		// Get pre-validation guidance if LLM available
+		const preValidationGuidance = await this.getPreValidationGuidance(
+			content,
+			refDir,
+		);
+		if (preValidationGuidance) {
+			console.log("\n📋 Pre-Validation Checklist:");
+			console.log("─".repeat(60));
+			console.log(preValidationGuidance);
+			console.log("─".repeat(60));
+			console.log();
+		}
+
 		// Run AI-powered validation if configured
 		if (config.ai?.enabled && config.ai.provider) {
 			const aiResult = await this.runAIValidation(
 				logsDir,
 				Phase.Analysis, // Use analysis model for validation
+				refDir,
 			);
 
 			if (!aiResult.passed) {
@@ -578,7 +592,7 @@ export class CheckCommand extends BaseCommand {
 						code: error.code ?? undefined,
 					}));
 
-					const errorAnalysis = await this.getErrorAnalysis(errors);
+					const errorAnalysis = await this.getErrorAnalysis(errors, refDir);
 					if (errorAnalysis) {
 						llmGuidance = [
 							"AI Error Analysis:",
@@ -719,11 +733,106 @@ export class CheckCommand extends BaseCommand {
 	}
 
 	/**
+	 * Get pre-validation guidance using LLM
+	 * Identifies validation pitfalls and provides checklist
+	 */
+	private async getPreValidationGuidance(
+		content: TaskFileContent,
+		refDir: string,
+	): Promise<string> {
+		if (!this.isLLMAvailable() || !this.llmProvider) {
+			return "";
+		}
+
+		// Provider is guaranteed to be available after check
+		const llmProvider = this.llmProvider;
+
+		try {
+			// Load project context
+			const fs = await import("node:fs");
+			const path = await import("node:path");
+
+			let retrospectiveContext = "";
+			let codingStandardsContext = "";
+
+			// Load retrospective for common validation failures
+			const retrospectivePath = path.join(refDir, "retrospective.md");
+			if (fs.existsSync(retrospectivePath)) {
+				retrospectiveContext = fs.readFileSync(retrospectivePath, "utf-8");
+			}
+
+			// Load coding standards
+			const codingStandardsPath = path.join(refDir, "coding-standards.md");
+			if (fs.existsSync(codingStandardsPath)) {
+				codingStandardsContext = fs.readFileSync(codingStandardsPath, "utf-8");
+			}
+
+			let prompt = `You are about to run validation checks on code changes for this task:
+
+Task: ${content.title}
+Description: ${content.description}
+Skill: ${content.skill || "backend"}
+`;
+
+			// Add project context
+			if (retrospectiveContext) {
+				prompt += `\n\nKNOWN VALIDATION FAILURES (from retrospective):\n${retrospectiveContext.slice(0, 800)}\n`;
+			}
+
+			if (codingStandardsContext) {
+				prompt += `\n\nPROJECT CODING STANDARDS:\n${codingStandardsContext.slice(0, 800)}\n`;
+			}
+
+			prompt += `\nBefore running validation, provide:
+1. Top 3 validation pitfalls to watch for based on:
+   - Common errors in retrospective
+   - Project coding standards
+   - The task type (${content.skill || "backend"})
+2. Quick checklist of items to verify before validation
+3. What to do if validation fails
+
+Be concise (max 150 words).`;
+
+			const messages = [
+				{
+					role: "system" as const,
+					content:
+						"You are a code validation assistant helping prevent common validation failures.",
+				},
+				{ role: "user" as const, content: prompt },
+			];
+			const options = { maxTokens: 300, temperature: 0.4 };
+
+			// Check cache first
+			const cached = this.llmCache.get(messages, options);
+			if (cached) {
+				return cached.content;
+			}
+
+			// Cache miss - call LLM
+			const response = await this.retryWithBackoff(() =>
+				llmProvider.generate(messages, options),
+			);
+
+			// Cache the response
+			this.llmCache.set(messages, options, response);
+
+			// Track cost
+			this.costTracker.trackUsage(response);
+
+			return response.content;
+		} catch {
+			return "";
+		}
+	}
+
+	/**
 	 * Run AI-powered validation on changed files
 	 */
 	private async runAIValidation(
 		logsDir: string,
 		phase: Phase,
+		refDir?: string,
 	): Promise<{ passed: boolean; result: CommandResult }> {
 		console.log("\n🤖 Running AI-powered file validation...\n");
 
@@ -759,13 +868,55 @@ export class CheckCommand extends BaseCommand {
 				`Validating ${modifiedFiles.length} file${modifiedFiles.length > 1 ? "s" : ""}...\n`,
 			);
 
-			// Create file validator
-			const validator = new FileValidator({
+			// Load project context if available
+			let codingStandards: string | undefined;
+			let architectureRules: string | undefined;
+
+			if (refDir) {
+				const fs = await import("node:fs");
+				const pathModule = await import("node:path");
+
+				const codingStandardsPath = pathModule.join(
+					refDir,
+					"coding-standards.md",
+				);
+				if (fs.existsSync(codingStandardsPath)) {
+					codingStandards = fs.readFileSync(codingStandardsPath, "utf-8");
+				}
+
+				const architectureRulesPath = pathModule.join(
+					refDir,
+					"architecture-rules.md",
+				);
+				if (fs.existsSync(architectureRulesPath)) {
+					architectureRules = fs.readFileSync(architectureRulesPath, "utf-8");
+				}
+			}
+
+			// Create file validator with project context
+			const validatorOptions: {
+				provider: typeof analysisProvider;
+				includeContext: boolean;
+				provideFixes: boolean;
+				maxIssues: number;
+				codingStandards?: string;
+				architectureRules?: string;
+			} = {
 				provider: analysisProvider,
 				includeContext: true,
 				provideFixes: true,
 				maxIssues: 10,
-			});
+			};
+
+			// Only add these if they have values
+			if (codingStandards !== undefined) {
+				validatorOptions.codingStandards = codingStandards;
+			}
+			if (architectureRules !== undefined) {
+				validatorOptions.architectureRules = architectureRules;
+			}
+
+			const validator = new FileValidator(validatorOptions);
 
 			// Validate each file
 			const results: ValidationResult[] = [];

@@ -10,10 +10,14 @@ import { ConfigureAICommand } from "../commands/configure.js";
 import { InitCommand } from "../commands/init.js";
 import { PrdCreateCommand } from "../commands/prd/create.js";
 import { PrdGenerateArchCommand } from "../commands/prd/generate-arch.js";
+import { PrdUpdateArchCommand } from "../commands/prd/update-arch.js";
+import { PrdUpdateStandardsCommand } from "../commands/prd/update-standards.js";
 import { RetroAddCommand } from "../commands/retro/add.js";
 import { RetroListCommand } from "../commands/retro/list.js";
+import { TasksAddCommand } from "../commands/tasks/add.js";
 import { TaskCreateCommand } from "../commands/tasks/create.js";
 import { TasksGenerateCommand } from "../commands/tasks/generate.js";
+import { TasksRefineCommand } from "../commands/tasks/refine.js";
 import { UpgradeCommand } from "../commands/upgrade.js";
 import { CheckCommand } from "../commands/workflow/check.js";
 import { CommitCommand } from "../commands/workflow/commit.js";
@@ -184,7 +188,7 @@ export async function runCLI() {
 	// ========================================
 	program
 		.command("start")
-		.description("Start working on a task")
+		.description("Start working on a task (with AI context analysis)")
 		.argument("<task-id>", "Task ID (e.g., 1.1.0)")
 		.action(async (taskId: string) => {
 			try {
@@ -202,7 +206,9 @@ export async function runCLI() {
 	// ========================================
 	program
 		.command("check")
-		.description("Validate current task and advance to next status")
+		.description(
+			"Validate current task and advance to next status (AI-powered validation)",
+		)
 		.action(async () => {
 			try {
 				const cmd = new CheckCommand(context);
@@ -240,7 +246,7 @@ export async function runCLI() {
 	// ========================================
 	program
 		.command("do")
-		.description("Execute the next step of the current task")
+		.description("Execute the next step of the current task (with AI guidance)")
 		.action(async () => {
 			try {
 				const cmd = new DoCommand(context);
@@ -310,16 +316,47 @@ export async function runCLI() {
 
 	prdCommand
 		.command("create")
-		.description("Create a new PRD")
+		.description("Create a new PRD (supports AI generation)")
 		.argument("<feature-name>", "Name of the feature")
 		.option(
 			"--description <desc>",
 			"Feature description/requirements (optional)",
 		)
-		.action(async (featureName: string, options: { description?: string }) => {
+		.option("--title <title>", "PRD title (optional, overrides feature name)")
+		.action(
+			async (
+				featureName: string,
+				options: { description?: string; title?: string },
+			) => {
+				try {
+					const cmd = new PrdCreateCommand(context);
+					const result = await cmd.execute(
+						featureName,
+						options.description,
+						options.title,
+					);
+					console.log(formatSuccess(result));
+					process.exit(0);
+				} catch (error) {
+					handleError(error);
+				}
+			},
+		);
+
+	prdCommand
+		.command("generate-arch")
+		.description(
+			"Generate coding-standards.md and architecture-rules.md from PRD (AI-powered)",
+		)
+		.argument("<prd-file>", "PRD filename")
+		.option(
+			"--instructions <text>",
+			"Additional instructions for LLM to customize standards generation",
+		)
+		.action(async (prdFile: string, options: { instructions?: string }) => {
 			try {
-				const cmd = new PrdCreateCommand(context);
-				const result = await cmd.execute(featureName, options.description);
+				const cmd = new PrdGenerateArchCommand(context);
+				const result = await cmd.execute(prdFile, options.instructions);
 				console.log(formatSuccess(result));
 				process.exit(0);
 			} catch (error) {
@@ -328,15 +365,30 @@ export async function runCLI() {
 		});
 
 	prdCommand
-		.command("generate-arch")
-		.description(
-			"Generate coding-standards.md and architecture-rules.md from PRD",
-		)
-		.argument("<prd-file>", "PRD filename")
-		.action(async (prdFile: string) => {
+		.command("update-standards")
+		.description("Add a new rule to coding-standards.md")
+		.argument("<rule>", "Rule to add to coding standards")
+		.option("--section <section>", "Section to add the rule to")
+		.action(async (rule: string, options: { section?: string }) => {
 			try {
-				const cmd = new PrdGenerateArchCommand(context);
-				const result = await cmd.execute(prdFile);
+				const cmd = new PrdUpdateStandardsCommand(context);
+				const result = await cmd.execute(rule, options.section);
+				console.log(formatSuccess(result));
+				process.exit(0);
+			} catch (error) {
+				handleError(error);
+			}
+		});
+
+	prdCommand
+		.command("update-arch")
+		.description("Add a new rule to architecture-rules.md")
+		.argument("<rule>", "Rule to add to architecture rules")
+		.option("--section <section>", "Section to add the rule to")
+		.action(async (rule: string, options: { section?: string }) => {
+			try {
+				const cmd = new PrdUpdateArchCommand(context);
+				const result = await cmd.execute(rule, options.section);
 				console.log(formatSuccess(result));
 				process.exit(0);
 			} catch (error) {
@@ -353,7 +405,7 @@ export async function runCLI() {
 
 	tasksCommand
 		.command("generate")
-		.description("Generate task breakdown from PRD")
+		.description("Generate task breakdown from PRD (AI-powered)")
 		.argument(
 			"[prd-file]",
 			"PRD filename (optional - shows selection if not provided)",
@@ -362,6 +414,60 @@ export async function runCLI() {
 			try {
 				const cmd = new TasksGenerateCommand(context);
 				const result = await cmd.execute(prdFile);
+				console.log(formatSuccess(result));
+				process.exit(0);
+			} catch (error) {
+				handleError(error);
+			}
+		});
+
+	tasksCommand
+		.command("add")
+		.description("Add a new task to existing breakdown")
+		.argument("<feature-id>", "Feature ID")
+		.argument("<story-id>", "Story ID")
+		.argument("<task-title>", "Task title")
+		.option("--description <desc>", "Task description")
+		.option(
+			"--skill <skill>",
+			"Task skill (backend, frontend, fullstack, devops, docs, mobile)",
+		)
+		.option("--dependencies <deps>", "Comma-separated dependency task IDs")
+		.action(
+			async (
+				featureId: string,
+				storyId: string,
+				taskTitle: string,
+				options: {
+					description?: string;
+					skill?: string;
+					dependencies?: string;
+				},
+			) => {
+				try {
+					const cmd = new TasksAddCommand(context);
+					const result = await cmd.execute(
+						featureId,
+						storyId,
+						taskTitle,
+						options,
+					);
+					console.log(formatSuccess(result));
+					process.exit(0);
+				} catch (error) {
+					handleError(error);
+				}
+			},
+		);
+
+	tasksCommand
+		.command("refine")
+		.description("Refine task breakdown with instructions (AI-powered)")
+		.argument("<instructions>", "Refinement instructions")
+		.action(async (instructions: string) => {
+			try {
+				const cmd = new TasksRefineCommand(context);
+				const result = await cmd.execute(instructions);
 				console.log(formatSuccess(result));
 				process.exit(0);
 			} catch (error) {

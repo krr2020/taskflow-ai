@@ -25,6 +25,7 @@ import {
 	TaskNotFoundError,
 } from "../../lib/errors.js";
 import { verifyBranch } from "../../lib/git.js";
+import { consoleOutput } from "../../lib/output.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class StartCommand extends BaseCommand {
@@ -58,7 +59,7 @@ export class StartCommand extends BaseCommand {
 
 		// If active task exists and we're starting an intermittent task, show warning
 		if (activeTask && isSwitchingToIntermittent) {
-			console.log(
+			consoleOutput(
 				`\n⚠️  Switching to intermittent task. Main task ${activeTask.taskId} is paused.\n`,
 			);
 		}
@@ -115,6 +116,22 @@ export class StartCommand extends BaseCommand {
 			}
 		}
 
+		// Get LLM-powered guidance if available
+		let llmGuidance = "";
+		if (this.isLLMAvailable()) {
+			llmGuidance = await this.getLLMGuidance({
+				task: `${taskId}: ${taskContent.title}`,
+				status: "setup",
+				files: taskContent.context || [],
+				instructions: [
+					`Task description: ${taskContent.description}`,
+					`Skill: ${taskContent.skill || "backend"}`,
+					`Subtasks: ${taskContent.subtasks?.length || 0}`,
+					`Acceptance criteria: ${taskContent.acceptanceCriteria?.join(", ") || "none"}`,
+				].join("\n"),
+			});
+		}
+
 		return this.success(
 			[
 				`✓ Task ${taskId} started: ${task.title}`,
@@ -156,39 +173,52 @@ export class StartCommand extends BaseCommand {
 				"   This will advance you to PLANNING status",
 			].join("\n"),
 			{
-				aiGuidance: [
-					"Current Status: SETUP",
-					"Your Goal: Understand the task completely before writing ANY code",
-					"",
-					"CRITICAL - Operating Mode:",
-					"────────────────────────────",
-					"Determine appropriate depth:",
-					"- REACTIVE: Simple fix, single file, clear requirements",
-					"- ANALYTICAL: Multi-file, moderate complexity, pattern matching",
-					"- ULTRATHINK: Architecture decisions, security, new patterns",
-					"",
-					"CRITICAL - Discovery First:",
-					"────────────────────────────",
-					"1. Read the task file completely",
-					"2. Read ai-protocol.md - this is your operating manual",
-					"3. Read retrospective.md - these are mistakes already made",
-					"4. Read project standards (coding-standards.md, architecture-rules.md)",
-					`5. Read skill file (skills/${taskContent.skill || "backend"}.md)`,
-					"6. Search for similar implementations in the codebase",
-					"7. Understand existing patterns before writing code",
-					"",
-					"DO NOT:",
-					"────────",
-					"- Write any code yet (you're in SETUP status)",
-					"- Skip reading the context files",
-					"- Ignore the retrospective",
-					"- Guess at patterns - search and match instead",
-					"",
-					"WHEN READY:",
-					"────────────",
-					"Run 'taskflow check' to advance to PLANNING status",
-					"Then create your execution plan before writing code",
-				].join("\n"),
+				aiGuidance: llmGuidance
+					? [
+							"Current Status: SETUP",
+							"Your Goal: Understand the task completely before writing ANY code",
+							"",
+							"LLM ANALYSIS:",
+							"──────────────",
+							llmGuidance,
+							"",
+							"WHEN READY:",
+							"────────────",
+							"Run 'taskflow check' to advance to PLANNING status",
+						].join("\n")
+					: [
+							"Current Status: SETUP",
+							"Your Goal: Understand the task completely before writing ANY code",
+							"",
+							"CRITICAL - Operating Mode:",
+							"────────────────────────────",
+							"Determine appropriate depth:",
+							"- REACTIVE: Simple fix, single file, clear requirements",
+							"- ANALYTICAL: Multi-file, moderate complexity, pattern matching",
+							"- ULTRATHINK: Architecture decisions, security, new patterns",
+							"",
+							"CRITICAL - Discovery First:",
+							"────────────────────────────",
+							"1. Read the task file completely",
+							"2. Read ai-protocol.md - this is your operating manual",
+							"3. Read retrospective.md - these are mistakes already made",
+							"4. Read project standards (coding-standards.md, architecture-rules.md)",
+							`5. Read skill file (skills/${taskContent.skill || "backend"}.md)`,
+							"6. Search for similar implementations in the codebase",
+							"7. Understand existing patterns before writing code",
+							"",
+							"DO NOT:",
+							"────────",
+							"- Write any code yet (you're in SETUP status)",
+							"- Skip reading the context files",
+							"- Ignore the retrospective",
+							"- Guess at patterns - search and match instead",
+							"",
+							"WHEN READY:",
+							"────────────",
+							"Run 'taskflow check' to advance to PLANNING status",
+							"Then create your execution plan before writing code",
+						].join("\n"),
 				contextFiles,
 				warnings: [
 					"DO NOT write code in SETUP status - read and understand first",

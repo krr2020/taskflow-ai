@@ -6,12 +6,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
+import { ensureDir, exists } from "../../lib/file-utils.js";
+import { buildPRDContext } from "../../llm/context-priorities.js";
+import { validatePRD } from "../../llm/validators.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class PrdCreateCommand extends BaseCommand {
 	async execute(
 		featureName: string,
 		description?: string,
+		title?: string,
 	): Promise<CommandResult> {
 		const configLoader = new ConfigLoader(this.context.projectRoot);
 		const paths = configLoader.getPaths();
@@ -39,8 +43,8 @@ export class PrdCreateCommand extends BaseCommand {
 
 		// Create PRDs directory if it doesn't exist
 		const prdsDir = path.join(paths.tasksDir, "prds");
-		if (!fs.existsSync(prdsDir)) {
-			fs.mkdirSync(prdsDir, { recursive: true });
+		if (!exists(prdsDir)) {
+			ensureDir(prdsDir);
 		}
 
 		// Generate PRD filename with timestamp
@@ -62,11 +66,34 @@ export class PrdCreateCommand extends BaseCommand {
 			);
 		}
 
-		// Create PRD template
-		const prdTemplate = this.generatePrdTemplate(featureName, description);
+		// Try to generate PRD with LLM if available
+		let prdContent: string;
+
+		if (this.isLLMAvailable()) {
+			console.log("Generating PRD with LLM...");
+			prdContent = await this.executeWithFallback(
+				async () => {
+					const content = await this.generatePRDWithLLM(
+						featureName,
+						description || "",
+						paths,
+						title,
+					);
+					console.log("✓ PRD generated with LLM");
+					return content;
+				},
+				() => {
+					console.warn("LLM generation failed, falling back to template.");
+					return this.generatePrdTemplate(featureName, description);
+				},
+				"PRD Generation",
+			);
+		} else {
+			prdContent = this.generatePrdTemplate(featureName, description);
+		}
 
 		// Write PRD file
-		fs.writeFileSync(prdFilePath, prdTemplate, "utf-8");
+		fs.writeFileSync(prdFilePath, prdContent, "utf-8");
 
 		const initialRequirements = description
 			? [
@@ -177,6 +204,290 @@ export class PrdCreateCommand extends BaseCommand {
 				],
 			},
 		);
+	}
+
+	/**
+	 * Generate PRD content using LLM with interactive Q&A
+	 */
+	private async generatePRDWithLLM(
+		featureName: string,
+		description: string,
+		paths: ReturnType<ConfigLoader["getPaths"]>,
+		title?: string,
+	): Promise<string> {
+		if (!this.llmProvider || !this.contextManager) {
+			throw new Error("LLM provider or context manager not available");
+		}
+
+		// Provider is guaranteed to be available after the check
+		const llmProvider = this.llmProvider;
+
+		// Load context files
+		const prdGuidelinesPath = getRefFilePath(
+			paths.refDir,
+			REF_FILES.prdGenerator,
+		);
+		const codingStandardsPath = getRefFilePath(
+			paths.refDir,
+			REF_FILES.codingStandards,
+		);
+		const architectureRulesPath = getRefFilePath(
+			paths.refDir,
+			REF_FILES.architectureRules,
+		);
+
+		const prdGuidelines = fs.existsSync(prdGuidelinesPath)
+			? fs.readFileSync(prdGuidelinesPath, "utf-8")
+			: "";
+		const codingStandards = fs.existsSync(codingStandardsPath)
+			? fs.readFileSync(codingStandardsPath, "utf-8")
+			: "";
+		const architectureRules = fs.existsSync(architectureRulesPath)
+			? fs.readFileSync(architectureRulesPath, "utf-8")
+			: "";
+
+		// Build context with priorities
+		const contextParams: {
+			userRequest: string;
+			codingStandards?: string;
+			architectureRules?: string;
+		} = {
+			userRequest: `Feature: ${featureName}\nDescription: ${description || "No description provided"}`,
+		};
+
+		if (codingStandards) {
+			contextParams.codingStandards = codingStandards;
+		}
+
+		if (architectureRules) {
+			contextParams.architectureRules = architectureRules;
+		}
+
+		const contextItems = buildPRDContext(this.contextManager, contextParams);
+
+		const { selectedItems, summary } =
+			this.contextManager.buildContext(contextItems);
+
+		console.log(`Context: ${summary}`);
+
+		// Build system prompt with Q&A capability
+		const systemPrompt = `You are a Product Requirements Document (PRD) generation specialist.
+
+${prdGuidelines ? `PRD GUIDELINES:\n${prdGuidelines}\n` : ""}
+
+INSTRUCTIONS:
+1. If you need more information to create a complete PRD, ask clarifying questions
+2. When asking questions, format them clearly with numbered list
+3. Once you have sufficient information, generate a complete PRD following the template structure
+4. Be specific and detailed based on the feature description
+5. Include all required sections: Overview, Goals, User Stories, Functional Requirements, Non-Functional Requirements, Technical Considerations, Success Criteria
+6. Use proper Markdown formatting
+7. Fill in realistic content based on the feature description - do NOT leave placeholder comments
+
+Q&A MODE:
+If you need clarification, respond with:
+QUESTIONS:
+1. [Your question]
+2. [Your question]
+...
+
+GENERATION MODE:
+When ready to generate the PRD, respond with the complete PRD in Markdown format, starting with the title.`;
+
+		// Build initial user prompt with context
+		let initialPrompt = `Generate a complete PRD for this feature:
+
+Title: ${title || featureName}
+Description: ${description || `Build a new feature called ${featureName}`}
+
+`;
+
+		// Add context items
+		for (const item of selectedItems) {
+			if (item.priority <= 2) {
+				// Essential, High, Medium
+				initialPrompt += `\n${item.content}\n`;
+			}
+		}
+
+		initialPrompt +=
+			"\nIf you need more information, ask clarifying questions. Otherwise, generate the complete PRD following the structure in the guidelines.";
+
+		// Interactive Q&A loop
+		const conversationHistory: Array<{
+			role: "system" | "user" | "assistant";
+			content: string;
+		}> = [
+			{ role: "system", content: systemPrompt },
+			{ role: "user", content: initialPrompt },
+		];
+
+		const maxIterations = 5;
+		let iteration = 0;
+
+		while (iteration < maxIterations) {
+			iteration++;
+
+			// Call LLM
+			const response = await this.retryWithBackoff(() =>
+				llmProvider.generate(conversationHistory, {
+					maxTokens: 4000,
+					temperature: 0.7,
+				}),
+			);
+
+			// Add response to conversation history
+			conversationHistory.push({
+				role: "assistant",
+				content: response.content,
+			});
+
+			// Check if this is a question or final PRD
+			if (this.isQuestionResponse(response.content)) {
+				// Extract and display questions
+				const questions = this.extractQuestions(response.content);
+
+				if (questions.length === 0) {
+					// No valid questions found, treat as final PRD
+					break;
+				}
+
+				console.log("\nThe AI has some questions to create a better PRD:");
+				console.log("─".repeat(60));
+				for (const question of questions) {
+					console.log(question);
+				}
+				console.log("─".repeat(60));
+
+				// Get user answers
+				const answers = await this.getUserAnswers(questions);
+
+				// Add answers to conversation
+				let answerText = "Here are my answers:\n\n";
+				for (let i = 0; i < questions.length; i++) {
+					answerText += `Q${i + 1}: ${questions[i]}\nA${i + 1}: ${answers[i]}\n\n`;
+				}
+				answerText +=
+					"Now please generate the complete PRD with this information.";
+
+				conversationHistory.push({ role: "user", content: answerText });
+			} else {
+				// This is the final PRD
+				// Validate response
+				const validation = validatePRD(response.content);
+				if (!validation.valid) {
+					console.warn("\nPRD validation warnings:");
+					for (const error of validation.errors) {
+						console.warn(`  - ${error}`);
+					}
+					// Continue anyway - warnings are acceptable
+				}
+
+				// Display cost
+				console.log(`\nCost: ${this.getCostSummary()}`);
+
+				return response.content;
+			}
+		}
+
+		// If we exhausted iterations, return the last response
+		console.warn(`\nReached maximum Q&A iterations (${maxIterations})`);
+		console.log(`Cost: ${this.getCostSummary()}`);
+
+		const lastResponse = conversationHistory[conversationHistory.length - 1];
+		if (lastResponse?.role === "assistant") {
+			return lastResponse.content;
+		}
+
+		throw new Error("Failed to generate PRD after maximum iterations");
+	}
+
+	/**
+	 * Check if LLM response contains questions
+	 */
+	private isQuestionResponse(content: string): boolean {
+		// Check for explicit QUESTIONS: marker
+		if (content.includes("QUESTIONS:")) {
+			return true;
+		}
+
+		// Check for question patterns
+		const lines = content.split("\n");
+		let questionCount = 0;
+
+		for (const line of lines) {
+			const trimmed = line.trim();
+			// Check for numbered questions or lines ending with ?
+			if (
+				(trimmed.match(/^\d+\.\s+.*\?/) || trimmed.match(/^-\s+.*\?/)) &&
+				!trimmed.toLowerCase().includes("# prd:")
+			) {
+				questionCount++;
+			}
+		}
+
+		// If we have 2+ questions and no PRD title, it's likely questions
+		const hasPRDTitle = content.match(/^#\s+PRD:/m);
+		return questionCount >= 2 && !hasPRDTitle;
+	}
+
+	/**
+	 * Extract questions from LLM response
+	 */
+	private extractQuestions(content: string): string[] {
+		const questions: string[] = [];
+
+		// Try to find QUESTIONS: section
+		const questionsMatch = content.match(/QUESTIONS:\s*\n([\s\S]*?)(?:\n\n|$)/);
+		if (questionsMatch?.[1]) {
+			const questionText = questionsMatch[1];
+			const lines = questionText.split("\n");
+
+			for (const line of lines) {
+				const trimmed = line.trim();
+				// Match numbered or bulleted questions
+				const match = trimmed.match(/^(?:\d+\.|-)\s+(.+)/);
+				if (match?.[1]) {
+					questions.push(match[1]);
+				}
+			}
+		} else {
+			// Fallback: extract any lines that look like questions
+			const lines = content.split("\n");
+			for (const line of lines) {
+				const trimmed = line.trim();
+				const match = trimmed.match(/^(?:\d+\.|-)\s+(.+\?)/);
+				if (match?.[1] && !trimmed.toLowerCase().includes("# prd:")) {
+					questions.push(match[1]);
+				}
+			}
+		}
+
+		return questions;
+	}
+
+	/**
+	 * Get user answers to questions
+	 */
+	private async getUserAnswers(questions: string[]): Promise<string[]> {
+		const answers: string[] = [];
+		const readline = await import("node:readline");
+		const rl = readline.createInterface({
+			input: process.stdin,
+			output: process.stdout,
+		});
+
+		for (let i = 0; i < questions.length; i++) {
+			const answer = await new Promise<string>((resolve) => {
+				rl.question(`\nAnswer to Q${i + 1}: `, (ans) => {
+					resolve(ans.trim());
+				});
+			});
+			answers.push(answer || "No specific answer provided");
+		}
+
+		rl.close();
+		return answers;
 	}
 
 	private generatePrdTemplate(

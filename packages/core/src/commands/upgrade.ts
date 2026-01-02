@@ -5,7 +5,23 @@
 import fs from "node:fs";
 import path from "node:path";
 import { TEMPLATE_FILES } from "../lib/config-paths.js";
-import { colors, icons } from "../lib/output.js";
+import { VERSIONS } from "../lib/constants.js";
+import {
+	copyDir,
+	ensureDir as ensureFileDir,
+	exists,
+	readJson,
+	readText,
+	writeJson,
+} from "../lib/file-utils.js";
+import { colors, consoleOutput, icons } from "../lib/output.js";
+import {
+	ensureDir as ensurePathDir,
+	getBackupDir,
+	getRefDir,
+	getTaskflowDir,
+} from "../lib/path-utils.js";
+import { getTemplateDir } from "../lib/template-utils.js";
 import type { CommandResult } from "./base.js";
 import { BaseCommand } from "./base.js";
 
@@ -31,7 +47,7 @@ interface UpdatePlan {
 	latestVersion: string;
 }
 
-const CURRENT_TEMPLATE_VERSION = "0.1.0";
+const CURRENT_TEMPLATE_VERSION = VERSIONS.TEMPLATE;
 
 const UPDATE_STRATEGIES = {
 	NEVER: ["retrospective.md"],
@@ -51,12 +67,12 @@ export class UpgradeCommand extends BaseCommand {
 		auto?: boolean;
 		diff?: boolean;
 	}): Promise<CommandResult> {
-		const refDir = path.join(this.context.projectRoot, ".taskflow", "ref");
-		const taskflowDir = path.join(this.context.projectRoot, ".taskflow");
+		const taskflowDir = getTaskflowDir(this.context.projectRoot);
+		const refDir = getRefDir(this.context.projectRoot);
 		const versionFile = path.join(taskflowDir, ".version");
 
 		// Check if .taskflow exists
-		if (!fs.existsSync(taskflowDir)) {
+		if (!exists(taskflowDir)) {
 			return {
 				success: false,
 				output: `${colors.error(`${icons.error} No .taskflow directory found`)}\n\nRun ${colors.command("taskflow init")} first.`,
@@ -181,15 +197,8 @@ export class UpgradeCommand extends BaseCommand {
 	}
 
 	private loadVersion(versionFile: string): string | null {
-		if (!fs.existsSync(versionFile)) return null;
-
-		try {
-			const content = fs.readFileSync(versionFile, "utf-8");
-			const version: VersionInfo = JSON.parse(content);
-			return version.templateVersion;
-		} catch {
-			return null;
-		}
+		const versionInfo = readJson<VersionInfo>(versionFile);
+		return versionInfo?.templateVersion ?? null;
 	}
 
 	private saveVersion(versionFile: string, version: string): void {
@@ -199,7 +208,7 @@ export class UpgradeCommand extends BaseCommand {
 			customized: [],
 		};
 
-		fs.writeFileSync(versionFile, JSON.stringify(versionInfo, null, 2));
+		writeJson(versionFile, versionInfo);
 	}
 
 	private planUpdate(
@@ -207,7 +216,7 @@ export class UpgradeCommand extends BaseCommand {
 		currentVersion: string | null,
 		latestVersion: string,
 	): UpdatePlan {
-		const templateDir = this.getTemplateDir();
+		const templateDir = getTemplateDir();
 		const files: FileUpdate[] = [];
 
 		// Map file names to their template paths using the new structure
@@ -246,9 +255,9 @@ export class UpgradeCommand extends BaseCommand {
 
 			// Check if file is customized (exists and differs from template)
 			let isCustomized = false;
-			if (fs.existsSync(currentPath) && fs.existsSync(templatePath)) {
-				const currentContent = fs.readFileSync(currentPath, "utf-8");
-				const templateContent = fs.readFileSync(templatePath, "utf-8");
+			if (exists(currentPath) && exists(templatePath)) {
+				const currentContent = readText(currentPath);
+				const templateContent = readText(templatePath);
 				isCustomized = currentContent !== templateContent;
 			}
 
@@ -257,7 +266,7 @@ export class UpgradeCommand extends BaseCommand {
 				strategy,
 				currentPath,
 				templatePath,
-				exists: fs.existsSync(currentPath),
+				exists: exists(currentPath),
 				isCustomized,
 			});
 		}
@@ -275,20 +284,20 @@ export class UpgradeCommand extends BaseCommand {
 		for (const file of plan.files) {
 			if (file.strategy === "NEVER") continue;
 
-			if (fs.existsSync(file.currentPath) && fs.existsSync(file.templatePath)) {
-				const current = fs.readFileSync(file.currentPath, "utf-8");
-				const template = fs.readFileSync(file.templatePath, "utf-8");
+			if (exists(file.currentPath) && exists(file.templatePath)) {
+				const current = readText(file.currentPath);
+				const template = readText(file.templatePath);
 
 				if (current === template) {
 					output += `  ${colors.muted(`${file.name}: No changes`)}\n`;
 				} else {
-					const currentLines = current.split("\n").length;
-					const templateLines = template.split("\n").length;
+					const currentLines = current?.split("\n").length ?? 0;
+					const templateLines = template?.split("\n").length ?? 0;
 					const diff = templateLines - currentLines;
 					const sign = diff > 0 ? "+" : "";
 					output += `  ${colors.info(`${file.name}: ${sign}${diff} lines`)}\n`;
 				}
-			} else if (!fs.existsSync(file.currentPath)) {
+			} else if (!exists(file.currentPath)) {
 				output += `  ${colors.success(`${file.name}: New file`)}\n`;
 			}
 		}
@@ -297,67 +306,36 @@ export class UpgradeCommand extends BaseCommand {
 	}
 
 	private createBackup(refDir: string, version: string): string {
-		const timestamp = new Date().toISOString().split("T")[0];
-		const backupDir = path.join(
-			this.context.projectRoot,
-			".taskflow",
-			"backups",
-			`v${version}-${timestamp}`,
-		);
+		const timestamp = new Date().toISOString().slice(0, 10);
+		let backupDir = getBackupDir(this.context.projectRoot, version);
+		backupDir = path.join(backupDir, timestamp);
 
 		// Create backup directory
-		fs.mkdirSync(backupDir, { recursive: true });
+		ensurePathDir(backupDir);
 
 		// Copy all ref files to backup
-		if (fs.existsSync(refDir)) {
-			this.copyDirectory(refDir, backupDir);
+		if (exists(refDir)) {
+			copyDir(refDir, backupDir);
 		}
 
 		return backupDir;
 	}
 
-	private copyDirectory(src: string, dest: string): void {
-		fs.mkdirSync(dest, { recursive: true });
-
-		const entries = fs.readdirSync(src, { withFileTypes: true });
-
-		for (const entry of entries) {
-			const srcPath = path.join(src, entry.name);
-			const destPath = path.join(dest, entry.name);
-
-			if (entry.isDirectory()) {
-				this.copyDirectory(srcPath, destPath);
-			} else {
-				fs.copyFileSync(srcPath, destPath);
-			}
-		}
-	}
-
 	private updateFile(file: FileUpdate): void {
-		if (!fs.existsSync(file.templatePath)) {
-			console.warn(`Template file not found: ${file.templatePath}`);
+		if (!exists(file.templatePath)) {
+			consoleOutput(`Template file not found: ${file.templatePath}`, {
+				type: "warn",
+			});
 			return;
 		}
 
-		const content = fs.readFileSync(file.templatePath, "utf-8");
-		fs.writeFileSync(file.currentPath, content);
-	}
+		// Ensure directory exists before writing
+		const targetDir = path.dirname(file.currentPath);
+		ensureFileDir(targetDir);
 
-	private getTemplateDir(): string {
-		// In development, templates are in the source tree
-		// In production, they're in the dist folder
-		const possiblePaths = [
-			path.join(__dirname, "..", "..", "templates"),
-			path.join(__dirname, "..", "templates"),
-			path.join(process.cwd(), "templates"),
-		];
-
-		for (const templatePath of possiblePaths) {
-			if (fs.existsSync(templatePath)) {
-				return templatePath;
-			}
+		const content = readText(file.templatePath);
+		if (content) {
+			fs.writeFileSync(file.currentPath, content, "utf-8");
 		}
-
-		throw new Error("Template directory not found");
 	}
 }

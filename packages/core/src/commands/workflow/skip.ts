@@ -2,7 +2,6 @@
  * Skip command - Mark task as blocked
  */
 
-import fs from "node:fs";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import {
 	findActiveTask,
@@ -12,6 +11,7 @@ import {
 	updateTaskStatus,
 } from "../../lib/data-access.js";
 import { NoActiveSessionError } from "../../lib/errors.js";
+import { exists, writeJson } from "../../lib/file-utils.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class SkipCommand extends BaseCommand {
@@ -74,7 +74,7 @@ export class SkipCommand extends BaseCommand {
 
 		// Update task file with blocked status and reason
 		const taskFilePath = getTaskFilePath(paths.tasksDir, tasksProgress, taskId);
-		if (taskFilePath && fs.existsSync(taskFilePath)) {
+		if (taskFilePath && exists(taskFilePath)) {
 			const updatedContent = {
 				...content,
 				status: "blocked" as const,
@@ -82,11 +82,7 @@ export class SkipCommand extends BaseCommand {
 				previousStatus: previousStatus,
 			};
 
-			fs.writeFileSync(
-				taskFilePath,
-				JSON.stringify(updatedContent, null, 2),
-				"utf-8",
-			);
+			writeJson(taskFilePath, updatedContent);
 		}
 
 		// Update status in progress file

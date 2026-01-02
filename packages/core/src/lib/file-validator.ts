@@ -80,6 +80,16 @@ export interface ValidatorOptions {
 	 * Maximum issues to report
 	 */
 	maxIssues?: number;
+
+	/**
+	 * Project coding standards content
+	 */
+	codingStandards?: string;
+
+	/**
+	 * Project architecture rules content
+	 */
+	architectureRules?: string;
 }
 
 /**
@@ -165,11 +175,22 @@ export class FileValidator {
 		const fileName = filePath.split("/").pop() || "";
 		const fileExtension = fileName.split(".").pop() || "";
 
-		const prompt = `Analyze the following ${fileExtension} file and identify any issues:
+		let prompt = `Analyze the following ${fileExtension} file and identify any issues:
 
 File: ${fileName}
 Path: ${filePath}
+`;
 
+		// Add project context if available
+		if (this.options.codingStandards) {
+			prompt += `\nPROJECT CODING STANDARDS:\n${this.options.codingStandards.slice(0, 1000)}\n`;
+		}
+
+		if (this.options.architectureRules) {
+			prompt += `\nPROJECT ARCHITECTURE RULES:\n${this.options.architectureRules.slice(0, 1000)}\n`;
+		}
+
+		prompt += `
 \`\`\`$${fileExtension}
 ${this.truncateContent(content)}
 \`\`\`
@@ -180,7 +201,9 @@ Please provide:
 3. Code quality issues (naming, complexity, etc.)
 4. Security concerns
 5. Performance concerns
-6. Suggested fixes for issues found
+6. Check compliance with project coding standards (if provided)
+7. Check compliance with project architecture rules (if provided)
+8. Suggested fixes for issues found
 
 Format your response as JSON:
 \`\`\`json

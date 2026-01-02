@@ -105,6 +105,8 @@ export class AnthropicProvider extends LLMProvider {
 			model: data.model,
 			tokensUsed:
 				(data.usage?.input_tokens ?? 0) + (data.usage?.output_tokens ?? 0),
+			promptTokens: data.usage?.input_tokens ?? 0,
+			completionTokens: data.usage?.output_tokens ?? 0,
 			finishReason: data.stop_reason,
 		};
 	}

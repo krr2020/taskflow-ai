@@ -12,6 +12,7 @@ import {
 } from "./base.js";
 import { type AIConfig, ModelSelector } from "./model-selector.js";
 import { AnthropicProvider } from "./providers/anthropic.js";
+import { MockLLMProvider } from "./providers/mock.js";
 import { OllamaProvider } from "./providers/ollama.js";
 import { OpenAICompatibleProvider } from "./providers/openai-compatible.js";
 
@@ -65,6 +66,10 @@ export const ProviderFactory = {
 				return OllamaProvider.fromEnv(config);
 			}
 
+			case LLMProviderType.Mock: {
+				return MockLLMProvider.createMock({ model });
+			}
+
 			default:
 				throw new Error(`Unknown provider type: ${type}`);
 		}
@@ -109,6 +114,7 @@ export const ProviderFactory = {
 			LLMProviderType.OpenAICompatible,
 			LLMProviderType.Anthropic,
 			LLMProviderType.Ollama,
+			LLMProviderType.Mock,
 		];
 	},
 
@@ -123,6 +129,8 @@ export const ProviderFactory = {
 				return "claude-3-5-sonnet-20241022";
 			case LLMProviderType.Ollama:
 				return "llama2";
+			case LLMProviderType.Mock:
+				return "mock-model";
 			default:
 				throw new Error(`Unknown provider type: ${providerType}`);
 		}

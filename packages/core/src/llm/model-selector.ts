@@ -5,6 +5,7 @@
 
 import { type LLMProvider, LLMProviderType, Phase } from "./base.js";
 import { AnthropicProvider } from "./providers/anthropic.js";
+import { MockLLMProvider } from "./providers/mock.js";
 import { OllamaProvider } from "./providers/ollama.js";
 import { OpenAICompatibleProvider } from "./providers/openai-compatible.js";
 
@@ -127,6 +128,10 @@ export class ModelSelector {
 				const config: Record<string, string> = { model };
 				if (baseUrl) config.baseUrl = baseUrl;
 				return OllamaProvider.fromEnv(config);
+			}
+
+			case LLMProviderType.Mock: {
+				return MockLLMProvider.createMock({ model });
 			}
 
 			default:

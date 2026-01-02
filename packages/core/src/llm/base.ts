@@ -19,6 +19,8 @@ export interface LLMGenerationResult {
 	content: string;
 	model: string;
 	tokensUsed?: number;
+	promptTokens?: number;
+	completionTokens?: number;
 	finishReason?: string;
 }
 
@@ -26,6 +28,7 @@ export enum LLMProviderType {
 	OpenAICompatible = "openai-compatible",
 	Anthropic = "anthropic",
 	Ollama = "ollama",
+	Mock = "mock",
 }
 
 export enum Phase {

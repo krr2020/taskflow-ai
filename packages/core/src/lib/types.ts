@@ -122,6 +122,7 @@ export const TaskFileContentSchema = z.object({
 	estimatedHours: z.number().optional(),
 	actualHours: z.number().optional(),
 	timeEntries: z.array(TimeEntrySchema).optional(),
+	acceptanceCriteria: z.array(z.string()).optional(),
 });
 export type TaskFileContent = z.infer<typeof TaskFileContentSchema>;
 
@@ -181,7 +182,7 @@ export type ProjectIndex = z.infer<typeof ProjectIndexSchema>;
  * Model definition for a single AI model
  */
 export const ModelDefinitionSchema = z.object({
-	provider: z.enum(["anthropic", "openai-compatible", "ollama"]),
+	provider: z.enum(["anthropic", "openai-compatible", "ollama", "mock"]),
 	model: z.string().min(1),
 	apiKey: z.string().optional(),
 	baseUrl: z.string().optional(),
