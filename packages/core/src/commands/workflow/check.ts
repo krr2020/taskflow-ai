@@ -2,9 +2,9 @@
  * Check command - Validate and advance task state
  */
 
-import { execSync } from "node:child_process";
 import { readdir } from "node:fs/promises";
 import path from "node:path";
+import { execaSync } from "execa";
 import { ConfigLoader } from "../../lib/config-loader.js";
 import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
 import {
@@ -1032,10 +1032,14 @@ Be concise (max 150 words).`;
 	private async findModifiedFiles(): Promise<string[]> {
 		try {
 			// Get modified, added, and untracked files from git
-			const output = execSync("git status --porcelain --untracked-files=all", {
-				cwd: this.context.projectRoot,
-				encoding: "utf-8",
-			}).trim();
+			const result = execaSync(
+				"git",
+				["status", "--porcelain", "--untracked-files=all"],
+				{
+					cwd: this.context.projectRoot,
+				},
+			);
+			const output = result.stdout.trim();
 
 			if (!output) {
 				return [];

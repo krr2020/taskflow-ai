@@ -3,7 +3,14 @@
  * Saves partial results during long operations and supports resume on failure
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	unlinkSync,
+	writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 
 /**
@@ -155,8 +162,7 @@ export class CheckpointManager {
 		}
 
 		try {
-			const fs = require("node:fs");
-			const files = fs.readdirSync(this.config.checkpointDir);
+			const files = readdirSync(this.config.checkpointDir);
 
 			const checkpoints: Checkpoint[] = [];
 
@@ -211,11 +217,10 @@ export class CheckpointManager {
 		}
 
 		try {
-			const fs = require("node:fs");
 			const filePath = this.getCheckpointPath(checkpointId);
 
 			if (existsSync(filePath)) {
-				fs.unlinkSync(filePath);
+				unlinkSync(filePath);
 				return true;
 			}
 
@@ -260,14 +265,13 @@ export class CheckpointManager {
 		}
 
 		try {
-			const fs = require("node:fs");
-			const files = fs.readdirSync(this.config.checkpointDir);
+			const files = readdirSync(this.config.checkpointDir);
 			let deleted = 0;
 
 			for (const file of files) {
 				if (file.endsWith(".json")) {
 					const filePath = join(this.config.checkpointDir, file);
-					fs.unlinkSync(filePath);
+					unlinkSync(filePath);
 					deleted++;
 				}
 			}
@@ -407,8 +411,7 @@ export class CheckpointManager {
 		}
 
 		try {
-			const fs = require("node:fs");
-			const files = fs.readdirSync(this.config.checkpointDir);
+			const files = readdirSync(this.config.checkpointDir);
 
 			const operations = new Map<string, number>();
 			let oldestDate: Date | undefined;

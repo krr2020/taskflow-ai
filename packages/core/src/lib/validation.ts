@@ -125,6 +125,42 @@ export function executeCommand(
 	}
 }
 
+/**
+ * Execute command using shell mode for better cross-platform compatibility
+ * Handles paths with spaces, quoted arguments, and platform-specific syntax
+ */
+export function executeCommandShell(cmd: string): CommandExecResult {
+	try {
+		const result = execaSync(cmd, {
+			stdio: "pipe",
+			maxBuffer: MAX_OUTPUT_BUFFER,
+			reject: false,
+			preferLocal: true,
+			shell: true,
+		});
+
+		const output = `${result.stdout}\n${result.stderr}`.trim();
+		return {
+			success: result.exitCode === 0,
+			stdout: result.stdout,
+			stderr: result.stderr,
+			output,
+		};
+	} catch (error) {
+		const err = error as { stdout?: string; stderr?: string; message?: string };
+		const output =
+			`${err.stdout || ""}\n${err.stderr || ""}`.trim() ||
+			err.message ||
+			String(error);
+		return {
+			success: false,
+			stdout: err.stdout || "",
+			stderr: err.stderr || "",
+			output,
+		};
+	}
+}
+
 export function runCommandWithLog(
 	logsDir: string,
 	cmd: string,
@@ -136,18 +172,9 @@ export function runCommandWithLog(
 		throw new Error(`Command cannot be empty for label: ${label}`);
 	}
 
-	// Parse command into executable and args
-	const parts = cmd.trim().split(" ");
-	const executable = parts[0];
-
-	// Ensure executable exists
-	if (!executable) {
-		throw new Error(`Invalid command format for label: ${label}`);
-	}
-
-	const args = parts.slice(1);
-
-	const result = executeCommand(executable, args);
+	// Execute command using shell mode for better cross-platform compatibility
+	// This handles paths with spaces, quoted arguments, and platform differences
+	const result = executeCommandShell(cmd);
 	const logFile = getLogFilePath(logsDir, taskId, label);
 
 	// Save full output to log file
