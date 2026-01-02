@@ -70,7 +70,7 @@ export class DoCommand extends BaseCommand {
 				result = await this.getValidateState();
 				break;
 			case "committing":
-				result = this.getCommitState(feature.id, taskId, task.title);
+				result = await this.getCommitState(feature.id, taskId, task.title);
 				break;
 			default:
 				return this.failure(
@@ -635,11 +635,11 @@ export class DoCommand extends BaseCommand {
 		};
 	}
 
-	private getCommitState(
+	private async getCommitState(
 		featureId: string,
 		taskId: string,
 		taskTitle: string,
-	): Partial<CommandResult> {
+	): Promise<Partial<CommandResult>> {
 		const outputParts: string[] = [];
 		outputParts.push(
 			colors.successBold(`${icons.save} COMMITTING STATE - READY TO COMMIT`),
@@ -649,10 +649,52 @@ export class DoCommand extends BaseCommand {
 		outputParts.push(`Header: feat(F${featureId}): T${taskId} - ${taskTitle}`);
 		outputParts.push("Body: Provide 3-4 bullet points");
 
+		// Get LLM guidance if available
+		let llmGuidance = [
+			"Current Status: COMMITTING",
+			"Your Goal: Commit changes with proper message format",
+			"",
+			"COMMIT MESSAGE FORMAT:",
+			"─────────────────────",
+			`Header: feat(F${featureId}): T${taskId} - ${taskTitle}`,
+			"",
+			"Body: Provide 3-4 bullet points describing changes:",
+			"  - Change 1 (be specific)",
+			"  - Change 2 (be specific)",
+			"  - Change 3 (if applicable)",
+			"",
+			"CRITICAL RULES:",
+			"───────────────",
+			"- Use bullet points (not paragraphs)",
+			"- Be specific about changes (not vague)",
+			"- Include technical debt notes if any",
+			"- Keep each bullet concise",
+			"",
+			"NEXT STEP:",
+			"──────────",
+			`taskflow commit " - Change 1\\n - Change 2"`,
+		].join("\n");
+
+		if (this.isLLMAvailable()) {
+			try {
+				const enhancedGuidance = await this.getLLMGuidance({
+					task: taskTitle,
+					status: "committing",
+					instructions:
+						"Focus on commit message guidance: format, content, best practices. Keep under 200 words.",
+				});
+				if (enhancedGuidance) {
+					llmGuidance = enhancedGuidance;
+				}
+			} catch {
+				// Use default guidance if LLM call fails
+			}
+		}
+
 		return {
 			output: outputParts.join("\n"),
 			nextSteps: `taskflow commit " - Change 1\\n - Change 2"`,
-			aiGuidance: "Commit and complete task.",
+			aiGuidance: llmGuidance,
 		};
 	}
 }

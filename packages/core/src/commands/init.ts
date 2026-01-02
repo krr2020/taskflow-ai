@@ -119,16 +119,9 @@ export class InitCommand extends BaseCommand {
 			}
 		}
 
-		// Copy project files
-		for (const [_key, sourcePath] of Object.entries(TEMPLATE_FILES.project)) {
-			const fullSourcePath = path.join(templatesDir, sourcePath);
-			const destPath = path.join(paths.refDir, path.basename(sourcePath));
-
-			if (fs.existsSync(fullSourcePath)) {
-				fs.copyFileSync(fullSourcePath, destPath);
-				copiedFiles++;
-			}
-		}
+		// Note: coding-standards.md and architecture-rules.md are NOT copied during init
+		// These should be generated via: taskflow prd generate-arch <prd-file>
+		// Skipping project template files to allow generate-arch command to work correctly
 
 		// Copy retrospective file
 		for (const [_key, sourcePath] of Object.entries(

@@ -9,7 +9,10 @@ import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class PrdGenerateArchCommand extends BaseCommand {
-	async execute(prdFile: string): Promise<CommandResult> {
+	async execute(
+		prdFile: string,
+		instructions?: string,
+	): Promise<CommandResult> {
 		const configLoader = new ConfigLoader(this.context.projectRoot);
 		const paths = configLoader.getPaths();
 
@@ -80,9 +83,49 @@ export class PrdGenerateArchCommand extends BaseCommand {
 		}
 
 		// Read PRD content
-		const _prdContent = fs.readFileSync(prdFilePath, "utf-8");
-		void _prdContent; // Intentionally unused - PRD content is loaded for reference
+		const prdContent = fs.readFileSync(prdFilePath, "utf-8");
 
+		// Try to generate with LLM if available
+		if (this.isLLMAvailable()) {
+			return await this.executeWithFallback(
+				() =>
+					this.generateStandardsWithLLM(
+						prdContent,
+						prdFile,
+						paths.refDir,
+						instructions,
+					),
+				() => {
+					console.error("LLM generation failed, falling back to guidance.");
+					return this.getGuidanceResult(
+						prdFile,
+						prdFilePath,
+						codingStandardsPath,
+						architectureRulesPath,
+						paths,
+					);
+				},
+				"Architecture Generation",
+			);
+		}
+
+		// Fallback to guidance (original behavior)
+		return this.getGuidanceResult(
+			prdFile,
+			prdFilePath,
+			codingStandardsPath,
+			architectureRulesPath,
+			paths,
+		);
+	}
+
+	private getGuidanceResult(
+		prdFile: string,
+		prdFilePath: string,
+		codingStandardsPath: string,
+		architectureRulesPath: string,
+		paths: ReturnType<ConfigLoader["getPaths"]>,
+	): CommandResult {
 		return this.success(
 			[
 				`PRD loaded: ${prdFile}`,
@@ -297,5 +340,246 @@ export class PrdGenerateArchCommand extends BaseCommand {
 				],
 			},
 		);
+	}
+
+	/**
+	 * Generate coding standards and architecture rules using LLM
+	 */
+	private async generateStandardsWithLLM(
+		prdContent: string,
+		prdFile: string,
+		refDir: string,
+		instructions?: string,
+	): Promise<CommandResult> {
+		if (!this.llmProvider) {
+			throw new Error("LLM provider not available");
+		}
+
+		// Load context files
+		const contextFiles: { name: string; content: string }[] = [];
+
+		// Load prd-generator.md if it exists
+		const prdGeneratorPath = getRefFilePath(refDir, REF_FILES.prdGenerator);
+		if (fs.existsSync(prdGeneratorPath)) {
+			contextFiles.push({
+				name: REF_FILES.prdGenerator,
+				content: fs.readFileSync(prdGeneratorPath, "utf-8"),
+			});
+		}
+
+		// Load ai-protocol.md if it exists
+		const aiProtocolPath = getRefFilePath(refDir, REF_FILES.aiProtocol);
+		if (fs.existsSync(aiProtocolPath)) {
+			contextFiles.push({
+				name: REF_FILES.aiProtocol,
+				content: fs.readFileSync(aiProtocolPath, "utf-8"),
+			});
+		}
+
+		// Generate coding-standards.md
+		const codingStandardsPath = getRefFilePath(
+			refDir,
+			REF_FILES.codingStandards,
+		);
+		const codingStandardsContent = await this.generateCodingStandards(
+			prdContent,
+			contextFiles,
+			instructions,
+		);
+
+		// Generate architecture-rules.md
+		const architectureRulesPath = getRefFilePath(
+			refDir,
+			REF_FILES.architectureRules,
+		);
+		const architectureRulesContent = await this.generateArchitectureRules(
+			prdContent,
+			contextFiles,
+			instructions,
+		);
+
+		// Write files
+		fs.writeFileSync(codingStandardsPath, codingStandardsContent, "utf-8");
+		fs.writeFileSync(architectureRulesPath, architectureRulesContent, "utf-8");
+
+		return this.success(
+			[
+				`✓ Generated coding-standards.md`,
+				`✓ Generated architecture-rules.md`,
+				"",
+				"Files created:",
+				`  - ${codingStandardsPath}`,
+				`  - ${architectureRulesPath}`,
+			].join("\n"),
+			[
+				"Next steps:",
+				"",
+				"1. Review the generated files and make adjustments if needed",
+				"",
+				"2. Generate tasks from PRD:",
+				`   taskflow tasks generate ${prdFile}`,
+			].join("\n"),
+		);
+	}
+
+	/**
+	 * Generate coding standards using LLM
+	 */
+	private async generateCodingStandards(
+		prdContent: string,
+		contextFiles: Array<{ name: string; content: string }>,
+		instructions?: string,
+	): Promise<string> {
+		if (!this.llmProvider) {
+			throw new Error("LLM provider not available");
+		}
+
+		// Provider is guaranteed to be available after the check
+		const llmProvider = this.llmProvider;
+
+		const systemPrompt = `You are an expert software architect tasked with creating project-specific coding standards.
+
+Your mission is to analyze the PRD and create a comprehensive coding-standards.md file that will guide all development work.
+
+CRITICAL RULES:
+1. DO NOT invent patterns - base standards on real-world best practices
+2. DO NOT write generic standards - be specific to the project's needs
+3. DO include concrete examples and DO/DON'T scenarios
+4. DO make rules enforceable and measurable
+5. DO align with the PRD requirements and technology stack
+
+Required sections:
+1. File Organization
+2. Code Style
+3. TypeScript Usage
+4. Error Handling
+5. Testing
+6. Documentation
+
+For each section, provide:
+- Clear, specific rules
+- Examples demonstrating the rule
+- Rationale for why the rule exists
+- How to verify compliance
+
+${instructions ? `\nAdditional instructions: ${instructions}` : ""}`;
+
+		const contextSection = contextFiles
+			.map(
+				(file) => `
+=== ${file.name} ===
+${file.content}
+`,
+			)
+			.join("\n");
+
+		const userPrompt = `Generate a comprehensive coding-standards.md file based on the following PRD:
+
+=== PRD ===
+${prdContent}
+
+${contextSection}
+
+Create a detailed coding-standards.md file with all required sections. Output ONLY the markdown content, no additional commentary.`;
+
+		const messages = [
+			{ role: "system" as const, content: systemPrompt },
+			{ role: "user" as const, content: userPrompt },
+		];
+
+		const options = {
+			maxTokens: 4000,
+			temperature: 0.3,
+		};
+
+		const response = await this.retryWithBackoff(() =>
+			llmProvider.generate(messages, options),
+		);
+
+		// Track cost
+		this.costTracker.trackUsage(response);
+
+		return response.content;
+	}
+
+	/**
+	 * Generate architecture rules using LLM
+	 */
+	private async generateArchitectureRules(
+		prdContent: string,
+		contextFiles: Array<{ name: string; content: string }>,
+		instructions?: string,
+	): Promise<string> {
+		if (!this.llmProvider) {
+			throw new Error("LLM provider not available");
+		}
+
+		// Provider is guaranteed to be available after the check
+		const llmProvider = this.llmProvider;
+
+		const systemPrompt = `You are an expert software architect tasked with creating project-specific architecture rules.
+
+Your mission is to analyze the PRD and create a comprehensive architecture-rules.md file that will guide all architectural decisions.
+
+CRITICAL RULES:
+1. DO NOT invent architecture - base rules on the PRD requirements
+2. DO NOT write generic rules - be specific to the project's architecture
+3. DO include concrete examples and forbidden patterns
+4. DO make rules enforceable and measurable
+5. DO align with the PRD's technical requirements
+
+Required sections:
+1. Project Structure
+2. Dependency Rules
+3. Data Flow
+4. API Design
+5. Security
+6. Performance
+7. Feature-Specific Rules (from PRD)
+
+For each section, provide:
+- Clear architectural constraints
+- Allowed and forbidden patterns
+- Integration points and boundaries
+- How to verify compliance
+
+${instructions ? `\nAdditional instructions: ${instructions}` : ""}`;
+
+		const contextSection = contextFiles
+			.map(
+				(file) => `
+=== ${file.name} ===
+${file.content}
+`,
+			)
+			.join("\n");
+
+		const userPrompt = `Generate a comprehensive architecture-rules.md file based on the following PRD:
+
+=== PRD ===
+${prdContent}
+
+${contextSection}
+
+Create a detailed architecture-rules.md file with all required sections. Output ONLY the markdown content, no additional commentary.`;
+
+		const messages = [
+			{ role: "system" as const, content: systemPrompt },
+			{ role: "user" as const, content: userPrompt },
+		];
+
+		const options = {
+			maxTokens: 4000,
+			temperature: 0.3,
+		};
+
+		const response = await this.retryWithBackoff(() =>
+			llmProvider.generate(messages, options),
+		);
+
+		// Track cost
+		this.costTracker.trackUsage(response);
+
+		return response.content;
 	}
 }

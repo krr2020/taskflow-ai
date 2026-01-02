@@ -11,6 +11,8 @@ import {
 	REF_FILES,
 	SKILL_FILES,
 } from "../../lib/config-paths.js";
+import { saveFeature, saveProjectIndex } from "../../lib/data-access.js";
+import type { TaskflowConfig } from "../../lib/types.js";
 import { BaseCommand, type CommandResult } from "../base.js";
 
 export class TasksGenerateCommand extends BaseCommand {
@@ -155,6 +157,58 @@ export class TasksGenerateCommand extends BaseCommand {
 			);
 		}
 
+		// Try to generate with LLM if available and PRD file is specified
+		if (this.isLLMAvailable() && prdFile && prdFilePath) {
+			return await this.executeWithFallback(
+				async () => {
+					// Read PRD content
+					const prdContent = fs.readFileSync(prdFilePath, "utf-8");
+
+					return await this.generateTasksWithLLM(
+						prdContent,
+						prdFile,
+						paths.tasksDir,
+						paths.refDir,
+						config.project?.name || "project",
+					);
+				},
+				() => {
+					// Fallback to manual guidance
+					console.error("LLM generation failed, falling back to guidance.");
+					return this.getGuidanceResult(
+						outputParts,
+						progressFilePath,
+						paths,
+						config,
+						prdFilePath,
+						codingStandardsPath,
+						architectureRulesPath,
+					);
+				},
+				"Task Generation",
+			);
+		}
+
+		return this.getGuidanceResult(
+			outputParts,
+			progressFilePath,
+			paths,
+			config,
+			prdFilePath,
+			codingStandardsPath,
+			architectureRulesPath,
+		);
+	}
+
+	private getGuidanceResult(
+		outputParts: string[],
+		progressFilePath: string,
+		paths: ReturnType<ConfigLoader["getPaths"]>,
+		config: TaskflowConfig,
+		prdFilePath: string | null,
+		codingStandardsPath: string,
+		architectureRulesPath: string,
+	): CommandResult {
 		// Get all available skill files
 		const availableSkills = Object.values(SKILL_FILES)
 			.map((skillFile) => {
@@ -454,4 +508,335 @@ export class TasksGenerateCommand extends BaseCommand {
 			},
 		);
 	}
+
+	/**
+	 * Generate tasks using LLM
+	 */
+	private async generateTasksWithLLM(
+		prdContent: string,
+		prdFile: string,
+		tasksDir: string,
+		refDir: string,
+		projectName: string,
+	): Promise<CommandResult> {
+		if (!this.llmProvider) {
+			throw new Error("LLM provider not available");
+		}
+
+		// Load context files
+		const contextFiles: { name: string; content: string }[] = [];
+
+		// Load task-generator.md
+		const taskGeneratorPath = getRefFilePath(refDir, REF_FILES.taskGenerator);
+		if (fs.existsSync(taskGeneratorPath)) {
+			contextFiles.push({
+				name: REF_FILES.taskGenerator,
+				content: fs.readFileSync(taskGeneratorPath, "utf-8"),
+			});
+		}
+
+		// Load coding-standards.md
+		const codingStandardsPath = getRefFilePath(
+			refDir,
+			REF_FILES.codingStandards,
+		);
+		if (fs.existsSync(codingStandardsPath)) {
+			contextFiles.push({
+				name: REF_FILES.codingStandards,
+				content: fs.readFileSync(codingStandardsPath, "utf-8"),
+			});
+		}
+
+		// Load architecture-rules.md
+		const architectureRulesPath = getRefFilePath(
+			refDir,
+			REF_FILES.architectureRules,
+		);
+		if (fs.existsSync(architectureRulesPath)) {
+			contextFiles.push({
+				name: REF_FILES.architectureRules,
+				content: fs.readFileSync(architectureRulesPath, "utf-8"),
+			});
+		}
+
+		// Load ai-protocol.md
+		const aiProtocolPath = getRefFilePath(refDir, REF_FILES.aiProtocol);
+		if (fs.existsSync(aiProtocolPath)) {
+			contextFiles.push({
+				name: REF_FILES.aiProtocol,
+				content: fs.readFileSync(aiProtocolPath, "utf-8"),
+			});
+		}
+
+		// Generate tasks JSON
+		const tasksData = await this.generateTasksJSON(
+			prdContent,
+			contextFiles,
+			projectName,
+		);
+
+		// Create task structure
+		await this.createTaskStructure(tasksDir, tasksData);
+
+		// Write tasks progress
+		await this.writeTasksProgress(tasksDir, tasksData);
+
+		// Save project index (required for loading progress)
+		saveProjectIndex(tasksDir, tasksData);
+
+		return this.success(
+			[
+				`✓ Generated task breakdown from ${prdFile}`,
+				"",
+				"Task hierarchy created:",
+				`  Features: ${tasksData.features.length}`,
+				`  Stories: ${tasksData.features.reduce((sum, f) => sum + f.stories.length, 0)}`,
+				`  Tasks: ${tasksData.features.reduce((sum, f) => sum + f.stories.reduce((s, st) => s + st.tasks.length, 0), 0)}`,
+				"",
+				`Files created:`,
+				`  - ${path.join(tasksDir, "tasks-progress.json")}`,
+				`  - Task files in ${tasksDir}/F*/S*/`,
+			].join("\n"),
+			[
+				"Next steps:",
+				"",
+				"1. Review the generated task breakdown:",
+				"   taskflow status",
+				"",
+				"2. Find the first task to work on:",
+				"   taskflow next",
+				"",
+				"3. Start working on a task:",
+				"   taskflow start <task-id>",
+			].join("\n"),
+		);
+	}
+
+	/**
+	 * Generate tasks JSON using LLM
+	 */
+	private async generateTasksJSON(
+		prdContent: string,
+		contextFiles: Array<{ name: string; content: string }>,
+		projectName: string,
+	): Promise<TasksData> {
+		if (!this.llmProvider) {
+			throw new Error("LLM provider not available");
+		}
+
+		const systemPrompt = `You are an expert software architect and project planner.
+
+Your mission is to analyze a PRD and break it down into a structured, executable task hierarchy.
+
+CRITICAL RULES:
+1. Each task must be atomic (1-4 hours of work)
+2. Each task must be independently testable
+3. Each task must have clear acceptance criteria
+4. Use proper dependency management
+5. Follow the coding standards and architecture rules provided
+
+Task Hierarchy:
+- Features: Major functional areas (ID: 1, 2, 3...)
+- Stories: User-facing scenarios (ID: 1.1, 1.2, 2.1...)
+- Tasks: Atomic implementation units (ID: 1.1.0, 1.1.1, 1.2.0...)
+
+Available skills: backend, frontend, fullstack, devops, docs, mobile
+
+Output ONLY valid JSON in this exact structure:
+{
+  "project": "project-name",
+  "features": [
+    {
+      "id": "1",
+      "title": "Feature name",
+      "description": "Feature description",
+      "status": "not-started",
+      "stories": [
+        {
+          "id": "1.1",
+          "title": "Story name",
+          "description": "Story description",
+          "status": "not-started",
+          "tasks": [
+            {
+              "id": "1.1.0",
+              "title": "Task title",
+              "description": "Detailed task description",
+              "skill": "backend",
+              "status": "not-started",
+              "estimatedHours": 2,
+              "dependencies": [],
+              "context": ["path/to/file.ts - Description"],
+              "subtasks": [
+                {
+                  "id": "1",
+                  "description": "Subtask description",
+                  "status": "not-started"
+                }
+              ],
+              "acceptanceCriteria": ["Criterion 1", "Criterion 2"]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}`;
+
+		const contextSection = contextFiles
+			.map(
+				(file) => `
+=== ${file.name} ===
+${file.content}
+`,
+			)
+			.join("\n");
+
+		const userPrompt = `Generate a complete task breakdown for this PRD:
+
+=== PRD ===
+${prdContent}
+
+${contextSection}
+
+IMPORTANT:
+- Output ONLY the JSON structure, no markdown code blocks or additional text
+- Ensure all IDs follow the correct format (N, N.M, N.M.K)
+- Keep tasks atomic (1-4 hours each)
+- Include clear acceptance criteria for each task
+- Set appropriate dependencies between tasks`;
+
+		const messages = [
+			{ role: "system" as const, content: systemPrompt },
+			{ role: "user" as const, content: userPrompt },
+		];
+
+		const options = {
+			maxTokens: 8000,
+			temperature: 0.2,
+		};
+
+		const response = await this.retryWithBackoff(() =>
+			llmProvider.generate(messages, options),
+		);
+
+		// Track cost
+		this.costTracker.trackUsage(response);
+
+		// Parse JSON response
+		let tasksData: TasksData;
+		try {
+			// Clean up response (remove markdown code blocks if present)
+			let jsonContent = response.content.trim();
+			if (jsonContent.startsWith("```")) {
+				jsonContent = jsonContent
+					.replace(/```json\n?/g, "")
+					.replace(/```\n?/g, "");
+			}
+
+			tasksData = JSON.parse(jsonContent);
+			tasksData.project = projectName; // Override with actual project name
+		} catch (error) {
+			throw new Error(
+				`Failed to parse LLM response as JSON: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		}
+
+		return tasksData;
+	}
+
+	/**
+	 * Create task file structure
+	 */
+	private async createTaskStructure(
+		tasksDir: string,
+		tasksData: TasksData,
+	): Promise<void> {
+		for (const feature of tasksData.features) {
+			// Set path and save feature
+			feature.path = `F${feature.id}-${feature.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+			const featureDir = path.join(tasksDir, feature.path);
+			fs.mkdirSync(featureDir, { recursive: true });
+
+			// Save feature file
+			saveFeature(tasksDir, feature);
+
+			for (const story of feature.stories) {
+				const storyDir = path.join(
+					featureDir,
+					`S${story.id}-${story.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+				);
+				fs.mkdirSync(storyDir, { recursive: true });
+
+				for (const task of story.tasks) {
+					const taskFilePath = path.join(
+						storyDir,
+						`T${task.id}-${task.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.json`,
+					);
+					fs.writeFileSync(
+						taskFilePath,
+						JSON.stringify(task, null, 2),
+						"utf-8",
+					);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Write tasks progress file
+	 */
+	private async writeTasksProgress(
+		tasksDir: string,
+		tasksData: TasksData,
+	): Promise<void> {
+		const progressFilePath = path.join(tasksDir, "tasks-progress.json");
+		fs.writeFileSync(
+			progressFilePath,
+			JSON.stringify(tasksData, null, 2),
+			"utf-8",
+		);
+	}
+}
+
+// Type definitions for task data
+interface TasksData {
+	project: string;
+	features: Feature[];
+}
+
+interface Feature {
+	id: string;
+	title: string;
+	description: string;
+	status: string;
+	path?: string;
+	stories: Story[];
+}
+
+interface Story {
+	id: string;
+	title: string;
+	description: string;
+	status: string;
+	tasks: Task[];
+}
+
+interface Task {
+	id: string;
+	title: string;
+	description: string;
+	skill: string;
+	status: string;
+	estimatedHours: number;
+	dependencies: string[];
+	context: string[];
+	subtasks: Subtask[];
+	acceptanceCriteria: string[];
+}
+
+interface Subtask {
+	id: string;
+	description: string;
+	status: string;
 }

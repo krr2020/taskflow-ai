@@ -3,10 +3,17 @@
  * Every command returns structured guidance for AI agents
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { ConfigLoader } from "../lib/config-loader.js";
 import type { LLMProvider } from "../llm/base.js";
 import { Phase } from "../llm/base.js";
+import { LLMCache } from "../llm/cache.js";
+import { CheckpointManager } from "../llm/checkpoint-manager.js";
+import { ContextManager } from "../llm/context-manager.js";
+import { CostTracker } from "../llm/cost-tracker.js";
 import { type AIConfig, ProviderFactory } from "../llm/factory.js";
+import { RateLimiter } from "../llm/rate-limiter.js";
 
 export interface CommandContext {
 	projectRoot: string;
@@ -25,9 +32,20 @@ export interface CommandResult {
 export abstract class BaseCommand {
 	protected llmProvider: LLMProvider | undefined;
 	protected configLoader: ConfigLoader;
+	protected costTracker: CostTracker;
+	protected contextManager: ContextManager | undefined;
+	protected llmCache: LLMCache;
+	protected rateLimiter: RateLimiter;
+	protected checkpointManager: CheckpointManager;
 
 	constructor(protected context: CommandContext) {
 		this.configLoader = new ConfigLoader(context.projectRoot);
+		this.costTracker = new CostTracker();
+		this.llmCache = new LLMCache();
+		this.rateLimiter = new RateLimiter();
+		this.checkpointManager = new CheckpointManager({
+			checkpointDir: `${context.projectRoot}/.taskflow/checkpoints`,
+		});
 		this.initializeLLMProvider();
 	}
 
@@ -43,12 +61,21 @@ export abstract class BaseCommand {
 				const aiConfig = config.ai as unknown as AIConfig;
 				const selector = ProviderFactory.createSelector(aiConfig);
 				if (selector.isConfigured()) {
-					this.llmProvider = selector.getProvider(Phase.Planning);
+					const baseProvider = selector.getProvider(Phase.Planning);
+
+					// Wrap provider with rate limiter
+					this.llmProvider = this.rateLimiter.wrap(baseProvider);
+
+					// Initialize context manager for the model
+					const modelName = selector.getModelName(Phase.Planning);
+					this.contextManager = ContextManager.forModel(modelName);
 				}
 			}
-		} catch {
+		} catch (error) {
 			// LLM provider initialization failed gracefully
+			this.logError(error, "LLM provider initialization failed");
 			this.llmProvider = void 0;
+			this.contextManager = void 0;
 		}
 	}
 
@@ -74,6 +101,9 @@ export abstract class BaseCommand {
 			return "";
 		}
 
+		// Provider is guaranteed to be available after the check
+		const llmProvider = this.llmProvider;
+
 		try {
 			const { task, status, files, errors, instructions } = context;
 
@@ -92,21 +122,38 @@ Provide:
 
 Be concise and actionable.`;
 
-			const response = await this.llmProvider.generate(
-				[
-					{
-						role: "system",
-						content:
-							"You are a helpful coding assistant providing concise guidance.",
-					},
-					{ role: "user", content: prompt },
-				],
-				{ maxTokens: 300, temperature: 0.5 },
+			const messages = [
+				{
+					role: "system" as const,
+					content:
+						"You are a helpful coding assistant providing concise guidance.",
+				},
+				{ role: "user" as const, content: prompt },
+			];
+			const options = { maxTokens: 300, temperature: 0.5 };
+
+			// Check cache first
+			const cached = this.llmCache.get(messages, options);
+			if (cached) {
+				// Cache hit - track as if it were a real call but with zero cost
+				return this.truncateToWords(cached.content, 200);
+			}
+
+			// Cache miss - call LLM
+			const response = await this.retryWithBackoff(() =>
+				llmProvider.generate(messages, options),
 			);
 
+			// Cache the response
+			this.llmCache.set(messages, options, response);
+
+			// Track cost
+			this.costTracker.trackUsage(response);
+
 			return this.truncateToWords(response.content, 200);
-		} catch {
+		} catch (error) {
 			// LLM call failed, return empty string
+			this.logError(error, "getLLMGuidance failed");
 			return "";
 		}
 	}
@@ -114,6 +161,7 @@ Be concise and actionable.`;
 	/**
 	 * Get error analysis with LLM
 	 * Groups errors by file and provides targeted fixes
+	 * Includes project context from retrospective and coding standards
 	 */
 	protected async getErrorAnalysis(
 		errors: Array<{
@@ -122,15 +170,43 @@ Be concise and actionable.`;
 			line?: number;
 			code?: string;
 		}>,
+		refDir?: string,
 	): Promise<string> {
 		if (!this.isLLMAvailable() || !this.llmProvider || errors.length === 0) {
 			return "";
 		}
 
+		// Provider is guaranteed to be available after check
+		const llmProvider = this.llmProvider;
+
 		try {
 			const groupedErrors = this.groupErrorsByFile(errors);
 
-			const prompt = `Analyze these errors and provide targeted fixes:
+			// Load project context if available
+			let retrospectiveContext = "";
+			let codingStandardsContext = "";
+
+			if (refDir) {
+				const fs = await import("node:fs");
+				const path = await import("node:path");
+
+				// Load retrospective for known error patterns
+				const retrospectivePath = path.join(refDir, "retrospective.md");
+				if (fs.existsSync(retrospectivePath)) {
+					retrospectiveContext = fs.readFileSync(retrospectivePath, "utf-8");
+				}
+
+				// Load coding standards
+				const codingStandardsPath = path.join(refDir, "coding-standards.md");
+				if (fs.existsSync(codingStandardsPath)) {
+					codingStandardsContext = fs.readFileSync(
+						codingStandardsPath,
+						"utf-8",
+					);
+				}
+			}
+
+			let prompt = `Analyze these errors and provide targeted fixes:
 
 ${Object.entries(groupedErrors)
 	.map(
@@ -138,27 +214,55 @@ ${Object.entries(groupedErrors)
 			`\n${file}:\n${fileErrors.map((e) => `  ${e.message}`).join("\n")}`,
 	)
 	.join("\n")}
+`;
 
-Provide:
+			// Add project context if available
+			if (retrospectiveContext) {
+				prompt += `\n\nKNOWN ERROR PATTERNS (from retrospective):\n${retrospectiveContext.slice(0, 1000)}\n`;
+			}
+
+			if (codingStandardsContext) {
+				prompt += `\n\nPROJECT CODING STANDARDS:\n${codingStandardsContext.slice(0, 1000)}\n`;
+			}
+
+			prompt += `\nProvide:
 1. Root cause analysis per file
-2. Specific fix suggestions
+2. Specific fix suggestions that align with project standards
 3. File-by-file approach to resolve
+4. Check if similar errors were already solved (see retrospective)
 
 Be concise and actionable.`;
 
-			const response = await this.llmProvider.generate(
-				[
-					{
-						role: "system",
-						content: "You are a debugging assistant providing error analysis.",
-					},
-					{ role: "user", content: prompt },
-				],
-				{ maxTokens: 500, temperature: 0.3 },
+			const messages = [
+				{
+					role: "system" as const,
+					content:
+						"You are a debugging assistant providing error analysis. Use project retrospective and coding standards to provide context-aware solutions.",
+				},
+				{ role: "user" as const, content: prompt },
+			];
+			const options = { maxTokens: 800, temperature: 0.3 };
+
+			// Check cache first
+			const cached = this.llmCache.get(messages, options);
+			if (cached) {
+				return cached.content;
+			}
+
+			// Cache miss - call LLM
+			const response = await this.retryWithBackoff(() =>
+				llmProvider.generate(messages, options),
 			);
 
+			// Cache the response
+			this.llmCache.set(messages, options, response);
+
+			// Track cost
+			this.costTracker.trackUsage(response);
+
 			return response.content;
-		} catch {
+		} catch (error) {
+			this.logError(error, "getErrorAnalysis failed");
 			return "";
 		}
 	}
@@ -214,6 +318,164 @@ Be concise and actionable.`;
 			return text;
 		}
 		return words.slice(0, maxWords).join(" ");
+	}
+
+	/**
+	 * Get LLM cost summary for current session
+	 */
+	protected getCostSummary(): string {
+		return this.costTracker.getSummary();
+	}
+
+	/**
+	 * Get detailed cost report
+	 */
+	protected getCostReport(verbose = false): string {
+		return this.costTracker.getReport(verbose);
+	}
+
+	/**
+	 * Check if over budget
+	 */
+	protected isOverBudget(): boolean {
+		return this.costTracker.isOverBudget();
+	}
+
+	/**
+	 * Get cache statistics
+	 */
+	protected getCacheStats(): string {
+		return this.llmCache.getStatsReport();
+	}
+
+	/**
+	 * Clear LLM cache
+	 */
+	protected clearCache(): void {
+		this.llmCache.clear();
+	}
+
+	/**
+	 * Clear expired cache entries
+	 */
+	protected clearExpiredCache(): void {
+		this.llmCache.clearExpired();
+	}
+
+	/**
+	 * Verify LLM configuration
+	 * Checks if provider is configured and API key is present
+	 * Optionally checks network connectivity
+	 */
+	protected async verifyLLMConfiguration(
+		checkConnection = false,
+	): Promise<{ valid: boolean; error?: string }> {
+		if (!this.llmProvider) {
+			return { valid: false, error: "LLM provider not initialized" };
+		}
+
+		if (!this.llmProvider.isConfigured()) {
+			return {
+				valid: false,
+				error: "LLM provider not configured (missing API key?)",
+			};
+		}
+
+		if (checkConnection) {
+			try {
+				await this.llmProvider.generate([{ role: "user", content: "ping" }], {
+					maxTokens: 1,
+				});
+			} catch (error) {
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
+				return {
+					valid: false,
+					error: `LLM connection failed: ${errorMessage}`,
+				};
+			}
+		}
+
+		return { valid: true };
+	}
+
+	/**
+	 * Execute an LLM operation with fallback
+	 */
+	protected async executeWithFallback<T>(
+		operation: () => Promise<T>,
+		fallback: () => T | Promise<T>,
+		context: string,
+	): Promise<T> {
+		try {
+			return await operation();
+		} catch (error) {
+			this.logError(error, `Fallback triggered for: ${context}`);
+			return await fallback();
+		}
+	}
+
+	/**
+	 * Retry a function with exponential backoff
+	 */
+	protected async retryWithBackoff<T>(
+		fn: () => Promise<T>,
+		maxRetries = 3,
+		initialDelay = 1000,
+	): Promise<T> {
+		let lastError: unknown;
+
+		for (let attempt = 0; attempt <= maxRetries; attempt++) {
+			try {
+				return await fn();
+			} catch (error) {
+				lastError = error;
+				if (attempt < maxRetries) {
+					const delay = initialDelay * 2 ** attempt;
+					await new Promise((resolve) => setTimeout(resolve, delay));
+				}
+			}
+		}
+
+		throw lastError;
+	}
+
+	/**
+	 * Log error to file
+	 */
+	protected logError(error: unknown, context: string): void {
+		try {
+			const taskflowDir = path.join(this.context.projectRoot, ".taskflow");
+			const logDir = path.join(taskflowDir, "logs");
+
+			// Only create log directory if .taskflow already exists
+			// Don't create directories during initialization or validation
+			if (!fs.existsSync(taskflowDir)) {
+				return;
+			}
+
+			if (!fs.existsSync(logDir)) {
+				fs.mkdirSync(logDir, { recursive: true });
+			}
+
+			const timestamp = new Date().toISOString();
+			let errorMessage = error instanceof Error ? error.message : String(error);
+			let stack = error instanceof Error ? error.stack : "";
+
+			// Sanitize API keys (basic patterns)
+			const apiKeyRegex = /(sk-[a-zA-Z0-9]{20,})|([a-zA-Z0-9]{32,})/g;
+			errorMessage = errorMessage.replace(apiKeyRegex, "***API_KEY***");
+			if (stack) {
+				stack = stack.replace(apiKeyRegex, "***API_KEY***");
+			}
+
+			const logEntry = `[${timestamp}] ${context}\nError: ${errorMessage}\n${stack}\n-------------------\n`;
+
+			const logFile = path.join(logDir, "error.log");
+			fs.appendFileSync(logFile, logEntry);
+		} catch {
+			// Fail silently if logging fails to avoid crashing the application
+		}
 	}
 
 	abstract execute(...args: unknown[]): Promise<CommandResult>;

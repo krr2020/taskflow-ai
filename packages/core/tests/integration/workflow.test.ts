@@ -99,7 +99,7 @@ describe("workflow integration", () => {
 							status: "in-progress",
 							tasks: [
 								{
-									id: "1.1.1",
+									id: "1.1.0",
 									title: "Implement Login Page",
 									status: "not-started",
 									dependencies: [],
@@ -123,7 +123,7 @@ describe("workflow integration", () => {
 					status: "in-progress",
 					tasks: [
 						{
-							id: "1.1.1",
+							id: "1.1.0",
 							title: "Implement Login Page",
 							status: "not-started",
 							dependencies: [],
@@ -137,7 +137,7 @@ describe("workflow integration", () => {
 
 		// Create task file (JSON format, name T{id}-*)
 		const taskContent = {
-			id: "1.1.1",
+			id: "1.1.0",
 			title: "Implement Login Page",
 			description: "Implement login page.",
 			status: "not-started",
@@ -148,14 +148,14 @@ describe("workflow integration", () => {
 			estimatedHours: 4,
 		};
 		fs.writeFileSync(
-			path.join(storyDir, "T1.1.1-implement-login.json"),
+			path.join(storyDir, "T1.1.0-implement-login.json"),
 			JSON.stringify(taskContent, null, 2),
 		);
 
 		// Create progress.md
 		fs.writeFileSync(
 			path.join(testDir, "progress.md"),
-			"# Progress\n\n## Pending\n- [ ] Task 1.1.1\n",
+			"# Progress\n\n## Pending\n- [ ] Task 1.1.0\n",
 		);
 	});
 
@@ -166,12 +166,12 @@ describe("workflow integration", () => {
 				"features",
 				"1-auth",
 				"S1.1-login",
-				"T1.1.1-implement-login.json",
+				"T1.1.0-implement-login.json",
 			);
 
 			// 1. Start Task
 			const startCmd = new StartCommand(context);
-			const startResult = await startCmd.execute("1.1.1");
+			const startResult = await startCmd.execute("1.1.0");
 			expect(startResult.success).toBe(true);
 
 			// Verify task status is 'setup' in JSON file
@@ -254,4 +254,128 @@ describe("workflow integration", () => {
 		});
 	});
 	*/
+
+	describe("LLM Guidance", () => {
+		it("should provide aiGuidance in start command when AI not configured", async () => {
+			const startCmd = new StartCommand(context);
+			const result = await startCmd.execute("1.1.0");
+
+			expect(result.success).toBe(true);
+			expect(result.aiGuidance).toBeDefined();
+			expect(result.aiGuidance).toContain("SETUP");
+			expect(result.contextFiles).toBeDefined();
+			expect(result.contextFiles?.length).toBeGreaterThan(0);
+		});
+
+		it("should provide state-specific guidance in do command", async () => {
+			// Start task first
+			const startCmd = new StartCommand(context);
+			await startCmd.execute("1.1.0");
+
+			// Get setup state guidance
+			const doCmd = new DoCommand(context);
+			const setupResult = await doCmd.execute();
+
+			expect(setupResult.success).toBe(true);
+			expect(setupResult.aiGuidance).toBeDefined();
+			expect(typeof setupResult.aiGuidance).toBe("string");
+
+			// Advance to planning
+			const checkCmd = new CheckCommand(context);
+			await checkCmd.execute();
+
+			// Get planning state guidance
+			const planningResult = await doCmd.execute();
+
+			expect(planningResult.success).toBe(true);
+			expect(planningResult.aiGuidance).toBeDefined();
+			expect(typeof planningResult.aiGuidance).toBe("string");
+		});
+
+		it("should include warnings in aiGuidance", async () => {
+			const startCmd = new StartCommand(context);
+			const result = await startCmd.execute("1.1.0");
+
+			expect(result.warnings).toBeDefined();
+			expect(result.warnings?.length).toBeGreaterThan(0);
+			expect(result.warnings?.some((w) => w.includes("DO NOT"))).toBe(true);
+		});
+
+		it("should provide contextFiles in start command", async () => {
+			const startCmd = new StartCommand(context);
+			const result = await startCmd.execute("1.1.0");
+
+			expect(result.contextFiles).toBeDefined();
+			expect(result.contextFiles?.length).toBeGreaterThan(0);
+			expect(result.contextFiles?.some((f) => f.includes("ai-protocol"))).toBe(
+				true,
+			);
+			expect(
+				result.contextFiles?.some((f) => f.includes("retrospective")),
+			).toBe(true);
+		});
+
+		it("should provide guidance for all workflow states", async () => {
+			// Start task
+			const startCmd = new StartCommand(context);
+			await startCmd.execute("1.1.0");
+
+			const doCmd = new DoCommand(context);
+			const checkCmd = new CheckCommand(context);
+
+			// Setup state
+			const setupResult = await doCmd.execute();
+			expect(setupResult.aiGuidance).toBeDefined();
+			await checkCmd.execute();
+
+			// Planning state
+			const planningResult = await doCmd.execute();
+			expect(planningResult.aiGuidance).toBeDefined();
+			await checkCmd.execute();
+
+			// Implementing state
+			const implementingResult = await doCmd.execute();
+			expect(implementingResult.aiGuidance).toBeDefined();
+			await checkCmd.execute();
+
+			// Verifying state
+			const verifyingResult = await doCmd.execute();
+			expect(verifyingResult.aiGuidance).toBeDefined();
+			await checkCmd.execute();
+
+			// Validating state
+			const validatingResult = await doCmd.execute();
+			expect(validatingResult.aiGuidance).toBeDefined();
+			await checkCmd.execute();
+
+			// Committing state
+			const committingResult = await doCmd.execute();
+			expect(committingResult.aiGuidance).toBeDefined();
+		});
+
+		it("should provide nextSteps guidance in all states", async () => {
+			// Start task
+			const startCmd = new StartCommand(context);
+			const startResult = await startCmd.execute("1.1.0");
+			expect(startResult.nextSteps).toBeDefined();
+			expect(startResult.nextSteps.length).toBeGreaterThan(0);
+
+			const doCmd = new DoCommand(context);
+			const checkCmd = new CheckCommand(context);
+
+			// Setup state
+			const setupResult = await doCmd.execute();
+			expect(setupResult.nextSteps).toBeDefined();
+			await checkCmd.execute();
+
+			// Planning state
+			const planningResult = await doCmd.execute();
+			expect(planningResult.nextSteps).toBeDefined();
+			await checkCmd.execute();
+
+			// Implementing state
+			const implementingResult = await doCmd.execute();
+			expect(implementingResult.nextSteps).toBeDefined();
+		});
+	});
 });

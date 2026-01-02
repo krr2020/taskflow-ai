@@ -12,6 +12,25 @@ npm install @krr2020/taskflow
 
 The core package provides a complete task management system with:
 
+### AI Integration
+
+TaskFlow features built-in AI capabilities to automate documentation, planning, and execution.
+
+#### Configuration
+
+Configure your preferred LLM provider (OpenAI, Anthropic, or Local/Ollama):
+
+```bash
+taskflow configure ai --provider openai-compatible --apiKey sk-... --model gpt-4
+```
+
+#### AI-Powered Features
+
+- **PRD Generation**: `taskflow prd create` can generate complete requirements from a description.
+- **Task Breakdown**: `taskflow tasks generate` analyzes your PRD and creates atomic, testable tasks.
+- **Context Analysis**: `taskflow start` analyzes the task and codebase to provide implementation guidance.
+- **Smart Execution**: `taskflow do` suggests the next step based on your current progress.
+
 ### Commands Layer
 13 command classes that handle all workflow operations:
 
@@ -62,6 +81,9 @@ The package includes a CLI via `bin/taskflow.js` using Commander.js:
 ```bash
 # Initialize project
 taskflow init [project-name]
+
+# Configure AI
+taskflow configure ai --provider <provider> --apiKey <key>
 
 # Status and navigation
 taskflow status [id]

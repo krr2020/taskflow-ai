@@ -125,18 +125,29 @@ export function getTaskFilePath(
 	taskId: string,
 ): string | null {
 	const location = findTaskLocation(tasksProgress, taskId);
-	if (!location) return null;
+	if (!location) {
+		console.log(`Debug: Task location not found for ${taskId}`);
+		return null;
+	}
 
 	const { feature, story, task } = location;
 	const featureDir = path.join(tasksDir, feature.path || "");
 
-	if (!fs.existsSync(featureDir)) return null;
+	if (!fs.existsSync(featureDir)) {
+		console.log(`Debug: Feature dir not found: ${featureDir}`);
+		return null;
+	}
 
 	// Find story directory by ID prefix (handles variable naming)
 	const dirs = fs
 		.readdirSync(featureDir)
 		.filter((d) => d.startsWith(`S${story.id}-`));
-	if (dirs.length === 0) return null;
+	if (dirs.length === 0) {
+		console.log(
+			`Debug: Story dir not found in ${featureDir} starting with S${story.id}-`,
+		);
+		return null;
+	}
 
 	const storyDir = path.join(featureDir, dirs[0] as string);
 
@@ -144,7 +155,14 @@ export function getTaskFilePath(
 	const files = fs
 		.readdirSync(storyDir)
 		.filter((f) => f.startsWith(`T${task.id}`));
-	return files.length > 0 ? path.join(storyDir, files[0] as string) : null;
+	if (files.length === 0) {
+		console.log(
+			`Debug: Task file not found in ${storyDir} starting with T${task.id}`,
+		);
+		return null;
+	}
+
+	return path.join(storyDir, files[0] as string);
 }
 
 export function loadTaskFile(filePath: string): TaskFileContent | null {

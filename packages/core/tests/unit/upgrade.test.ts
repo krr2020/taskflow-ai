@@ -3,6 +3,7 @@
  */
 
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { CommandContext } from "../../src/commands/base.js";
@@ -25,13 +26,18 @@ describe("UpgradeCommand", () => {
 
 	describe("execute", () => {
 		it("should fail if .taskflow directory does not exist", async () => {
-			const emptyDir = createTestDir();
+			// Create a fresh temporary directory that's NOT the testDir
+			// This test needs to verify command fails when .taskflow doesn't exist
+			const emptyDir = fs.mkdtempSync(path.join(os.tmpdir(), "taskflow-test-empty-"));
 			const cmd = new UpgradeCommand({ projectRoot: emptyDir });
 
 			const result = await cmd.execute();
 
 			expect(result.success).toBe(false);
 			expect(result.output).toContain("No .taskflow directory found");
+
+			// Clean up
+			fs.rmSync(emptyDir, { recursive: true, force: true });
 		});
 
 		it("should report already up to date if versions match", async () => {

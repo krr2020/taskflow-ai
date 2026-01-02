@@ -62,7 +62,11 @@ export class OpenAICompatibleProvider extends LLMProvider {
 		const data = (await response.json()) as {
 			choices: Array<{ message: { content: string }; finish_reason: string }>;
 			model: string;
-			usage?: { total_tokens: number };
+			usage?: {
+				total_tokens: number;
+				prompt_tokens: number;
+				completion_tokens: number;
+			};
 		};
 		const choice = data.choices[0];
 
@@ -74,6 +78,8 @@ export class OpenAICompatibleProvider extends LLMProvider {
 			content: choice.message.content,
 			model: data.model,
 			tokensUsed: data.usage?.total_tokens ?? 0,
+			promptTokens: data.usage?.prompt_tokens ?? 0,
+			completionTokens: data.usage?.completion_tokens ?? 0,
 			finishReason: choice.finish_reason,
 		};
 	}

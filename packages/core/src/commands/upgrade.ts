@@ -339,6 +339,12 @@ export class UpgradeCommand extends BaseCommand {
 			return;
 		}
 
+		// Ensure directory exists before writing
+		const targetDir = path.dirname(file.currentPath);
+		if (!fs.existsSync(targetDir)) {
+			fs.mkdirSync(targetDir, { recursive: true });
+		}
+
 		const content = fs.readFileSync(file.templatePath, "utf-8");
 		fs.writeFileSync(file.currentPath, content);
 	}
