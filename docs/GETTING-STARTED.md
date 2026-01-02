@@ -1,0 +1,394 @@
+# Getting Started with Taskflow
+
+This guide will take you from installation to your first completed task in about 10 minutes.
+
+---
+
+## Prerequisites
+
+- Node.js 16+ and npm or pnpm
+- Git installed and configured
+- A project directory (existing or new)
+
+---
+
+## Step 1: Installation
+
+Choose the installation method that fits your workflow:
+
+### Global CLI (Recommended for most users)
+
+```bash
+npm install -g @krr2020/taskflow
+```
+
+After installation, verify it works:
+
+```bash
+taskflow --version
+```
+
+### MCP Server (For Claude Desktop users)
+
+```bash
+npm install -g @krr2020/taskflow-mcp
+```
+
+Then configure Claude Desktop by editing `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "taskflow": {
+      "command": "npx",
+      "args": ["-y", "@krr2020/taskflow-mcp"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop and look for the tools icon to verify Taskflow is connected.
+
+### Project Dependency
+
+```bash
+cd your-project
+npm install -D @krr2020/taskflow
+```
+
+Use with `npx @krr2020/taskflow <command>` or add a script to package.json:
+
+```json
+{
+  "scripts": {
+    "task": "taskflow"
+  }
+}
+```
+
+Then use: `npm run task <command>`
+
+---
+
+## Step 2: Initialize Your Project
+
+Navigate to your project directory and initialize Taskflow:
+
+```bash
+cd your-project
+taskflow init
+```
+
+This creates:
+
+```
+your-project/
+├── taskflow.config.json    # Project configuration
+├── tasks/                  # Where task files will live
+└── .taskflow/
+    ├── ref/                # AI protocol files
+    └── logs/               # Validation logs
+```
+
+The project name is auto-detected from package.json or uses the directory name.
+
+---
+
+## Step 3: Create Your First Feature Specification
+
+Create a Product Requirements Document (PRD) for your feature:
+
+```bash
+taskflow prd create user-authentication
+```
+
+This creates `tasks/prds/YYYY-MM-DD-user-authentication.md` with a template. Open it and fill in your requirements:
+
+```markdown
+# User Authentication
+
+## Overview
+Add secure user authentication with login, logout, and session management.
+
+## User Stories
+1. As a user, I want to log in with email and password
+2. As a user, I want to stay logged in across sessions
+3. As a user, I want to securely log out
+
+## Technical Requirements
+- JWT-based authentication
+- Secure password hashing (bcrypt)
+- HTTP-only cookies for session tokens
+- Rate limiting on login endpoint
+
+## Acceptance Criteria
+- Users can log in with valid credentials
+- Invalid credentials show appropriate error messages
+- Sessions persist across browser restarts
+- Logout clears all session data
+```
+
+Save the file when done.
+
+---
+
+## Step 4: Generate Tasks from the PRD
+
+Taskflow can auto-generate a task breakdown from your PRD (requires AI configuration, see below) or you can create tasks manually.
+
+### With AI (Recommended)
+
+First, configure an AI provider:
+
+```bash
+# Set your API key
+export ANTHROPIC_API_KEY=your-key-here
+
+# Configure Taskflow
+taskflow configure ai --provider anthropic --model claude-3-5-sonnet-20241022
+```
+
+Then generate tasks:
+
+```bash
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
+```
+
+This creates a structured task breakdown:
+
+```
+tasks/
+├── project-index.json
+└── F1/                        # Feature 1: User Authentication
+    ├── F1.json
+    └── S1.1/                  # Story 1.1: Login Endpoint
+        ├── T1.1.0.json        # Task: Create auth endpoints
+        ├── T1.1.1.json        # Task: Add password hashing
+        └── T1.1.2.json        # Task: Session management
+```
+
+### Without AI
+
+You can manually create task files following the JSON schema. See [Architecture](./ARCHITECTURE.md) for the task file format.
+
+---
+
+## Step 5: View Your Tasks
+
+Check the status of your project:
+
+```bash
+taskflow status
+```
+
+Output:
+
+```
+PROJECT: your-project
+
+Features:
+  F1: User Authentication [not-started]
+    S1.1: Login endpoint [not-started]
+      T1.1.0: Create auth endpoints [not-started]
+      T1.1.1: Add password hashing [not-started]
+      T1.1.2: Session management [not-started]
+```
+
+---
+
+## Step 6: Start Your First Task
+
+Begin working on the first task:
+
+```bash
+taskflow start 1.1.0
+```
+
+Taskflow will:
+- Create or switch to the Git branch `story/S1.1-login-endpoint`
+- Set the task status to `setup`
+- Display what to do next
+
+Output:
+
+```
+Task started: T1.1.0 - Create auth endpoints
+Status: setup
+Branch: story/S1.1-login-endpoint
+
+NEXT STEPS:
+Run: taskflow do
+```
+
+---
+
+## Step 7: Follow the Task Workflow
+
+Taskflow guides you through each state of the task:
+
+### Read instructions
+
+```bash
+taskflow do
+```
+
+This shows you what to do in the current state.
+
+### Advance to the next state
+
+```bash
+taskflow check
+```
+
+This moves you through the workflow:
+
+```
+setup → implementing → verifying → validating → committing
+```
+
+In the **implementing** state, you write your code. In the **validating** state, Taskflow runs automated checks:
+
+```bash
+taskflow check  # Runs lint, type-check, tests
+```
+
+If validations fail, you'll see the errors and can fix them before running `taskflow check` again.
+
+---
+
+## Step 8: Commit Your Work
+
+Once all validations pass, you'll be in the **committing** state:
+
+```bash
+taskflow commit "- Add POST /api/auth/login endpoint
+- Add POST /api/auth/logout endpoint
+- Implement JWT token generation
+- Add input validation"
+```
+
+Taskflow will:
+- Create a conventional commit with your message
+- Push to the remote branch
+- Mark the task as completed
+- Show you the next available task
+
+Output:
+
+```
+Changes committed successfully
+Commit: a3f8d92
+Message: feat(F1): T1.1.0 - Create auth endpoints
+
+- Add POST /api/auth/login endpoint
+- Add POST /api/auth/logout endpoint
+- Implement JWT token generation
+- Add input validation
+
+Story: S1.1
+
+NEXT AVAILABLE TASK:
+T1.1.1: Add password hashing
+
+Run: taskflow start 1.1.1
+```
+
+---
+
+## Step 9: Continue with Remaining Tasks
+
+Repeat steps 6-8 for each task:
+
+```bash
+taskflow start 1.1.1
+taskflow do
+# ... write code ...
+taskflow check
+taskflow commit "- Implemented bcrypt password hashing
+- Added password validation"
+```
+
+---
+
+## Step 10: Monitor Progress
+
+At any time, check your progress:
+
+```bash
+# Project overview
+taskflow status
+
+# Specific feature
+taskflow status 1
+
+# Specific story
+taskflow status 1.1
+
+# Find next task
+taskflow next
+```
+
+---
+
+## Common Workflow Patterns
+
+### If you need to pause work
+
+Just stop. Taskflow saves your state. When you return:
+
+```bash
+taskflow resume
+```
+
+### If you get blocked
+
+Mark the task as blocked and move on:
+
+```bash
+taskflow skip "Waiting for backend API to be deployed"
+```
+
+Later, restart the blocked task:
+
+```bash
+taskflow start 1.1.0  # Resumes from where you left off
+```
+
+### If validations fail
+
+Read the error message and check the log file:
+
+```bash
+cat .taskflow/logs/T1-1-0-typeCheck-YYYY-MM-DD.log
+```
+
+Fix the issues and run:
+
+```bash
+taskflow check
+```
+
+---
+
+## Next Steps
+
+Now that you've completed your first task, explore:
+
+- [User Guide](./USER-GUIDE.md) - Learn common workflows and patterns
+- [Commands Reference](./COMMANDS.md) - See all available commands
+- [Configuration Guide](./CONFIG.md) - Configure AI providers and validations
+- [Troubleshooting](./TROUBLESHOOTING.md) - Solve common issues
+
+---
+
+## Tips for Success
+
+1. **One task at a time**: Complete or block a task before starting another
+2. **Write clear commit messages**: Use bullet points that describe what changed
+3. **Use the retrospective system**: Document solutions to prevent repeated errors
+4. **Review before validating**: The verifying state catches issues early
+5. **Commit frequently**: One task = one commit for clean Git history
+
+---
+
+**You're ready to use Taskflow! Start with a small feature and work your way up.**

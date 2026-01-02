@@ -1,393 +1,77 @@
 # Taskflow Commands Reference
 
-Complete reference for all Taskflow CLI commands.
+Quick reference for all Taskflow CLI commands.
 
-## Table of Contents
-
-- [Initialization Commands](#initialization-commands)
-- [Configuration Commands](#configuration-commands)
-- [Upgrade Command](#upgrade-command)
-- [PRD Commands](#prd-commands)
-- [Task Workflow Commands](#task-workflow-commands)
-- [Navigation Commands](#navigation-commands)
-- [Recovery Commands](#recovery-commands)
-- [Retrospective Commands](#retrospective-commands)
+For detailed workflows and usage patterns, see the [User Guide](./USER-GUIDE.md).
 
 ---
 
-## Initialization Commands
+## Initialization & Setup
 
 ### `taskflow init [project-name]`
 
-Initialize a new Taskflow project in the current directory.
+Initialize Taskflow in the current directory.
 
-**Usage:**
 ```bash
-# Initialize with default project name (directory name)
-taskflow init
-
-# Initialize with custom project name
-taskflow init my-awesome-project
+taskflow init                  # Auto-detect project name
+taskflow init my-project       # Specify project name
 ```
 
-**What it creates:**
-```
-your-project/
-├── taskflow.config.json      # Configuration
-├── tasks/                     # Task files go here
-└── .taskflow/
-    ├── ref/                   # Reference documentation
-    │   ├── ai-protocol.md
-    │   ├── task-generator.md
-    │   ├── task-executor.md
-    │   ├── retrospective.md
-    │   ├── prd-generator.md
-    │   └── coding-standards.md
-    └── logs/                  # Validation logs
-```
-
-**Example output:**
-```
-✓ Taskflow initialized for project: my-project
-✓ Created: taskflow.config.json
-✓ Created: tasks/
-✓ Created: .taskflow/ref/
-✓ Created: .taskflow/logs/
-
-NEXT STEPS:
-1. Create a PRD: taskflow prd create feature-name
-2. Generate tasks: taskflow tasks generate your-prd.md
-3. Start working: taskflow start <task-id>
-```
+Creates: `taskflow.config.json`, `tasks/`, `.taskflow/ref/`, `.taskflow/logs/`
 
 ---
-
-## Configuration Commands
-
-### `taskflow configure ai [options]`
-
-Configure AI/LLM integration for Taskflow.
-
-**Usage:**
-```bash
-# New format: Add model definitions
-taskflow configure ai --addModel '{"claude-sonnet":{"provider":"anthropic","model":"claude-3-5-sonnet-20241022","apiKey":"${ANTHROPIC_API_KEY}"}}'
-
-# New format: Set usage mapping for phases
-taskflow configure ai --setPlanning claude-sonnet
-taskflow configure ai --setExecution gpt-4o-mini
-taskflow configure ai --setAnalysis claude-sonnet
-taskflow configure ai --setDefault claude-sonnet
-
-# Legacy format: Single provider (still supported)
-taskflow configure ai \
-  --provider anthropic \
-  --model claude-3-5-sonnet-20241022 \
-  --apiKey ${ANTHROPIC_API_KEY}
-
-# Show current configuration
-taskflow configure ai --show
-
-# Disable AI while keeping config
-taskflow configure ai --disable
-```
-
-**Options:**
-
-| Option | Description | Required |
-|--------|-------------|----------|
-| `--addModel <json>` | Add new model definition (JSON format) | No |
-| `--removeModel <name>` | Remove a model definition | No |
-| `--setDefault <name>` | Set default model for all phases | No |
-| `--setPlanning <name>` | Set model for planning phase | No |
-| `--setExecution <name>` | Set model for execution phase | No |
-| `--setAnalysis <name>` | Set model for analysis phase | No |
-| `--provider <name>` | LLM provider name (legacy format) | No* |
-| `--model <name>` | Model name (legacy format) | No* |
-| `--planning <name>` | Model for planning phase (legacy) | No* |
-| `--execution <name>` | Model for execution phase (legacy) | No* |
-| `--analysis <name>` | Model for analysis phase (legacy) | No* |
-| `--apiKey <key>` | API key (or use env var) | No** |
-| `--executionApiKey <key>` | API key for execution phase (legacy) | No** |
-| `--apiEndpoint <url>` | Custom API endpoint | No |
-| `--apiVersion <version>` | API version (Azure) | No |
-| `--show` | Show current configuration | No |
-| `--disable` | Disable AI features | No |
-
-*Legacy format options (single provider)
-**Required if environment variable not set
-
-**Providers:**
-- `anthropic` - Anthropic Claude API
-- `openai-compatible` - OpenAI, Azure, Together, Groq, DeepSeek, or any OpenAI-compatible API
-- `ollama` - Local Ollama
-
-**New format examples:**
-```bash
-# Add multiple models
-taskflow configure ai --addModel '{"claude-sonnet":{"provider":"anthropic","model":"claude-3-5-sonnet-20241022","apiKey":"${ANTHROPIC_API_KEY}"}}'
-taskflow configure ai --addModel '{"openai-gpt4":{"provider":"openai-compatible","model":"gpt-4o-mini","apiKey":"${OPENAI_API_KEY}"}}'
-taskflow configure ai --addModel '{"ollama-local":{"provider":"ollama","model":"llama2","baseUrl":"http://localhost:11434"}}'
-
-# Set usage mapping
-taskflow configure ai --setPlanning claude-sonnet
-taskflow configure ai --setExecution openai-gpt4
-taskflow configure ai --setAnalysis claude-sonnet
-```
-
-**Legacy format examples:**
-```bash
-# Simple single-provider setup
-taskflow configure ai \
-  --provider anthropic \
-  --model claude-3-5-sonnet-20241022
-```
-
-**Example output:**
-```
-✓ AI configuration updated
-
-AI Configuration:
-──────────────────────────────────────────────────────────────────────────
-Enabled: ✓
-Model Definitions:
-  claude-sonnet:
-    Provider: anthropic
-    Model: claude-3-5-sonnet-20241022
-    API Key: ***configured***
-  openai-gpt4:
-    Provider: openai-compatible
-    Model: gpt-4o-mini
-    Base URL: https://api.openai.com/v1
-    API Key: ***configured***
-
-Usage Mapping:
-  Default: claude-sonnet
-  Planning: claude-sonnet
-  Execution: openai-gpt4
-  Analysis: claude-sonnet
-
-NEXT STEPS:
-1. Test: taskflow tasks generate your-prd.md
-2. Or run: taskflow start <task-id>
-```
-
-**Per-phase model usage:**
-- **Planning**: `tasks generate`, `prd generate-arch` - Task generation and architecture
-- **Execution**: Error analysis, code suggestions during implementation
-- **Analysis**: Validation fixing, retrospective updates
-
-**Environment variables (recommended):**
-```bash
-export ANTHROPIC_API_KEY=sk-ant-your-key-here
-export OPENAI_API_KEY=sk-your-key-here
-export AZURE_OPENAI_API_KEY=your-key-here
-export GROQ_API_KEY=gsk-your-key-here
-```
-
-**Ollama setup (no API key required):**
-```bash
-# Install Ollama
-# https://ollama.ai
-
-# Pull a model
-ollama pull llama3.1
-
-# Configure
-taskflow configure ai --provider ollama --model llama3.1
-```
-
-**Configuration file update:**
-After running `taskflow configure ai`, `taskflow.config.json` is updated:
-
-**New format:**
-```json
-{
-  "version": "2.0",
-  "ai": {
-    "enabled": true,
-    "models": {
-      "claude-sonnet": {
-        "provider": "anthropic",
-        "model": "claude-3-5-sonnet-20241022",
-        "apiKey": "${ANTHROPIC_API_KEY}"
-      },
-      "openai-gpt4": {
-        "provider": "openai-compatible",
-        "model": "gpt-4o-mini",
-        "apiKey": "${OPENAI_API_KEY}"
-      }
-    },
-    "usage": {
-      "default": "claude-sonnet",
-      "planning": "claude-sonnet",
-      "execution": "openai-gpt4",
-      "analysis": "claude-sonnet"
-    }
-  }
-}
-```
-
-**Legacy format:**
-```json
-{
-  "version": "2.0",
-  "ai": {
-    "enabled": true,
-    "provider": "anthropic",
-    "model": "claude-3-5-sonnet-20241022",
-    "apiKey": "${ANTHROPIC_API_KEY}"
-  }
-}
-```
-
-**See [CONFIG.md](./CONFIG.md) for complete configuration reference.**
-
----
-
-## Upgrade Command
 
 ### `taskflow upgrade [options]`
 
-Upgrade `.taskflow` reference files to the latest version.
+Upgrade reference files to the latest templates.
 
-**Usage:**
 ```bash
-# Check if upgrade available (shows diff)
-taskflow upgrade --diff
-
-# Upgrade with prompts for user-generated files
-taskflow upgrade
-
-# Force upgrade (overwrite all files)
-taskflow upgrade --force
-
-# Auto upgrade (skip all prompts)
-taskflow upgrade --auto
+taskflow upgrade               # Upgrade with prompts
+taskflow upgrade --diff        # Show what will change
+taskflow upgrade --force       # Force overwrite all files
 ```
-
-**Options:**
-
-| Option | Description |
-|--------|-------------|
-| `--diff` | Show diff summary without upgrading |
-| `--auto` | Skip prompts for user-generated files |
-| `--force` | Force upgrade even if customized files will be overwritten |
-
-**What it does:**
-1. Checks current version vs latest template version
-2. Shows which files will be updated
-3. Warns about customized files that will be overwritten
-4. Creates backup of existing files
-5. Updates reference files to latest templates
-
-**Update Strategies:**
-
-| Strategy | Files | Description |
-|-----------|--------|-------------|
-| **NEVER** | `retrospective.md` | Never touched (preserves your data) |
-| **PROMPT** | `coding-standards.md`, `architecture-rules.md` | User-generated, preserved with prompt |
-| **SUGGEST** | `ai-protocol.md`, `task-generator.md`, `task-executor.md`, `prd-generator.md` | Updated (overwrites if customized) |
-| **AUTO** | `.version` | Always updated |
-
-**Example output:**
-```
-📦 TaskFlow Template Upgrade
-
-Current version: unknown
-Latest version: 0.1.0
-
-Files to update:
-  ✓ ai-protocol.md (will update)
-  ✓ task-generator.md (will update)
-  ✓ task-executor.md (will update)
-  ✓ prd-generator.md (will update)
-  ✓ coding-standards.md (will update)
-  ✓ architecture-rules.md (will update)
-  📝 retrospective.md (never touched)
-
-Creating backup...
-✓ Backup created: .taskflow/backups/vunknown-2026-01-01
-
-⚠️  IMPORTANT: Backup location saved above
-You can restore your files if needed:
-  cp .taskflow/backups/vunknown-2026-01-01/* .taskflow/ref/
-
-  ✓ Updated ai-protocol.md
-  ✓ Updated task-generator.md
-  ✓ Updated task-executor.md
-  ✓ Updated prd-generator.md
-  ✓ Updated coding-standards.md
-  ✓ Updated architecture-rules.md
-
-✅ Upgrade complete!
-  Updated: 6 files
-  Skipped: 0 files
-  Preserved: retrospective.md, logs
-```
-
-**Warning for customized files:**
-```
-⚠️  WARNING: Customized files detected!
-
-The following files have been modified and will be overwritten:
-  - coding-standards.md
-
-Your customizations will be LOST!
-
-To proceed anyway, use:
-  taskflow upgrade --force
-```
-
-**Backup location:**
-- Backups are saved to: `.taskflow/backups/v{version}-{date}/`
-- To restore: `cp .taskflow/backups/v{version}-{date}/* .taskflow/ref/`
-
-**See [CONFIG.md](./CONFIG.md) for complete configuration reference.**
 
 ---
 
-## PRD Commands
+## Configuration
+
+### `taskflow configure ai [options]`
+
+Configure AI/LLM integration.
+
+```bash
+# Quick setup (single provider)
+taskflow configure ai --provider anthropic --model claude-3-5-sonnet-20241022
+
+# Advanced setup (multiple models)
+taskflow configure ai --addModel '{"claude-sonnet":{"provider":"anthropic","model":"claude-3-5-sonnet-20241022","apiKey":"${ANTHROPIC_API_KEY}"}}'
+taskflow configure ai --setPlanning claude-sonnet
+taskflow configure ai --setExecution gpt-4o-mini
+
+# View configuration
+taskflow configure ai --show
+
+# Disable AI features
+taskflow configure ai --disable
+```
+
+**Supported providers**: `anthropic`, `openai-compatible`, `ollama`
+
+See [CONFIG.md](./CONFIG.md) for detailed configuration options.
+
+---
+
+## PRD & Task Generation
 
 ### `taskflow prd create <feature-name>`
 
-Create a PRD (Product Requirements Document) template for a new feature.
+Create a Product Requirements Document template.
 
-**Usage:**
 ```bash
 taskflow prd create user-authentication
 ```
 
-**Creates:**
-- `tasks/prds/YYYY-MM-DD-user-authentication.md`
-
-**Example PRD structure:**
-```markdown
-# User Authentication
-
-## Overview
-Add secure user authentication with login, logout, and session management.
-
-## User Stories
-1. As a user, I want to log in with email and password
-2. As a user, I want to stay logged in across sessions
-3. As a user, I want to securely log out
-
-## Technical Requirements
-- JWT-based authentication
-- Secure password hashing (bcrypt)
-- HTTP-only cookies for session tokens
-- Rate limiting on login endpoint
-
-## Dependencies
-- Database schema changes
-- User model updates
-
-## Success Criteria
-- Users can log in with valid credentials
-- Users cannot log in with invalid credentials
-- Sessions persist across browser refreshes
-```
+Creates: `tasks/prds/YYYY-MM-DD-user-authentication.md`
 
 ---
 
@@ -395,689 +79,256 @@ Add secure user authentication with login, logout, and session management.
 
 Generate architecture documentation from a PRD.
 
-**Usage:**
 ```bash
-taskflow prd generate-arch 2024-01-15-user-authentication.md
+taskflow prd generate-arch tasks/prds/YYYY-MM-DD-user-authentication.md
 ```
 
-**Creates/Updates:**
-- `.taskflow/ref/coding-standards.md` - Project-specific coding standards
-- `.taskflow/ref/ARCHITECTURE-RULES.md` - Architecture patterns and constraints
+Creates: `.taskflow/ref/coding-standards.md`, `.taskflow/ref/ARCHITECTURE-RULES.md`
 
-**Example output:**
-```
-✓ Architecture documentation generated
-✓ Created: .taskflow/ref/coding-standards.md
-✓ Created: .taskflow/ref/ARCHITECTURE-RULES.md
-
-NEXT STEPS:
-1. Review the generated standards
-2. Customize as needed
-3. Generate tasks: taskflow tasks generate your-prd.md
-```
+**Requires**: AI configuration
 
 ---
 
 ### `taskflow tasks generate <prd-file>`
 
-Generate a complete task breakdown from a PRD.
+Generate task breakdown from a PRD.
 
-**Usage:**
 ```bash
-taskflow tasks generate 2024-01-15-user-authentication.md
+taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md
 ```
 
-**Creates:**
-```
-tasks/
-├── project-index.json         # Project overview
-└── F1/                        # Feature 1: User Authentication
-    ├── F1.json                # Feature file with all stories
-    └── S1.1/                  # Story 1.1: Login endpoint
-        ├── T1.1.0.json        # Task: Create auth endpoints
-        ├── T1.1.1.json        # Task: Add password hashing
-        └── T1.1.2.json        # Task: Implement session management
-```
+Creates: `tasks/project-index.json`, feature/story/task JSON files
 
-**Example output:**
-```
-✓ Tasks generated from PRD
-✓ Created: tasks/project-index.json
-✓ Created: tasks/F1/F1.json
-✓ Created: 3 stories, 8 tasks
-
-TASK SUMMARY:
-Feature F1: User Authentication [not-started]
-  S1.1: Login endpoint [not-started]
-    - T1.1.0: Create auth endpoints [not-started]
-    - T1.1.1: Add password hashing [not-started]
-    - T1.1.2: Implement session management [not-started]
-  S1.2: Logout endpoint [not-started]
-  S1.3: Session management [not-started]
-
-NEXT STEPS:
-View status: taskflow status
-Start task: taskflow start 1.1.0
-```
+**Requires**: AI configuration
 
 ---
 
-## Task Workflow Commands
+## Task Workflow
 
 ### `taskflow start <task-id>`
 
-Start working on a task. Resumes if already active.
+Start working on a task.
 
-**Usage:**
 ```bash
 taskflow start 1.1.0
 ```
 
-**What it does:**
-1. Checks for active sessions (error if different task is active)
-2. Verifies task dependencies are complete
-3. Creates/switches to correct story branch
-4. Sets task status to `setup`
-5. Marks task as active
-
-**Example output:**
-```
-✓ Task started: T1.1.0 - Create auth endpoints
-✓ Status: setup
-✓ Branch: story/S1.1-login-endpoint
-✓ Dependencies: All complete
-
-TASK: T1.1.0 - Create auth endpoints
-DESCRIPTION: Create POST /api/auth/login and POST /api/auth/logout endpoints
-SKILL: backend
-
-NEXT STEPS:
-1. Read the context: taskflow do
-2. Advance: taskflow check
-```
-
-**Error scenarios:**
-
-```bash
-# If another task is active
-✗ Cannot start task 2.1.0
-
-Active session exists for task 1.1.0
-
-Options:
-- Complete current: taskflow commit "..."
-- Skip current: taskflow skip --reason "..."
-```
-
-```bash
-# If dependencies not met
-✗ Cannot start task 1.2.0
-
-Dependencies not met:
-  T1.1.0: Create auth endpoints [not-started]
-  T1.1.1: Add password hashing [not-started]
-
-Complete dependencies first.
-```
+- Creates/switches to story branch
+- Sets status to `setup`
+- Shows task details and next steps
 
 ---
 
 ### `taskflow do`
 
-Execute the next step of the current active task.
+Show instructions for the current task state.
 
-**Usage:**
 ```bash
 taskflow do
 ```
 
-**Output varies by state:**
-
-**Setup state:**
-```
-🚀 STATUS: SETUP
-
-GOAL: Understand requirements and prepare environment
-
-TASK: T1.1.0 - Create auth endpoints
-
-DESCRIPTION: Create POST /api/auth/login and POST /api/auth/logout endpoints
-
-CONTEXT:
-- See auth requirements in docs/auth.md
-- Review existing user model in src/models/User.ts
-
-NEXT STEPS:
-1. Read context files
-2. Understand JWT token structure
-3. Review API conventions
-4. Run: taskflow check to advance
-
-REFERENCES:
-- AI Protocol: .taskflow/ref/ai-protocol.md
-- Coding Standards: .taskflow/ref/coding-standards.md
-```
-
-**Implementing state:**
-```
-🚀 STATUS: IMPLEMENTING
-
-GOAL: Write code to implement the feature
-
-TASK: T1.1.0 - Create auth endpoints
-
-SUBTASKS:
-  [ ] 1. Create login endpoint
-  [ ] 2. Create logout endpoint
-  [ ] 3. Add input validation
-
-NEXT STEPS:
-1. Implement the subtasks above
-2. Mark subtasks as completed:
-   taskflow subtask complete 1
-3. When done, run: taskflow check
-
-DO:
-- Follow coding standards in .taskflow/ref/coding-standards.md
-- Use existing patterns in the codebase
-- Write tests for new code
-
-DON'T:
-- Skip tests
-- Ignore error handling
-- Commit before validation passes
-```
-
-**Verifying state:**
-```
-🚀 STATUS: VERIFYING
-
-GOAL: Self-review your implementation
-
-CHECKLIST:
-- [ ] Code follows coding standards
-- [ ] All subtasks are completed
-- [ ] Error handling is comprehensive
-- [ ] Edge cases are handled
-- [ ] Code is tested
-
-NEXT STEPS:
-1. Review your code
-2. Complete checklist items
-3. Run: taskflow check to advance
-```
-
-**Validating state:**
-```
-🚀 STATUS: VALIDATING
-
-GOAL: Run automated validations
-
-The following validations will run:
-- format: Fix code formatting
-- type-check: Type checking
-- lint: Lint checks
-
-NEXT STEPS:
-Run: taskflow check to execute validations
-```
-
-**Committing state:**
-```
-🚀 STATUS: COMMITTING
-
-GOAL: Commit and push your changes
-
-COMMIT MESSAGE FORMAT:
-feat(F1): T1.1.0 - Create auth endpoints
-
-- Add POST /api/auth/login endpoint
-- Add POST /api/auth/logout endpoint
-- Implement JWT token generation
-- Add input validation for email and password
-
-Story: S1.1
-
-NEXT STEPS:
-Run: taskflow commit "- Bullet point 1\n- Bullet point 2"
-```
+Displays state-specific guidance and next steps.
 
 ---
 
 ### `taskflow check`
 
-Validate and advance to the next workflow state.
+Advance to the next workflow state or run validations.
 
-**Usage:**
 ```bash
 taskflow check
 ```
 
-**Behavior varies by current state:**
-
-**Setup → Planning:**
-```
-✓ Status advanced: setup → planning
-
-GOAL: Plan your implementation approach
-
-NEXT STEPS:
-1. Think through the implementation
-2. Run: taskflow check
-```
-
-**Planning → Implementing:**
-```
-✓ Status advanced: planning → implementing
-
-TASK: T1.1.0 - Create auth endpoints
-
-DESCRIPTION: Create POST /api/auth/login and POST /api/auth/logout endpoints
-
-SUBTASKS:
-  [ ] 1. Create login endpoint
-  [ ] 2. Create logout endpoint
-  [ ] 3. Add input validation
-
-NEXT STEPS:
-1. Read the task description and subtasks
-2. Implement the required functionality
-3. Run: taskflow check when done
-```
-
-**Implementing → Verifying:**
-```
-✓ Status advanced: implementing → verifying
-
-NEXT STEPS:
-1. Review your implementation
-2. Check for edge cases
-3. Ensure subtasks are completed
-4. Run: taskflow check when ready
-```
-
-**Verifying → Validating:**
-```
-✓ Status advanced: verifying → validating
-
-NEXT STEPS:
-Run: taskflow check to run validations
-```
-
-**Validating (run validations):**
-```
-Running validations...
-
-✓ format    (as configured)       PASSED
-✓ typeCheck (as configured)       PASSED
-✓ lint      (as configured)       PASSED
-
-✓ Status advanced: validating → committing
-
-NEXT STEPS:
-Run: taskflow commit "- Bullet point 1\n- Bullet point 2"
-```
-
-**Validation failure:**
-```
-Running validations...
-
-✓ format    PASSED
-✗ typeCheck FAILED
-
-ERROR: Type error in src/auth.ts:15
-Property 'email' does not exist on type 'User'
-
-⚠️ Check .taskflow/logs/T1-1-0-typeCheck-2024-01-15.log for details
-
-Fix the errors and run: taskflow check again
-```
+**State progression**:
+- `setup` → `implementing`
+- `implementing` → `verifying`
+- `verifying` → `validating`
+- `validating` → runs configured checks → `committing` (if passed)
 
 ---
 
-### `taskflow commit "<bullet-points>"`
+### `taskflow commit "<message>"`
 
-Commit and push changes, marking the task as complete.
-
-**Usage:**
-```bash
-taskflow commit "- Add POST /api/auth/login endpoint
-- Add POST /api/auth/logout endpoint
-- Implement JWT token generation
-- Add input validation for email and password"
-```
-
-**What it does:**
-1. Validates we're in `committing` state
-2. Checks subtasks are completed
-3. Generates commit message in standard format
-4. Runs `git add .`
-5. Runs `git commit`
-6. Runs `git push`
-7. Updates task status to `completed`
-8. Clears active session
-9. Finds next available task
-
-**Example output:**
-```
-✓ Changes committed
-✓ Pushed to origin/story/S1.1-login-endpoint
-✓ Task completed: T1.1.0
-
-Commit: 3a8f9d2
-Message: feat(F1): T1.1.0 - Create auth endpoints
-
-- Add POST /api/auth/login endpoint
-- Add POST /api/auth/logout endpoint
-- Implement JWT token generation
-- Add input validation for email and password
-
-Story: S1.1
-
-NEXT AVAILABLE TASK:
-T1.1.1: Add password hashing
-
-NEXT STEPS:
-Run: taskflow start 1.1.1
-```
-
-**Error scenarios:**
+Commit changes and mark task complete.
 
 ```bash
-# If not in committing state
-✗ Cannot commit
-
-Invalid state for commit: implementing
-
-Run: taskflow check to advance to committing state
+taskflow commit "- Add login endpoint
+- Implement JWT authentication
+- Add input validation"
 ```
 
-```bash
-# If no subtasks completed
-✗ Cannot commit
-
-No subtasks have been marked as completed
-
-Complete at least one subtask:
-  taskflow subtask complete <subtask-id>
-```
+- Creates conventional commit
+- Pushes to remote
+- Marks task as completed
+- Shows next available task
 
 ---
 
-## Navigation Commands
+## Navigation
 
 ### `taskflow status [id]`
 
 View project, feature, or story status.
 
-**Usage:**
 ```bash
-# View project overview
-taskflow status
-
-# View specific feature
-taskflow status 1
-
-# View specific story
-taskflow status 1.1
-```
-
-**Project overview output:**
-```
-PROJECT: my-project
-
-Features:
-  F1: User Authentication [in-progress]
-    S1.1: Login endpoint [in-progress]
-      T1.1.0: Create auth endpoints [completed]
-      T1.1.1: Add password hashing [implementing]
-      T1.1.2: Implement session management [not-started]
-    S1.2: Logout endpoint [not-started]
-  F2: User Profile [not-started]
-
-ACTIVE TASK: T1.1.1
-BRANCH: story/S1.1-login-endpoint
-```
-
-**Feature output:**
-```
-FEATURE: F1 - User Authentication [in-progress]
-
-Stories:
-  S1.1: Login endpoint [in-progress]
-    ✓ T1.1.0: Create auth endpoints [completed]
-    ◐ T1.1.1: Add password hashing [implementing]
-    ○ T1.1.2: Implement session management [not-started]
-  S1.2: Logout endpoint [not-started]
-
-PROGRESS: 1/8 tasks completed (12%)
+taskflow status          # Project overview
+taskflow status 1        # Feature F1 details
+taskflow status 1.1      # Story S1.1 details
 ```
 
 ---
 
 ### `taskflow next`
 
-Find the next available task to work on.
+Find the next available task.
 
-**Usage:**
 ```bash
 taskflow next
 ```
 
-**Example output:**
-```
-NEXT AVAILABLE TASK:
-T1.1.1: Add password hashing
-
-To start:
-  taskflow start 1.1.1
-
-Context:
-- Depends on: T1.1.0 (completed)
-- Story: S1.1 - Login endpoint
-- Feature: F1 - User Authentication
-```
+Shows the next task that can be started based on dependencies.
 
 ---
 
-## Recovery Commands
+## Recovery
 
 ### `taskflow resume [status]`
 
-Resume a blocked or on-hold task to a specific status.
+Resume an interrupted or blocked task.
 
-**Usage:**
 ```bash
-# Resume to current status
-taskflow resume
-
-# Resume to specific status
-taskflow resume implementing
-```
-
-**Arguments:**
-
-| Argument | Description |
-|-----------|-------------|
-| `[status]` | Status to resume to (setup, implementing, verifying, validating). Optional. |
-
-**What it does:**
-- Finds the task with `active` flag
-- Changes task status to specified status (or current if not specified)
-- Restores the session
-- Displays current state and next steps
-
-**Example output:**
-```
-✓ Resumed task: T1.1.0 - Create auth endpoints
-✓ Status: implementing
-
-Continue where you left off...
-
-SUBTASKS:
-  [✓] 1. Create login endpoint
-  [ ] 2. Create logout endpoint
-  [ ] 3. Add input validation
-
-NEXT STEPS:
-Continue with: taskflow do
+taskflow resume                    # Resume to current state
+taskflow resume implementing       # Resume to specific state
 ```
 
 ---
 
-### `taskflow skip --reason "..."`
+### `taskflow skip --reason "<reason>"`
 
-Block the current task due to external issues.
+Block the current task.
 
-**Usage:**
 ```bash
-taskflow skip --reason "Waiting for backend API to be deployed"
+taskflow skip --reason "Waiting for API deployment"
 ```
 
-**What it does:**
-- Sets task status to `blocked`
-- Clears active session
-- Records blocking reason
-- Finds next available task
-
-**Example output:**
-```
-✓ Task T1.2.0 blocked
-Reason: Waiting for backend API to be deployed
-
-Status: blocked (was: implementing)
-
-NEXT AVAILABLE TASK:
-T1.3.0: Add error handling
-
-NEXT STEPS:
-Run: taskflow start 1.3.0
-
-To resume T1.2.0 later:
-  taskflow start 1.2.0
-```
+Sets task to `blocked` status and suggests next available task.
 
 ---
 
-## Retrospective Commands
+## Retrospective
 
 ### `taskflow retro add`
 
-Add a new error pattern to the retrospective database.
+Add an error pattern to the retrospective.
 
-**Usage:**
 ```bash
-taskflow retro add
-```
+taskflow retro add       # Interactive prompts
 
-**Interactive prompts:**
-```
-Enter error pattern category:
-  1. type_error
-  2. lint
-  3. architecture
-  4. runtime
-  5. build
-  6. test
-  7. formatting
-
-Category: 1
-
-Enter error pattern:
-Cannot find module
-
-Enter solution:
-Ensure all imports use .js extension for ESM compatibility
-
-Enter criticality (critical/high/medium/low):
-high
-
-✓ Error pattern added to retrospective
-```
-
-**Flags:**
-```bash
-# Non-interactive mode
-taskflow retro add \
-  --category type_error \
-  --pattern "Cannot find module" \
-  --solution "Use .js extensions" \
-  --criticality high
+# Or non-interactive
+taskflow retro add --category type_error --pattern "Cannot find module" --solution "Use .js extensions" --criticality high
 ```
 
 ---
 
 ### `taskflow retro list [category]`
 
-List error patterns from the retrospective database.
+List error patterns.
 
-**Usage:**
 ```bash
-# List all patterns
-taskflow retro list
-
-# List by category
-taskflow retro list type_error
-```
-
-**Example output:**
-```
-ERROR PATTERNS (type_error):
-
-1. Cannot find module
-   Solution: Ensure all imports use .js extension for ESM compatibility
-   Criticality: high
-   Occurrences: 5
-
-2. Property does not exist
-   Solution: Check type definitions and interfaces
-   Criticality: medium
-   Occurrences: 2
-
-Total patterns: 8 across 4 categories
+taskflow retro list              # All patterns
+taskflow retro list type_error   # Specific category
 ```
 
 ---
 
-## Quick Reference
+## Command Cheat Sheet
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           QUICK REFERENCE                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  Initialization:                                                             │
-│  ─────────────────                                                              │
-│  taskflow init           # Initialize project                                   │
-│  taskflow upgrade         # Upgrade reference files to latest version      │
-│                                                                              │
-│  Configuration:                                                              │
-│  ───────────────────                                                              │
-│  taskflow configure ai    # Configure LLM provider                        │
-│                                                                              │
-│  Standard Workflow:                                                          │
-│  ──────────────────                                                          │
-│  taskflow start <id>     # Start task                                       │
-│  taskflow do             # Execute next step of current task          │
-│  taskflow check          # Advance to next state                          │
-│  (write code)                                                                │
-│  taskflow check          # Advance through: VERIFYING → VALIDATING          │
-│  taskflow commit "..."   # Commit and complete (auto-marks completed)       │
-│                                                                              │
-│  Navigation:                                                                 │
-│  ───────────                                                                 │
-│  taskflow status         # Project overview                                 │
-│  taskflow next           # Find next task                                   │
-│                                                                              │
-│  Recovery:                                                                   │
-│  ─────────                                                                   │
-│  taskflow resume [status] # Resume to specific status or current           │
-│  taskflow skip           # Block current task                               │
-│                                                                              │
-│  Retrospective:                                                              │
-│  ──────────────                                                              │
-│  taskflow retro add      # Add error pattern                                │
-│  taskflow retro list     # View patterns                                    │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+Initialization
+├─ init [name]                 Initialize project
+├─ upgrade [--diff|--force]    Upgrade reference files
+└─ configure ai [options]      Configure AI integration
+
+Planning
+├─ prd create <name>           Create PRD template
+├─ prd generate-arch <file>    Generate architecture docs
+└─ tasks generate <file>       Generate task breakdown
+
+Workflow (Main Loop)
+├─ start <id>                  Start task
+├─ do                          Show current instructions
+├─ check                       Advance state or validate
+└─ commit "<message>"          Commit and complete
+
+Navigation
+├─ status [id]                 View progress
+└─ next                        Find next task
+
+Recovery
+├─ resume [status]             Resume interrupted task
+└─ skip --reason "<reason>"    Block current task
+
+Learning
+├─ retro add                   Add error pattern
+└─ retro list [category]       View patterns
 ```
+
+---
+
+## Task State Flow
+
+```
+not-started → setup → implementing → verifying → validating → committing → completed
+                                                      ↓
+                                                   blocked
+```
+
+- **setup**: Read requirements and context
+- **implementing**: Write code
+- **verifying**: Self-review
+- **validating**: Run automated checks
+- **committing**: Ready to commit
+- **blocked**: External blocker
+
+---
+
+## Validation Commands
+
+Configured in `taskflow.config.json`:
+
+```json
+{
+  "validation": {
+    "commands": {
+      "format": "prettier --write .",
+      "lint": "eslint .",
+      "typeCheck": "tsc --noEmit",
+      "test": "jest",
+      "build": "npm run build"
+    }
+  }
+}
+```
+
+Runs during `taskflow check` when in `validating` state.
+
+---
+
+## Environment Variables
+
+```bash
+# AI Provider API Keys
+export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
+export AZURE_OPENAI_API_KEY=...
+export GROQ_API_KEY=gsk-...
+```
+
+Use `${VAR_NAME}` in config to reference environment variables.
+
+---
+
+For detailed workflows and examples, see:
+- [Getting Started Guide](./GETTING-STARTED.md)
+- [User Guide](./USER-GUIDE.md)
+- [Configuration Guide](./CONFIG.md)

@@ -1,74 +1,127 @@
-# Taskflow Troubleshooting Guide
+# Taskflow Troubleshooting
 
-Common issues and solutions for Taskflow, including AI/LLM integration problems.
-
-## Table of Contents
-
-- [General Issues](#general-issues)
-- [AI/LLM Issues](#aillm-issues)
-- [Validation Issues](#validation-issues)
-- [Git Issues](#git-issues)
-- [Configuration Issues](#configuration-issues)
-- [Performance Issues](#performance-issues)
-- [Getting Help](#getting-help)
+Common issues and solutions for Taskflow.
 
 ---
 
-## General Issues
+## Installation Issues
 
-### "Command not found: taskflow"
+### Command not found: taskflow
 
-**Cause:** Taskflow is not installed or not in PATH
+**Problem**: After installation, the `taskflow` command isn't recognized.
 
-**Solution:**
+**Solutions**:
+
+1. **Check npm global bin path**:
+   ```bash
+   npm config get prefix
+   # Add to PATH if needed
+   export PATH="/usr/local/bin:$PATH"
+   source ~/.bashrc  # or ~/.zshrc
+   ```
+
+2. **Use npx instead**:
+   ```bash
+   npx @krr2020/taskflow <command>
+   ```
+
+3. **Reinstall globally**:
+   ```bash
+   npm uninstall -g @krr2020/taskflow
+   npm cache clean --force
+   npm install -g @krr2020/taskflow
+   ```
+
+---
+
+### Permission errors during installation
+
+**Problem**: Getting EACCES or permission denied errors.
+
+**Solutions**:
+
+1. **Fix npm permissions (recommended)**:
+   ```bash
+   mkdir ~/.npm-global
+   npm config set prefix '~/.npm-global'
+   echo 'export PATH=~/.npm-global/bin:$PATH' >> ~/.bashrc
+   source ~/.bashrc
+   npm install -g @krr2020/taskflow
+   ```
+
+2. **Use nvm**:
+   ```bash
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+   source ~/.bashrc
+   nvm install node
+   npm install -g @krr2020/taskflow
+   ```
+
+3. **Use sudo (not recommended)**:
+   ```bash
+   sudo npm install -g @krr2020/taskflow
+   ```
+
+---
+
+### New version not working after upgrade
+
+**Problem**: Updated Taskflow but still seeing old version or errors.
+
+**Solution**:
+
 ```bash
-# If installed as dev dependency
-npx @krr2020/taskflow <command>
+# Uninstall old version
+npm uninstall -g @krr2020/taskflow
+npm uninstall -g @krr2020/taskflow-mcp
 
-# Or install globally
+# Clear cache
+npm cache clean --force
+
+# Install new version
 npm install -g @krr2020/taskflow
-taskflow <command>
+npm install -g @krr2020/taskflow-mcp
 
-# Or add script to package.json
-# Then use: pnpm task <command>
-```
+# Verify version
+taskflow --version
 
-### "No .taskflow directory"
-
-**Cause:** Project not initialized
-
-**Solution:**
-```bash
-# Initialize project
-taskflow init
-```
-
-### "Active session exists"
-
-**Cause:** Another task is already active
-
-**Solution:**
-```bash
-# Complete current task
-taskflow commit "- Changes"
-
-# Or block it
-taskflow skip --reason "Reason"
-
-# Check status
-taskflow status
-```
-
-### "Cannot find taskflow.config.json"
-
-**Cause:** Not in Taskflow project directory
-
-**Solution:**
-```bash
-# Navigate to project directory
+# Update project reference files
 cd your-project
+taskflow upgrade
+```
 
-# Check if config exists
+---
+
+## Project Initialization Issues
+
+### No .taskflow directory found
+
+**Problem**: Commands fail with "No .taskflow directory" error.
+
+**Solution**:
+
+```bash
+# Initialize the project first
+taskflow init
+
+# If already initialized, verify you're in the correct directory
+ls -la | grep taskflow
+pwd  # Verify you're in the project root
+```
+
+---
+
+### Cannot find taskflow.config.json
+
+**Problem**: Commands can't find the configuration file.
+
+**Solution**:
+
+```bash
+# Ensure you're in the project root
+cd /path/to/your/project
+
+# Verify config exists
 ls taskflow.config.json
 
 # If missing, reinitialize
@@ -77,755 +130,510 @@ taskflow init
 
 ---
 
-## AI/LLM Issues
+## Workflow Issues
 
-### "AI features not configured"
+### Active session exists
 
-**Cause:** No AI configuration in `taskflow.config.json` or `ai.enabled` is `false`
+**Problem**: Can't start a new task because another task is active.
 
-**Solution:**
+**Solution**:
+
 ```bash
-# Configure AI
-taskflow configure ai \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514 \
-  --apiKey ${ANTHROPIC_API_KEY}
+# Check current status
+taskflow status
 
-# Or use environment variable
-export ANTHROPIC_API_KEY=your-key-here
-taskflow configure ai --provider anthropic --model claude-sonnet-4-20250514
+# Option 1: Complete the current task
+taskflow check     # Advance through states
+taskflow commit "- Your changes"
+
+# Option 2: Block the current task
+taskflow skip --reason "Switching to higher priority task"
+
+# Then start the new task
+taskflow start <new-task-id>
 ```
 
-### "API key not found for provider"
+---
 
-**Cause:** API key not configured in config or environment
+### Dependencies not met
 
-**Solution:**
+**Problem**: Can't start a task because dependencies aren't complete.
+
+**Solution**:
+
 ```bash
-# Set environment variable (recommended)
-export ANTHROPIC_API_KEY=your-key-here
-export OPENAI_API_KEY=your-key-here
+# Check task dependencies
+taskflow status <task-id>
 
-# Or configure with key
-taskflow configure ai \
-  --provider anthropic \
-  --apiKey sk-ant-your-key-here
+# Complete dependencies first
+taskflow start <dependency-task-id>
+# ... complete the task ...
+
+# Then start your original task
+taskflow start <task-id>
 ```
 
-### "Invalid provider: xyz"
+---
 
-**Cause:** Provider name is misspelled or not supported
+### Wrong branch error
 
-**Solution:**
+**Problem**: Not on the correct story branch.
+
+**Solution**:
+
+Taskflow automatically creates and switches branches. If you get this error:
+
 ```bash
-# Use valid provider name
-taskflow configure ai --provider anthropic --model claude-sonnet-4-20250514
-
-# Valid providers:
-# - openai
-# - azure
-# - anthropic
-# - ollama
-# - together
-# - groq
-# - deepseek
-# - custom
-```
-
-### "Invalid model for provider: xyz"
-
-**Cause:** Model name is incorrect for the provider
-
-**Solution:**
-```bash
-# Use correct model name for provider
-
-# Anthropic models
-taskflow configure ai --provider anthropic --model claude-sonnet-4-20250514
-
-# OpenAI models
-taskflow configure ai --provider openai --model gpt-4o
-
-# Check provider documentation for available models
-```
-
-### "API request failed: 401 Unauthorized"
-
-**Cause:** Invalid API key or key doesn't have access to the model
-
-**Solution:**
-```bash
-# Verify API key is correct
-echo $ANTHROPIC_API_KEY
-
-# Regenerate API key from provider dashboard
-# Anthropic: https://console.anthropic.com/
-# OpenAI: https://platform.openai.com/api-keys
-
-# Update and reconfigure
-export ANTHROPIC_API_KEY=new-key-here
-taskflow configure ai --provider anthropic --model claude-sonnet-4-20250514
-```
-
-### "API request failed: 429 Rate Limit Exceeded"
-
-**Cause:** Too many API requests, rate limit reached
-
-**Solution:**
-```bash
-# Wait a few minutes and retry
-
-# Or use a different model with higher rate limits
-taskflow configure ai \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514  # Higher limits than opus
-
-# Or switch providers
-taskflow configure ai --provider together --model meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo
-```
-
-### "API request failed: Connection timeout"
-
-**Cause:** Network issue or API endpoint is unreachable
-
-**Solution:**
-```bash
-# Check internet connection
-ping api.anthropic.com
-
-# Increase timeout in config
-# taskflow.config.json
-{
-  "ai": {
-    "timeout": 60000  // 60 seconds
-  }
-}
-
-# Check if using proxy that blocks the API
-# Or try different provider
-```
-
-### "API request failed: Connection refused" (Ollama)
-
-**Cause:** Ollama server is not running
-
-**Solution:**
-```bash
-# Start Ollama
-ollama serve
-
-# In another terminal, pull model if needed
-ollama pull llama3.1
-
-# Configure Taskflow
-taskflow configure ai --provider ollama --model llama3.1
-
-# Test Ollama directly
-curl http://localhost:11434/api/generate -d '{
-  "model": "llama3.1",
-  "prompt": "Hello"
-}'
-```
-
-### "Ollama model not found: xyz"
-
-**Cause:** Model not pulled in Ollama
-
-**Solution:**
-```bash
-# List available models
-ollama list
-
-# Pull the model
-ollama pull llama3.1
-
-# Or use a different model that's already pulled
-taskflow configure ai --provider ollama --model mistral
-```
-
-### "LLM generated invalid output"
-
-**Cause:** Model output doesn't match expected format
-
-**Solution:**
-```bash
-# Try a different model
-taskflow configure ai --provider openai --model gpt-4o
-
-# Or adjust temperature for more deterministic output
-# taskflow.config.json
-{
-  "ai": {
-    "temperature": 0.0
-  }
-}
-```
-
-### "LLM output too long/truncated"
-
-**Cause:** Output exceeds token limit
-
-**Solution:**
-```bash
-# Increase max tokens in config
-{
-  "ai": {
-    "maxTokens": 8192
-  }
-}
-
-# Or use model with larger context window
-taskflow configure ai --provider anthropic --model claude-opus-4
-```
-
-### "Per-phase model not configured"
-
-**Cause:** Trying to use a phase-specific model without configuring it
-
-**Solution:**
-```bash
-# Configure all phases or use default model
-taskflow configure ai \
-  --provider anthropic \
-  --model claude-sonnet-4-20250514
-
-# Or configure each phase
-taskflow configure ai \
-  --planning claude-opus-4 \
-  --execution claude-sonnet-4-20250514 \
-  --analysis claude-sonnet-4-20250514
-```
-
-### "AI features are slow"
-
-**Cause:** Model is slow or network is slow
-
-**Solution:**
-```bash
-# Use faster model
-taskflow configure ai --provider groq --model llama-3.1-70b-versatile
-
-# Or use local Ollama (no network latency)
-taskflow configure ai --provider ollama --model llama3.1
-
-# Or reduce work AI needs to do
-# - Use manual mode: ai.enabled: false
-# - Skip AI for simple tasks
-```
-
-### "AI suggestions are poor quality"
-
-**Cause:** Model not suitable for task, or insufficient context
-
-**Solution:**
-```bash
-# Use higher-quality model
-taskflow configure ai --provider anthropic --model claude-opus-4
-
-# Ensure retrospective has error patterns
-taskflow retro list
-
-# Add patterns manually
-taskflow retro add
-
-# Check that config has proper context files
-```
-
-### "Environment variable not expanded: ${VAR_NAME}"
-
-**Cause:** Environment variable not set or shell doesn't expand variables
-
-**Solution:**
-```bash
-# Set environment variable
-export ANTHROPIC_API_KEY=your-key-here
-
-# Verify it's set
-echo $ANTHROPIC_API_KEY
-
-# Restart your shell/terminal
-# Then run command
-taskflow configure ai --provider anthropic --model claude-sonnet-4-20250514
-```
-
-### "Azure OpenAI deployment not found"
-
-**Cause:** Incorrect Azure deployment name or resource
-
-**Solution:**
-```bash
-# Verify Azure configuration
-echo $AZURE_OPENAI_ENDPOINT
-echo $AZURE_OPENAI_API_KEY
-
-# Configure with correct deployment name
-taskflow configure ai \
-  --provider azure \
-  --model gpt-4o \
-  --apiEndpoint https://your-resource.openai.azure.com \
-  --apiVersion 2024-02-15-preview
-```
-
-### "Custom provider not responding"
-
-**Cause:** Custom API endpoint is down or incorrect
-
-**Solution:**
-```bash
-# Test endpoint directly
-curl https://api.example.com/v1/chat/completions \
-  -H "Authorization: Bearer $CUSTOM_API_KEY"
-
-# Check endpoint URL
-# Ensure it's OpenAI-compatible
-
-# Configure with correct endpoint
-taskflow configure ai \
-  --provider custom \
-  --apiEndpoint https://api.example.com/v1 \
-  --model your-model
-```
-
-### "AI quota exceeded"
-
-**Cause:** Reached API usage limits
-
-**Solution:**
-```bash
-# Check provider dashboard for usage
-# Anthropic: https://console.anthropic.com/
-# OpenAI: https://platform.openai.com/usage
-
-# Wait for quota reset (usually monthly)
-# Or upgrade plan
-
-# Or switch providers
-taskflow configure ai --provider groq --model llama-3.1-70b-versatile
+# Let Taskflow manage branches
+taskflow start <task-id>  # Auto-switches to correct branch
+
+# Or manually switch
+git checkout story/S1.1-story-name
 ```
 
 ---
 
 ## Validation Issues
 
-### "Validation failed"
+### Validation failed
 
-**Cause:** Automated checks (lint, tests, type-check) didn't pass
+**Problem**: Automated checks (lint, type-check, tests) are failing.
 
-**Solution:**
+**Solution**:
+
 ```bash
-# 1. Check what failed
+# Read the error message
 taskflow check
 
-# 2. Read detailed logs
-ls .taskflow/logs/
-cat .taskflow/logs/T1-1-0-typeCheck-2024-01-15.log
+# Check the detailed log
+cat .taskflow/logs/T<task-id>-<validation>-<date>.log
 
-# 3. Fix the errors manually
-# Or use AI if configured (LLM will suggest fixes)
+# Fix the issues in your code
 
-# 4. Re-run validation
-taskflow check
-```
-
-### "TypeScript errors: Property does not exist"
-
-**Cause:** Type mismatch or missing type definition
-
-**Solution:**
-```bash
-# Without AI: Fix manually
-# Read error, check types, fix code
-
-# With AI:
-taskflow check  # LLM will suggest fixes
-
-# Add to retrospective to prevent future issues
-taskflow retro add
-```
-
-### "Linting errors"
-
-**Cause:** Code style violations
-
-**Solution:**
-```bash
-# Auto-fix if supported
-biome check --write .
-
-# Or manually fix linting errors
-taskflow check  # AI will help if configured
-
-# Configure linting rules in biome.json
-```
-
-### "Test failures"
-
-**Cause:** Tests are failing
-
-**Solution:**
-```bash
-# Run tests with verbose output
-vitest run --verbose
-
-# Read test file and implementation
-# Fix the bug or update test (whichever is wrong)
-
-# With AI: LLM can analyze test failures
+# Re-run validation
 taskflow check
 ```
 
-### "Validation keeps failing after fixes"
+---
 
-**Cause:** Error persists or new errors introduced
+### Validation command not found
 
-**Solution:**
+**Problem**: Configured validation command doesn't exist in your project.
+
+**Solution**:
+
+Edit `taskflow.config.json` to match your tech stack:
+
+```json
+{
+  "validation": {
+    "commands": {
+      "format": "prettier --write .",     // Your formatter
+      "lint": "eslint .",                  // Your linter
+      "typeCheck": "tsc --noEmit",         // Your type checker
+      "test": "jest",                      // Your test runner
+      "build": "npm run build"             // Your build command
+    }
+  }
+}
+```
+
+Use empty string to disable a validation:
+
+```json
+{
+  "validation": {
+    "commands": {
+      "format": "",  // Disabled
+      "lint": "eslint ."
+    }
+  }
+}
+```
+
+---
+
+### Cannot commit: subtasks not completed
+
+**Problem**: Trying to commit but no subtasks are marked complete.
+
+**Solution**:
+
 ```bash
-# Check logs for all errors
-cat .taskflow/logs/*.log
+# Mark subtasks as completed
+taskflow subtask complete 1
+taskflow subtask complete 2
 
-# Fix one file at a time
-# Re-validate after each fix
+# Or if subtasks are tracked in the task JSON, update the file
 
-# With AI: LLM does file-by-file fixing
-taskflow check
+# Then commit
+taskflow commit "- Your changes"
+```
 
-# Check retrospective for similar patterns
-taskflow retro list
+---
+
+## AI/LLM Issues
+
+### AI features not configured
+
+**Problem**: AI commands fail with "AI not configured" error.
+
+**Solution**:
+
+```bash
+# Set environment variable
+export ANTHROPIC_API_KEY=your-key-here
+
+# Configure Taskflow
+taskflow configure ai --provider anthropic --model claude-3-5-sonnet-20241022
+
+# Verify configuration
+taskflow configure ai --show
+```
+
+---
+
+### API key not found
+
+**Problem**: "API key not found for provider" error.
+
+**Solution**:
+
+```bash
+# Option 1: Set environment variable (recommended)
+export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_API_KEY=sk-...
+
+# Option 2: Add to shell profile
+echo 'export ANTHROPIC_API_KEY=sk-ant-...' >> ~/.bashrc
+source ~/.bashrc
+
+# Option 3: Configure with key directly (less secure)
+taskflow configure ai --provider anthropic --apiKey sk-ant-...
+```
+
+---
+
+### API request failed: 401 Unauthorized
+
+**Problem**: Invalid API key or insufficient permissions.
+
+**Solution**:
+
+```bash
+# Verify API key is correct
+echo $ANTHROPIC_API_KEY
+
+# Regenerate key from provider dashboard:
+# - Anthropic: https://console.anthropic.com/
+# - OpenAI: https://platform.openai.com/api-keys
+
+# Update and reconfigure
+export ANTHROPIC_API_KEY=new-key-here
+taskflow configure ai --provider anthropic --model claude-3-5-sonnet-20241022
+```
+
+---
+
+### API request failed: 429 Rate limit exceeded
+
+**Problem**: Too many API requests in short time.
+
+**Solutions**:
+
+1. **Wait and retry**: Wait a few minutes before retrying
+
+2. **Use different model**:
+   ```bash
+   taskflow configure ai --provider anthropic --model claude-3-5-sonnet-20241022
+   ```
+
+3. **Switch provider**:
+   ```bash
+   taskflow configure ai --provider openai-compatible --model gpt-4o-mini
+   ```
+
+---
+
+### Connection timeout
+
+**Problem**: API requests timing out.
+
+**Solutions**:
+
+```bash
+# Check internet connection
+ping api.anthropic.com
+
+# Increase timeout in taskflow.config.json
+{
+  "ai": {
+    "timeout": 60000  // 60 seconds
+  }
+}
+
+# Try different provider
+taskflow configure ai --provider ollama --model llama3.1  // Local
 ```
 
 ---
 
 ## Git Issues
 
-### "Git: command not found"
+### Git push failed
 
-**Cause:** Git is not installed
+**Problem**: Cannot push to remote.
 
-**Solution:**
+**Solutions**:
+
 ```bash
-# macOS (with Homebrew)
-brew install git
+# Check remote is configured
+git remote -v
 
-# Ubuntu/Debian
-sudo apt-get install git
-
-# Windows
-# Download from: https://git-scm.com/
-```
-
-### "Git: not a git repository"
-
-**Cause:** Not in a git repository
-
-**Solution:**
-```bash
-# Initialize git repository
-git init
-
-# Or clone existing repository
-git clone https://github.com/user/repo.git
-```
-
-### "Git: branch already exists"
-
-**Cause:** Branch with same name already exists
-
-**Solution:**
-```bash
-# Switch to existing branch
-git checkout story/S1.1-feature-name
-
-# Or delete and recreate
-git branch -D story/S1.1-feature-name
-taskflow start 1.1.0  # Will recreate branch
-```
-
-### "Git: cannot push"
-
-**Cause:** No remote configured or authentication issue
-
-**Solution:**
-```bash
-# Add remote
+# Add remote if missing
 git remote add origin https://github.com/user/repo.git
 
-# Push with authentication
-git push -u origin story/S1.1-feature-name
+# Pull first if needed
+git pull origin main --rebase
 
-# Configure credentials
-git config --global user.name "Your Name"
-git config --global user.email "your@email.com"
+# Then commit again
+taskflow commit "- Your changes"
 ```
 
-### "Git: merge conflict"
+---
 
-**Cause:** Branch has conflicts with base branch
+### Merge conflicts
 
-**Solution:**
+**Problem**: Story branch has merge conflicts with main.
+
+**Solution**:
+
 ```bash
+# On your story branch
+git fetch origin
+git rebase origin/main
+
 # Resolve conflicts manually
-git status  # See conflicted files
-# Edit files to resolve conflicts
 git add .
-git commit
+git rebase --continue
 
-# Or use merge tool
-git mergetool
-
-# Then continue
+# Continue with Taskflow workflow
 taskflow check
 ```
 
 ---
 
-## Configuration Issues
+## MCP Server Issues (Claude Desktop)
 
-### "Invalid config file format"
+### Tools not showing in Claude Desktop
 
-**Cause:** JSON syntax error in `taskflow.config.json`
+**Problem**: Claude doesn't see Taskflow tools.
 
-**Solution:**
+**Solutions**:
+
+1. **Verify configuration file location**:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+2. **Check configuration format**:
+   ```json
+   {
+     "mcpServers": {
+       "taskflow": {
+         "command": "npx",
+         "args": ["-y", "@krr2020/taskflow-mcp"]
+       }
+     }
+   }
+   ```
+
+3. **Restart Claude Desktop completely** (not just reload)
+
+4. **Check logs**:
+   ```bash
+   # macOS
+   tail -f ~/Library/Logs/Claude/mcp*.log
+   ```
+
+5. **Test MCP server manually**:
+   ```bash
+   npx @krr2020/taskflow-mcp
+   ```
+
+---
+
+### MCP server connection failed
+
+**Problem**: Claude shows MCP server as disconnected.
+
+**Solutions**:
+
 ```bash
-# Validate JSON
-cat taskflow.config.json | jq .
+# Reinstall MCP server
+npm uninstall -g @krr2020/taskflow-mcp
+npm cache clean --force
+npm install -g @krr2020/taskflow-mcp
 
-# Fix syntax errors
-# - Missing commas
-# - Trailing commas
-# - Unquoted keys
-# - Comments (not allowed in JSON)
+# Verify it runs
+npx @krr2020/taskflow-mcp
 
-# Reinitialize if needed
-taskflow init
-```
-
-### "Configuration field not recognized"
-
-**Cause:** Field name is misspelled or from wrong version
-
-**Solution:**
-```bash
-# Check config version
-cat taskflow.config.json | jq '.version'
-
-# Update to v2.0 if needed
-# See CONFIG.md for valid fields
-
-# Reinitialize to get correct format
-taskflow init
-```
-
-### "Validation command not found"
-
-**Cause:** Command in config doesn't exist or not in PATH
-
-**Solution:**
-```bash
-# Install missing tool
-npm install -g biome
-
-# Or update config with correct command
-# taskflow.config.json
-{
-  "validation": {
-    "commands": {
-      "format": "biome check --write .",
-      "lint": "biome lint .",
-      "test": "vitest run",
-      "type-check": "tsc --noEmit"
-    }
-  }
-}
-```
-
-### "Node_modules not found"
-
-**Cause:** Project dependencies not installed
-
-**Solution:**
-```bash
-# Install dependencies
-npm install
-# or
-pnpm install
-# or
-yarn install
-
-# Then try again
-taskflow check
+# Restart Claude Desktop
 ```
 
 ---
 
 ## Performance Issues
 
-### "Taskflow is slow"
+### Slow task generation
 
-**Cause:** System or tool performance issues
+**Problem**: `taskflow tasks generate` takes too long.
 
-**Solution:**
-```bash
-# Check system resources
-top  # or htop on macOS
+**Solutions**:
 
-# Disable AI if not needed
-taskflow configure ai --disable
-
-# Use faster validation tools
-# - Biome instead of ESLint + Prettier
-# - Vitest instead of Jest
-
-# Cache dependencies
-npm ci  # instead of npm install
-```
-
-### "Large log files"
-
-**Cause:** Validation logs accumulating
-
-**Solution:**
-```bash
-# Clean old logs
-rm .taskflow/logs/*.log
-
-# Or archive logs
-mkdir .taskflow/logs/archive
-mv .taskflow/logs/*.log .taskflow/logs/archive/
-
-# Configure log rotation (future feature)
-```
-
----
-
-## Getting Help
-
-### Debug Mode
-
-Enable debug logging for more information:
-
-```bash
-# Set environment variable
-export TASKFLOW_DEBUG=true
-
-# Run command
-taskflow start 1.1.0
-```
-
-### Check Logs
-
-Always check logs when something fails:
-
-```bash
-# List all logs
-ls -la .taskflow/logs/
-
-# Read specific log
-cat .taskflow/logs/T1-1-0-typeCheck-2024-01-15.log
-
-# Search for errors
-grep -i error .taskflow/logs/*.log
-```
-
-### Report Issues
-
-If you can't resolve an issue:
-
-1. **Gather information:**
+1. **Use faster model for planning**:
    ```bash
-   # System info
-   taskflow --version
-   node --version
-   npm --version
-
-   # Config
-   cat taskflow.config.json
-
-   # Logs
-   tar -czf taskflow-logs.tar.gz .taskflow/logs/
+   taskflow configure ai --setPlanning gpt-4o-mini  // Faster than opus
    ```
 
-2. **Check documentation:**
-   - [README.md](../README.md) - Quick start
-   - [CONFIG.md](./CONFIG.md) - Configuration guide
-   - [COMMANDS.md](./COMMANDS.md) - Command reference
-   - [FAQ.md](./FAQ.md) - Common questions
+2. **Simplify PRD**: Break large PRDs into smaller features
 
-3. **Report issue:**
-   - Create GitHub issue
-   - Include system info
-   - Attach relevant logs
-   - Describe expected vs actual behavior
-
-### Community
-
-- **GitHub Issues:** Report bugs and request features
-- **GitHub Discussions:** Ask questions and share ideas
-- **Documentation:** Check `/docs` folder for guides
-
----
-
-## Quick Fixes Reference
-
-| Issue | Quick Fix |
-|-------|-----------|
-| Command not found | Use `npx @krr2020/taskflow <cmd>` |
-| No .taskflow directory | Run `taskflow init` |
-| Active session exists | Run `taskflow commit "- done"` |
-| Validation failed | Fix errors, run `taskflow check` |
-| AI not configured | Run `taskflow configure ai --provider <name> --model <name>` |
-| API key missing | Set environment variable or use `--apiKey` |
-| Ollama not running | Run `ollama serve` |
-| Config syntax error | Run `jq . taskflow.config.json` to validate |
-| Git merge conflict | Resolve conflicts, `git add .`, `git commit` |
-| Validation slow | Use faster tools, disable AI |
-
----
-
-## Prevention
-
-### Best Practices
-
-1. **Keep dependencies updated:**
+3. **Use local model for development**:
    ```bash
-   npm update @krr2020/taskflow
-   ```
-
-2. **Use version control:**
-   ```bash
-   git add taskflow.config.json
-   git commit "Add Taskflow config"
-   ```
-
-3. **Use environment variables for keys:**
-   ```bash
-   export ANTHROPIC_API_KEY=sk-ant-...
-   # Never commit keys to git
-   ```
-
-4. **Regular maintenance:**
-   ```bash
-   # Clean old logs
-   rm .taskflow/logs/*.log
-
-   # Update retrospective
-   taskflow retro list
-   ```
-
-5. **Test configuration:**
-   ```bash
-   # Validate config
-   taskflow configure ai --show
-
-   # Test AI
-   taskflow tasks generate your-prd.md
+   taskflow configure ai --provider ollama --model llama3.1
    ```
 
 ---
 
-## See Also
+### Large log files
 
-- [README.md](../README.md) - Quick start guide
-- [CONFIG.md](./CONFIG.md) - Configuration reference
-- [COMMANDS.md](./COMMANDS.md) - Complete command reference
-- [FAQ.md](./FAQ.md) - Frequently asked questions
-- [MIGRATION.md](./MIGRATION.md) - Migration guide
+**Problem**: `.taskflow/logs/` directory growing too large.
+
+**Solution**:
+
+```bash
+# Clean up old logs (older than 30 days)
+find .taskflow/logs -type f -mtime +30 -delete
+
+# Or manually delete
+rm .taskflow/logs/*
+
+# Logs are recreated as needed
+```
+
+---
+
+## Configuration Issues
+
+### Invalid JSON in config file
+
+**Problem**: `taskflow.config.json` has syntax errors.
+
+**Solution**:
+
+```bash
+# Validate JSON
+cat taskflow.config.json | jq .
+
+# If invalid, fix manually or regenerate
+mv taskflow.config.json taskflow.config.json.backup
+taskflow init
+# Then re-apply your custom settings
+```
+
+---
+
+### Lost customizations after upgrade
+
+**Problem**: `taskflow upgrade` overwrote custom files.
+
+**Solution**:
+
+```bash
+# Restore from backup
+ls .taskflow/backups/
+cp .taskflow/backups/v<version>-<date>/* .taskflow/ref/
+
+# In future, use --diff first
+taskflow upgrade --diff  # Preview changes
+```
+
+---
+
+## Common Patterns
+
+### Working on intermittent/urgent tasks
+
+**Problem**: Need to fix an urgent bug but already have an active task.
+
+**Solution**:
+
+```bash
+# Option 1: Complete current task first
+taskflow commit "- Partial work (WIP)"
+
+# Option 2: Block current task
+taskflow skip --reason "Paused for urgent bugfix"
+
+# Work on urgent task (create as needed)
+# When done, resume original task
+taskflow start <original-task-id>
+```
+
+---
+
+### Switching between features
+
+**Problem**: Want to work on tasks from different features.
+
+**Solution**:
+
+Complete all tasks in a story before switching features. If you must switch:
+
+```bash
+# Block current task
+taskflow skip --reason "Switching to Feature 2"
+
+# Work on other feature
+taskflow start <other-feature-task-id>
+
+# Resume later
+taskflow start <original-task-id>
+```
+
+---
+
+### Regenerating tasks after PRD changes
+
+**Problem**: Updated PRD but tasks are outdated.
+
+**Solution**:
+
+```bash
+# Back up existing tasks
+cp -r tasks tasks.backup
+
+# Regenerate
+taskflow tasks generate tasks/prds/your-prd.md
+
+# Manually merge changes or keep new structure
+```
+
+---
+
+## Getting More Help
+
+**Documentation**:
+- [Getting Started](./GETTING-STARTED.md) - Complete tutorial
+- [User Guide](./USER-GUIDE.md) - Common workflows
+- [Commands Reference](./COMMANDS.md) - All commands
+- [Configuration Guide](./CONFIG.md) - Setup options
+
+**Support**:
+- GitHub Issues: https://github.com/krr2020/taskflow/issues
+- GitHub Discussions: https://github.com/krr2020/taskflow/discussions
+
+**Debugging**:
+- Check logs: `.taskflow/logs/`
+- Check config: `cat taskflow.config.json`
+- Check status: `taskflow status`
+- Check version: `taskflow --version`
