@@ -5,34 +5,37 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { execaSync } from "execa";
-import { ConfigLoader } from "../../lib/config-loader.js";
-import { getRefFilePath, REF_FILES } from "../../lib/config-paths.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { LogParser, type ParsedError } from "@/lib/analysis/log-parser";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import { getRefFilePath, REF_FILES } from "@/lib/config/config-paths";
+import { Text } from "@/lib/ui/components";
+import { runValidations } from "@/lib/utils/validation";
+import { Phase } from "@/llm/base";
+import { ProviderFactory } from "@/llm/factory";
 import {
 	findActiveTask,
 	loadTasksProgress,
 	updateTaskStatus,
-} from "../../lib/data-access.js";
-import { LLMRequiredError, NoActiveSessionError } from "../../lib/errors.js";
+} from "../../lib/core/data-access.js";
 import {
-	FileValidator,
-	type ValidationResult,
-} from "../../lib/file-validator.js";
-import { LogParser, type ParsedError } from "../../lib/log-parser.js";
-import {
-	extractNewPatterns,
-	formatNewPatternForDisplay,
-	processValidationOutput,
-} from "../../lib/retrospective.js";
-import { TerminalFormatter } from "../../lib/terminal-formatter.js";
+	LLMRequiredError,
+	NoActiveSessionError,
+} from "../../lib/core/errors.js";
 import type {
 	Subtask,
 	TaskFileContent,
 	TasksProgress,
-} from "../../lib/types.js";
-import { runValidations } from "../../lib/validation.js";
-import { Phase } from "../../llm/base.js";
-import { ProviderFactory } from "../../llm/factory.js";
-import { BaseCommand, type CommandResult } from "../base.js";
+} from "../../lib/core/types.js";
+import {
+	FileValidator,
+	type ValidationResult,
+} from "../../lib/utils/file-validator.js";
+import {
+	extractNewPatterns,
+	formatNewPatternForDisplay,
+	processValidationOutput,
+} from "../../lib/utils/retrospective.js";
 
 export class CheckCommand extends BaseCommand {
 	async execute(): Promise<CommandResult> {
@@ -140,7 +143,7 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.success("Status advanced: setup → planning"),
+				Text.success("Status advanced: setup → planning"),
 				`Task ${taskId}: ${content.title}`,
 				"",
 				"Now create your execution plan before writing code.",
@@ -235,7 +238,7 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.success("Status advanced: planning → implementing"),
+				Text.success("Status advanced: planning → implementing"),
 				`Task ${taskId}: ${content.title}`,
 				"",
 				"You may now write code to implement this task based on your plan.",
@@ -326,7 +329,7 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.success("Status advanced: implementing → verifying"),
+				Text.success("Status advanced: implementing → verifying"),
 				`Task ${taskId}: ${content.title}`,
 				"",
 				"Now perform self-review of your implementation.",
@@ -412,7 +415,7 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.success("Status advanced: verifying → validating"),
+				Text.success("Status advanced: verifying → validating"),
 				`Task ${taskId}: ${content.title}`,
 				"",
 				"Ready to run automated validation checks.",
@@ -498,7 +501,7 @@ export class CheckCommand extends BaseCommand {
 			refDir,
 		);
 		if (preValidationGuidance) {
-			console.log(TerminalFormatter.section("Pre-Validation Checklist"));
+			console.log(Text.section("Pre-Validation Checklist"));
 			console.log(preValidationGuidance);
 			console.log("");
 		}
@@ -517,7 +520,7 @@ export class CheckCommand extends BaseCommand {
 		}
 
 		// Run traditional validations
-		console.log(TerminalFormatter.info("Running validations..."));
+		console.log(Text.info("Running validations..."));
 
 		const summary = runValidations(logsDir, taskId, validationCommands);
 
@@ -663,7 +666,7 @@ export class CheckCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.success("All validations passed!"),
+				Text.success("All validations passed!"),
 				"Status advanced: validating → committing",
 				`Task ${taskId}: ${content.title}`,
 				"",
@@ -833,9 +836,7 @@ Be concise (max 150 words).`;
 		phase: Phase,
 		refDir?: string,
 	): Promise<{ passed: boolean; result: CommandResult }> {
-		console.log(
-			TerminalFormatter.info("Running AI-powered file validation..."),
-		);
+		console.log(Text.info("Running AI-powered file validation..."));
 
 		try {
 			// Get AI config to create provider with correct settings

@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { ConfigLoader } from "../../src/lib/config-loader.js";
+import { ConfigLoader } from "@/lib/config/config-loader";
 import { createMockProject, createTestDir } from "../setup.js";
 
 describe("ConfigLoader", () => {

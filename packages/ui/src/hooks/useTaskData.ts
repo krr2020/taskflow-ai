@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Task } from "../types";
+import { useEffect, useState } from "react";
+import type { Task } from "../types";
 
 export function useTaskData(taskId: string | undefined) {
 	const [task, setTask] = useState<Task | null>(null);

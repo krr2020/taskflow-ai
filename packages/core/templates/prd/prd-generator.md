@@ -5,44 +5,50 @@ To guide an AI assistant in creating a detailed Product Requirements Document (P
 
 ## Process
 1. **Receive Initial Prompt:** The user provides a brief description or request for a new feature or functionality.
-2. **Ask Clarifying Questions:** Before writing the PRD, the AI must ask clarifying questions to ensure a robust and well-defined specification. Ask a minimum of 5 questions to cover edge cases, error handling, and specific behavior. The goal is to understand the "what" and "why" of the feature. For each question, provide recommended options (A, B, C...) and include a short reason for each option to help the user make an informed decision.
+2. **Ask Clarifying Questions:** Before writing the PRD, the AI *must* ask only the most essential clarifying questions needed to write a clear PRD. The goal is to understand the "what" and "why" of the feature, not necessarily the "how" (which the developer will figure out). Make sure to provide options in letter/number lists so responses can be given easily with selections.
 3. **Generate PRD:** Based on the initial prompt and the user's answers to the clarifying questions, generate a PRD using the structure outlined below.
 4. **Save PRD:** Save the generated document as `prd-[feature-name].md` inside the `/tasks` directory.
 
 ## Clarifying Questions (Guidelines)
-Ask critical questions needed to write a clear PRD. Focus on areas where the initial prompt is ambiguous or missing essential context. Common areas that may need clarification:
+
+Ask only the most critical questions needed to write a clear PRD. Focus on areas where the initial prompt is ambiguous or missing essential context. Common areas that may need clarification:
 
 - **Problem/Goal:** If unclear - "What problem does this feature solve for the user?"
 - **Core Functionality:** If vague - "What are the key actions a user should be able to perform?"
-- **Scope/Boundaries:** If broad - "Are there any specific things this feature should not do?"
+- **Scope/Boundaries:** If broad - "Are there any specific things this feature *should not* do?"
 - **Success Criteria:** If unstated - "How will we know when this feature is successfully implemented?"
 
-**Important:** Provide recommended options with reasons for every question. Prioritize questions that would significantly impact the PRD's clarity.
+**Important:** Only ask questions when the answer isn't reasonably inferable from the initial prompt. Prioritize questions that would significantly impact the PRD's clarity.
 
 ### Formatting Requirements
-- Number all questions (1, 2, 3, etc.)
-- List options for each question as A, B, C, D, etc. for easy reference
-- **Crucial:** Provide a short reason/explanation for each option to guide the user.
+- **Number all questions** (1, 2, 3, etc.)
+- **List options for each question as A, B, C, D, etc.** for easy reference
+- After all options, provide a **Recommended option** with a brief reason why
 - Make it simple for the user to respond with selections like "1A, 2C, 3B"
 
 ### Example Format
+```
 1. What is the primary goal of this feature?
-   A. Improve user onboarding experience (Reason: Reduces drop-off during signup)
-   B. Increase user retention (Reason: Encourages daily active usage)
-   C. Reduce support burden (Reason: Automates common user requests)
-   D. Generate additional revenue (Reason: Adds a premium feature gate)
+   A. Improve user onboarding experience
+   B. Increase user retention
+   C. Reduce support burden
+   D. Generate additional revenue
+   Recommended: Option A - Reduces drop-off during signup and has immediate impact
 
 2. Who is the target user for this feature?
-   A. New users only (Reason: Focuses on acquisition)
-   B. Existing users only (Reason: Focuses on retention)
-   C. All users (Reason: Broadest impact)
-   D. Admin users only (Reason: Backend management focus)
+   A. New users only
+   B. Existing users only
+   C. All users
+   D. Admin users only
+   Recommended: Option C - Broadest impact across user base
 
 3. What is the expected timeline for this feature?
-   A. Urgent (1-2 weeks) (Reason: Immediate business need)
-   B. High priority (3-4 weeks) (Reason: Important for upcoming release)
-   C. Standard (1-2 months) (Reason: Part of regular roadmap)
-   D. Future consideration (3+ months) (Reason: Nice-to-have, low priority)
+   A. Urgent (1-2 weeks)
+   B. High priority (3-4 weeks)
+   C. Standard (1-2 months)
+   D. Future consideration (3+ months)
+   Recommended: Option B - Important for upcoming release cycle
+```
 
 ## PRD Structure
 The generated PRD should include the following sections:

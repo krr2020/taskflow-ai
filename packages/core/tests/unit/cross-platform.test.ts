@@ -8,7 +8,8 @@ import os from "node:os";
 import path from "node:path";
 import { execaSync } from "execa";
 import { describe, expect, it } from "vitest";
-import { MESSAGES } from "../../src/lib/constants.js";
+import { MESSAGES } from "@/lib/config/constants";
+import { getCurrentBranch } from "@/lib/git/git";
 import {
 	deleteDir,
 	deleteFile,
@@ -17,8 +18,7 @@ import {
 	readText,
 	writeJson,
 	writeText,
-} from "../../src/lib/file-utils.js";
-import { getCurrentBranch } from "../../src/lib/git.js";
+} from "../../src/lib/utils/file-utils.js";
 import {
 	ensureAllDirs,
 	getBackupsDir,
@@ -26,7 +26,7 @@ import {
 	getRefDir,
 	getTaskflowDir,
 	getTasksDir,
-} from "../../src/lib/path-utils.js";
+} from "../../src/lib/utils/path-utils.js";
 
 describe("Cross-Platform Compatibility", () => {
 	describe("Temporary Directory", () => {

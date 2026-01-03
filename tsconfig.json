@@ -40,7 +40,9 @@
 		"composite": false,
 		"skipLibCheck": true,
 		"baseUrl": ".",
-		"paths": {}
+		"paths": {
+			"@/*": ["packages/core/src/*"]
+		}
 	},
 	"include": ["packages/core/src/**/*.ts", "packages/core/tests/**/*.ts"],
 	"exclude": ["node_modules", "dist", "coverage"]

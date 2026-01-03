@@ -1,15 +1,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PrdAnalyzeBrownfieldCommand } from "../../src/commands/prd/analyze-brownfield.js";
-import { ConfigLoader } from "../../src/lib/config-loader.js";
+import { PrdAnalyzeBrownfieldCommand } from "@/commands/prd/analyze-brownfield";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import { createMockConfigLoader } from "../helpers/mocks.js";
 
 vi.mock("node:fs");
 vi.mock("node:path");
-vi.mock("../../src/lib/config-loader.js");
+vi.mock("@/lib/config/config-loader");
 
 // Mock dependencies
-vi.mock("../../src/lib/codebase-scanner.js", () => ({
+vi.mock("@/lib/analysis/codebase-scanner", () => ({
 	CodebaseScanner: class {
 		scan() {
 			return Promise.resolve([
@@ -19,7 +20,7 @@ vi.mock("../../src/lib/codebase-scanner.js", () => ({
 	},
 }));
 
-vi.mock("../../src/lib/prd-matcher.js", () => ({
+vi.mock("@/lib/analysis/prd-matcher", () => ({
 	PRDMatcher: class {
 		matchRequirements() {
 			return Promise.resolve([
@@ -33,7 +34,7 @@ vi.mock("../../src/lib/prd-matcher.js", () => ({
 	},
 }));
 
-vi.mock("../../src/lib/gap-analyzer.js", () => ({
+vi.mock("@/lib/analysis/gap-analyzer", () => ({
 	GapAnalyzer: class {
 		analyzeGaps() {
 			return {
@@ -63,16 +64,12 @@ describe("PrdAnalyzeBrownfieldCommand", () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
 
-		// Mock ConfigLoader
+		// Mock ConfigLoader as a constructor function
 		vi.mocked(ConfigLoader).mockImplementation(function (this: any) {
-			return {
-				getPaths: () => ({
-					tasksDir: "/test/root/.taskflow",
-					prdsDir: "/test/root/.taskflow/prds",
-				}),
-				load: () => ({ project: { name: "test" } }),
-			} as any;
-		});
+			const mock = createMockConfigLoader();
+			Object.assign(this, mock);
+			return this;
+		} as any);
 
 		command = new PrdAnalyzeBrownfieldCommand(mockContext as any);
 

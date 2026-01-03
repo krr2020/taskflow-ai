@@ -2,23 +2,22 @@
  * Status command - Display project/feature/story status
  */
 
-import pc from "picocolors";
-import { ConfigLoader } from "../../lib/config-loader.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import { Colors, Text } from "@/lib/ui/components";
 import {
 	calculateProgressStats,
 	findActiveTask,
 	findFeature,
 	findStoryLocation,
 	loadTasksProgress,
-} from "../../lib/data-access.js";
-import { TerminalFormatter } from "../../lib/terminal-formatter.js";
+} from "../../lib/core/data-access.js";
 import type {
 	Feature,
 	Story,
 	TaskRef,
 	TasksProgress,
-} from "../../lib/types.js";
-import { BaseCommand, type CommandResult } from "../base.js";
+} from "../../lib/core/types.js";
 
 export class StatusCommand extends BaseCommand {
 	async execute(id?: string): Promise<CommandResult> {
@@ -95,23 +94,23 @@ export class StatusCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.header(`PROJECT: ${tasksProgress.project}`),
+				Text.heading(`PROJECT: ${tasksProgress.project}`),
 				"",
-				TerminalFormatter.section("PROGRESS"),
+				Text.section("PROGRESS"),
 				`Features: ${stats.completedFeatures}/${stats.totalFeatures} completed`,
 				`Stories:  ${stats.completedStories}/${stats.totalStories} completed`,
 				`Tasks:    ${stats.completedTasks}/${stats.totalTasks} completed`,
 				"",
 				activeTask
-					? TerminalFormatter.success(
+					? Text.success(
 							`ACTIVE TASK: ${activeTask.taskId} (${activeTask.content.status})`,
 						)
 					: "No active task",
 				"",
-				TerminalFormatter.section("MAIN FEATURES"),
+				Text.section("MAIN FEATURES"),
 				mainFeaturesList || "  No main features",
 				"",
-				TerminalFormatter.section("INTERMITTENT TASKS (Side Tasks)"),
+				Text.section("INTERMITTENT TASKS (Side Tasks)"),
 				intermittentTasksList,
 			].join("\n"),
 			[
@@ -160,10 +159,10 @@ export class StatusCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.header(`FEATURE F${feature.id}: ${feature.title}`),
+				Text.heading(`FEATURE F${feature.id}: ${feature.title}`),
 				`Status: ${feature.status}`,
 				"",
-				TerminalFormatter.section("STORIES"),
+				Text.section("STORIES"),
 				storiesList || "  No stories",
 			].join("\n"),
 			[
@@ -204,11 +203,11 @@ export class StatusCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.header(`STORY S${story.id}: ${story.title}`),
+				Text.heading(`STORY S${story.id}: ${story.title}`),
 				`Feature: F${feature.id} - ${feature.title}`,
 				`Status: ${story.status}`,
 				"",
-				TerminalFormatter.section("TASKS"),
+				Text.section("TASKS"),
 				tasksList || "  No tasks",
 			].join("\n"),
 			[
@@ -223,16 +222,16 @@ export class StatusCommand extends BaseCommand {
 
 	private getStatusIcon(status: string): string {
 		const icons: Record<string, string> = {
-			"not-started": pc.gray("○"),
-			"in-progress": pc.blue("◐"),
-			setup: pc.blue("◐"),
-			implementing: pc.blue("◐"),
-			verifying: pc.yellow("◐"),
-			validating: pc.yellow("◐"),
-			committing: pc.green("◐"),
-			completed: pc.green("●"),
-			blocked: pc.red("✗"),
-			"on-hold": pc.gray("⊘"),
+			"not-started": Colors.muted("○"),
+			"in-progress": Colors.primary("◐"),
+			setup: Colors.primary("◐"),
+			implementing: Colors.primary("◐"),
+			verifying: Colors.warning("◐"),
+			validating: Colors.warning("◐"),
+			committing: Colors.success("◐"),
+			completed: Colors.success("●"),
+			blocked: Colors.error("✗"),
+			"on-hold": Colors.muted("⊘"),
 		};
 		return icons[status] || "?";
 	}

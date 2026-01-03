@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Feature } from "../types";
+import { useEffect, useState } from "react";
+import type { Feature } from "../types";
 
 export function useFeatureData(featureId: string | undefined) {
 	const [feature, setFeature] = useState<Feature | null>(null);

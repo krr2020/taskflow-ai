@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
@@ -14,6 +15,11 @@ export default defineConfig({
 				"src/**/*.spec.ts",
 				"src/cli/index.ts", // CLI is tested via integration
 			],
+		},
+	},
+	resolve: {
+		alias: {
+			"@": path.resolve(__dirname, "./src"),
 		},
 	},
 });

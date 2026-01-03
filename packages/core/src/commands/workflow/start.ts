@@ -2,12 +2,16 @@
  * Start command - Start working on a task
  */
 
-import { ConfigLoader } from "../../lib/config-loader.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import { consoleOutput, icons } from "@/lib/core/output";
+import { verifyBranch } from "@/lib/git/git";
+import { Text } from "@/lib/ui/components";
 import {
 	getRefFilePath,
 	getSkillFilePath,
 	REF_FILES,
-} from "../../lib/config-paths.js";
+} from "../../lib/config/config-paths.js";
 import {
 	checkDependenciesMet,
 	findActiveTask,
@@ -18,17 +22,13 @@ import {
 	loadTaskFile,
 	loadTasksProgress,
 	updateTaskStatus,
-} from "../../lib/data-access.js";
+} from "../../lib/core/data-access.js";
 import {
 	ActiveSessionExistsError,
 	DependencyNotMetError,
 	TaskAlreadyCompletedError,
 	TaskNotFoundError,
-} from "../../lib/errors.js";
-import { verifyBranch } from "../../lib/git.js";
-import { consoleOutput, icons } from "../../lib/output.js";
-import { TerminalFormatter } from "../../lib/terminal-formatter.js";
-import { BaseCommand, type CommandResult } from "../base.js";
+} from "../../lib/core/errors.js";
 
 export class StartCommand extends BaseCommand {
 	async execute(taskIdInput?: string): Promise<CommandResult> {
@@ -82,7 +82,7 @@ export class StartCommand extends BaseCommand {
 		// If active task exists and we're starting an intermittent task, show warning
 		if (activeTask && isSwitchingToIntermittent) {
 			console.log(
-				TerminalFormatter.warning(
+				Text.warning(
 					`Switching to intermittent task. Main task ${activeTask.taskId} is paused.`,
 				),
 			);
@@ -158,12 +158,12 @@ export class StartCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.success(`Task ${taskId} started: ${task.title}`),
+				Text.success(`Task ${taskId} started: ${task.title}`),
 				`✓ Status: not-started → setup`,
 				`✓ Branch: story/S${story.id}-${story.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
 				`✓ Skill: ${taskContent.skill || "backend"}`,
 				"",
-				TerminalFormatter.section("TASK DETAILS"),
+				Text.section("TASK DETAILS"),
 				`Title: ${taskContent.title}`,
 				`Description: ${taskContent.description}`,
 				"",

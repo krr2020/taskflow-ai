@@ -2,14 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { execa } from "execa";
-import type { ConfigLoader } from "../lib/config-loader.js";
-import { colors, consoleOutput, icons } from "../lib/output.js";
-import { SessionManager } from "../lib/session-manager.js";
-import type { LLMMessage, LLMProvider, LLMProviderType } from "../llm/base.js";
-import { ProviderFactory } from "../llm/factory.js";
-import { ToolParser } from "./parser.js";
-import { BackupManager, Sandbox } from "./safety.js";
-import { DefaultToolRegistry, FileSystemTools } from "./tools.js";
+import { ToolParser } from "@/agent/parser";
+import { BackupManager, Sandbox } from "@/agent/safety";
+import { DefaultToolRegistry, FileSystemTools } from "@/agent/tools";
+import type { ConfigLoader } from "@/lib/config/config-loader";
+import { colors, consoleOutput, icons } from "@/lib/core/output";
+import { SessionManager } from "@/lib/session/session-manager";
+import type { LLMMessage, LLMProvider, LLMProviderType } from "@/llm/base";
+import { ProviderFactory } from "@/llm/factory";
 
 export interface AgentContext {
 	taskId: string;

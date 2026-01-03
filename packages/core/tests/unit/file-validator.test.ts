@@ -9,7 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	FileValidator,
 	type ValidationIssue,
-} from "../../src/lib/file-validator.js";
+} from "../../src/lib/utils/file-validator.js";
 import {
 	type LLMGenerationResult,
 	type LLMProvider,

@@ -4,19 +4,25 @@
 
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommandContext } from "../../src/commands/base.js";
-import { InitCommand } from "../../src/commands/init.js";
-import { PrdCreateCommand } from "../../src/commands/prd/create.js";
-import { TasksGenerateCommand } from "../../src/commands/tasks/generate.js";
-import { type MCPContext, MCPDetector } from "../../src/lib/mcp-detector.js";
+import type { CommandContext } from "@/commands/base";
+import { InitCommand } from "@/commands/init";
+import { PrdCreateCommand } from "@/commands/prd/create";
+import { TasksGenerateCommand } from "@/commands/tasks/generate";
+import {
+	type MCPContext,
+	MCPDetector,
+} from "../../src/lib/mcp/mcp-detector.js";
 
-vi.mock("../../src/lib/prd-interactive-session.js", () => ({
-	PRDInteractiveSession: class {
-		start(featureName: string) {
+vi.mock("@/lib/prd/interactive-session", () => ({
+	EnhancedPRDSession: class {
+		run(featureName?: string) {
 			return Promise.resolve({
 				featureName: featureName || "Test Feature",
-				title: "Test Feature",
 				summary: "Test Summary",
+				referencedFiles: [],
+				questions: [],
+				answers: [],
+				content: `# PRD: ${featureName || "Test Feature"}`,
 			});
 		}
 	},
@@ -66,11 +72,16 @@ describe("Integration Workflow Tests", () => {
 			const cmd = new InitCommand(context);
 			const result = await cmd.execute("test-project");
 
+			// All modes should show successful initialization
+			expect(result.success).toBe(true);
+			expect(result.output).toContain("taskflow.config.json");
+
 			if (mcpContext.isMCP) {
-				expect(result.output).toContain("Running in MCP mode (AI-assisted)");
+				// MCP mode should provide AI guidance
+				expect(result.aiGuidance).toBeDefined();
 			} else {
-				expect(result.output).toContain("Running in direct CLI mode");
-				expect(result.output).toContain("Configure AI provider");
+				// Manual mode should not have AI guidance
+				expect(result.aiGuidance).toBeUndefined();
 			}
 		});
 
@@ -105,7 +116,7 @@ describe("Integration Workflow Tests", () => {
 			// Mock isLLMAvailable to return false
 			vi.spyOn(cmd as any, "isLLMAvailable").mockReturnValue(false);
 
-			const result = await cmd.execute("test-feature", "Test description");
+			const result = await cmd.execute("test-feature");
 
 			// Should succeed because validation is skipped in MCP mode
 			// (Will use fallback template)
@@ -131,9 +142,9 @@ describe("Integration Workflow Tests", () => {
 			// Mock isLLMAvailable to return false
 			vi.spyOn(cmd as any, "isLLMAvailable").mockReturnValue(false);
 
-			await expect(
-				cmd.execute("test-feature", "Test description"),
-			).rejects.toThrow("LLM Provider Required");
+			await expect(cmd.execute("test-feature")).rejects.toThrow(
+				"LLM Provider Required",
+			);
 		});
 
 		it("should succeed when LLM is configured", async () => {
@@ -149,10 +160,25 @@ describe("Integration Workflow Tests", () => {
 			};
 
 			const cmd = new PrdCreateCommand(context);
+
 			// Mock isLLMAvailable to return true
 			vi.spyOn(cmd as any, "isLLMAvailable").mockReturnValue(true);
 
-			const result = await cmd.execute("test-feature", "Test description");
+			// Mock llmProvider to pass the provider check
+			const mockLLMProvider = {
+				isConfigured: vi.fn().mockReturnValue(true),
+				generate: vi.fn().mockResolvedValue({
+					content: "Mock response",
+					model: "mock-model",
+					tokensUsed: 100,
+					promptTokens: 50,
+					completionTokens: 50,
+					finishReason: "stop",
+				}),
+			};
+			(cmd as any).llmProvider = mockLLMProvider;
+
+			const result = await cmd.execute("test-feature");
 
 			// Should succeed when LLM is available
 			expect(result.success).toBe(true);
@@ -181,7 +207,7 @@ describe("Integration Workflow Tests", () => {
 			// Step 2: Create PRD
 			const prdCmd = new PrdCreateCommand(context);
 			vi.spyOn(prdCmd as any, "isLLMAvailable").mockReturnValue(false);
-			const prdResult = await prdCmd.execute("test-feature", "Test PRD");
+			const prdResult = await prdCmd.execute("test-feature");
 			expect(prdResult.success).toBe(true);
 
 			// Step 3: Generate Tasks

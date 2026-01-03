@@ -1,6 +1,6 @@
-import { TaskflowServer } from "../lib/server.js";
-import { UiManager } from "../lib/ui-manager.js";
-import { BaseCommand, type CommandResult } from "./base.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { TaskflowServer } from "@/lib/utils/server";
+import { UiManager } from "@/lib/utils/ui-manager";
 
 export class UiCommand extends BaseCommand {
 	async execute(options: {

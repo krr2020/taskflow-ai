@@ -3,7 +3,7 @@
  */
 
 import { afterEach, describe, expect, it } from "vitest";
-import { MCPDetector } from "../../src/lib/mcp-detector.js";
+import { MCPDetector } from "@/lib/mcp/mcp-detector";
 
 // Store original env vars
 const originalEnv = { ...process.env };

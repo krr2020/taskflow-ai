@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CodebaseScanner } from "../../src/lib/codebase-scanner.js";
+import { CodebaseScanner } from "@/lib/analysis/codebase-scanner";
 
 vi.mock("node:fs", () => ({
 	default: {
@@ -87,9 +87,9 @@ describe("CodebaseScanner", () => {
 		const authFeature = features.find((f) => f.type === "auth");
 		expect(authFeature).toBeDefined();
 		expect(authFeature?.files).toContain("/test/root/src/auth.ts");
-		expect(authFeature?.patterns.some((p) => p.pattern === "passport")).toBe(
-			true,
-		);
+		expect(
+			authFeature?.patterns.some((p: any) => p.pattern === "passport"),
+		).toBe(true);
 
 		const apiFeature = features.find((f) => f.type === "api");
 		expect(apiFeature).toBeDefined();

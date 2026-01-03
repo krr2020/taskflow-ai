@@ -22,17 +22,17 @@ import {
 	saveFeature,
 	saveProjectIndex,
 	saveTaskFile,
-} from "../../src/lib/data-access.js";
+} from "../../src/lib/core/data-access.js";
 import {
 	FileNotFoundError,
 	InvalidFileFormatError,
-} from "../../src/lib/errors.js";
+} from "../../src/lib/core/errors.js";
 import type {
 	Feature,
 	Story,
 	TaskFileContent,
 	TasksProgress,
-} from "../../src/lib/types.js";
+} from "../../src/lib/core/types.js";
 import { createTestDir } from "../setup.js";
 
 describe("data-access", () => {

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { execa } from "execa";
-import type { BackupManager, Sandbox } from "./safety.js";
+import type { BackupManager, Sandbox } from "@/agent/safety";
 
 export interface ToolResult {
 	success: boolean;

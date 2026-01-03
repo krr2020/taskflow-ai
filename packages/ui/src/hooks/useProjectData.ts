@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { ProjectData } from "../types";
+import { useEffect, useState } from "react";
+import type { ProjectData } from "../types";
 
 export function useProjectData() {
 	const [data, setData] = useState<ProjectData | null>(null);

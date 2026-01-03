@@ -4,8 +4,12 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { TEMPLATE_FILES } from "../lib/config-paths.js";
-import { VERSIONS } from "../lib/constants.js";
+import type { CommandResult } from "@/commands/base";
+import { BaseCommand } from "@/commands/base";
+import { TEMPLATE_FILES } from "@/lib/config/config-paths";
+import { VERSIONS } from "@/lib/config/constants";
+import { colors, consoleOutput, icons } from "@/lib/core/output";
+import { getTemplateDir } from "@/lib/utils/template-utils";
 import {
 	copyDir,
 	ensureDir as ensureFileDir,
@@ -13,17 +17,13 @@ import {
 	readJson,
 	readText,
 	writeJson,
-} from "../lib/file-utils.js";
-import { colors, consoleOutput, icons } from "../lib/output.js";
+} from "../lib/utils/file-utils.js";
 import {
 	ensureDir as ensurePathDir,
 	getBackupDir,
 	getRefDir,
 	getTaskflowDir,
-} from "../lib/path-utils.js";
-import { getTemplateDir } from "../lib/template-utils.js";
-import type { CommandResult } from "./base.js";
-import { BaseCommand } from "./base.js";
+} from "../lib/utils/path-utils.js";
 
 interface VersionInfo {
 	templateVersion: string;

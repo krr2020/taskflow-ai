@@ -11,7 +11,7 @@ import {
 	TaskFileContentSchema,
 	TaskRefSchema,
 	TaskStatusSchema,
-} from "../../src/lib/types.js";
+} from "../../src/lib/core/types.js";
 
 describe("Types and Schemas", () => {
 	describe("TaskStatusSchema", () => {

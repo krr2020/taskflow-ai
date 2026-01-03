@@ -29,19 +29,16 @@ export * from "./commands/workflow/resume.js";
 export * from "./commands/workflow/skip.js";
 export * from "./commands/workflow/start.js";
 export * from "./commands/workflow/status.js";
-export * from "./lib/config-loader.js";
-// Export configuration
-export * from "./lib/config-paths.js";
-// Export business logic
-export * from "./lib/data-access.js";
-// Export errors
-export * from "./lib/errors.js";
-export * from "./lib/file-validator.js";
-export * from "./lib/git.js";
 // Export log parser and file validator
-export * from "./lib/log-parser.js";
-export * from "./lib/output.js";
-export * from "./lib/retrospective.js";
+export * from "./lib/analysis/log-parser.js";
+export * from "./lib/config/config-loader.js";
+// Export configuration
+export * from "./lib/config/config-paths.js";
+// Export business logic
+export * from "./lib/core/data-access.js";
+// Export errors
+export * from "./lib/core/errors.js";
+export * from "./lib/core/output.js";
 // Export all types (except CommandResult which is exported from base.js)
 export type {
 	ActiveStatus,
@@ -57,12 +54,15 @@ export type {
 	TaskStatus,
 	TasksProgress,
 	TimeEntry,
-} from "./lib/types.js";
+} from "./lib/core/types.js";
 export {
 	parseTaskId,
 	STATUS_TRANSITIONS,
 	TaskStatusSchema,
-} from "./lib/types.js";
-export * from "./lib/validation.js";
+} from "./lib/core/types.js";
+export * from "./lib/git/git.js";
+export * from "./lib/utils/file-validator.js";
+export * from "./lib/utils/retrospective.js";
+export * from "./lib/utils/validation.js";
 // Export LLM providers
 export * from "./llm/index.js";

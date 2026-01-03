@@ -5,8 +5,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { ProviderFactory } from "../llm/factory.js";
-import { BaseCommand, type CommandResult } from "./base.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { ProviderFactory } from "@/llm/factory";
 
 export class ConfigureAICommand extends BaseCommand {
 	async execute(options: {
@@ -60,7 +60,9 @@ export class ConfigureAICommand extends BaseCommand {
 			this.saveConfig(config, configPath);
 			return this.success(
 				"AI configuration disabled",
-				"AI features will not be used. Commands will show guidance only.",
+				"AI features will not be used. Commands will show guidance only.\n\n" +
+					"To re-enable, run: taskflow configure ai --enable\n" +
+					"Or configure a provider: taskflow configure ai --provider anthropic --apiKey $${ANTHROPIC_API_KEY}",
 				{
 					aiGuidance:
 						"To re-enable, run: taskflow configure ai --enable\n" +
@@ -113,15 +115,15 @@ export class ConfigureAICommand extends BaseCommand {
 		}
 
 		if (options.model) {
-			config.ai.models = config.ai.models || { default: "gpt-4o-mini" };
-			config.ai.models.default = options.model;
+			config.ai.usage = config.ai.usage || { default: "gpt-4o-mini" };
+			config.ai.usage.default = options.model;
 		}
 
 		// Update per-phase models (legacy support)
 		if (options.planning || options.execution || options.analysis) {
-			config.ai.models = config.ai.models || { default: "gpt-4o-mini" };
+			config.ai.usage = config.ai.usage || { default: "gpt-4o-mini" };
 
-			const models = config.ai.models as {
+			const usage = config.ai.usage as {
 				default: string;
 				planning?: string;
 				execution?: string;
@@ -129,13 +131,13 @@ export class ConfigureAICommand extends BaseCommand {
 			};
 
 			if (options.planning) {
-				models.planning = options.planning;
+				usage.planning = options.planning;
 			}
 			if (options.execution) {
-				models.execution = options.execution;
+				usage.execution = options.execution;
 			}
 			if (options.analysis) {
-				models.analysis = options.analysis;
+				usage.analysis = options.analysis;
 			}
 		}
 
@@ -466,16 +468,16 @@ export class ConfigureAICommand extends BaseCommand {
 		);
 
 		// Display models for each phase
-		const models = aiConfig.models as Record<string, unknown>;
-		if (models && typeof models === "object") {
+		const usage = aiConfig.usage as Record<string, unknown>;
+		if (usage && typeof usage === "object") {
 			lines.push("");
 			lines.push("Models:");
 			const getPhaseModel = (phase: string): string => {
-				if (typeof models[phase] === "string") {
-					return models[phase] as string;
+				if (typeof usage[phase] === "string") {
+					return usage[phase] as string;
 				}
-				if (typeof models[phase] === "object" && models[phase] !== null) {
-					return (models[phase] as Record<string, unknown>).model as string;
+				if (typeof usage[phase] === "object" && usage[phase] !== null) {
+					return (usage[phase] as Record<string, unknown>).model as string;
 				}
 				return "Not configured";
 			};
@@ -538,10 +540,10 @@ export class ConfigureAICommand extends BaseCommand {
 			return `Configure a provider:\n${examples.join("\n")}`;
 		}
 
-		const models = aiConfig.models as
+		const usage = aiConfig.usage as
 			| { planning?: string; execution?: string; analysis?: string }
 			| undefined;
-		if (!models?.planning && !models?.execution && !models?.analysis) {
+		if (!usage?.planning && !usage?.execution && !usage?.analysis) {
 			return (
 				"Configure per-phase models (optional):\n" +
 				"  taskflow configure ai --planning claude-opus-4 --execution gemini-pro-2.0 --analysis claude-sonnet-4-20250514"

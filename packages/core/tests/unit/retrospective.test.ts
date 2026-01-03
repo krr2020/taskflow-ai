@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { ParsedError } from "../../src/lib/log-parser.js";
+import type { ParsedError } from "@/lib/analysis/log-parser";
 import {
 	appendNewPatternsToRetrospective,
 	extractNewPatterns,
@@ -16,7 +16,7 @@ import {
 	readRetrospectiveBeforeWork,
 	VALID_CATEGORIES,
 	VALID_CRITICALITIES,
-} from "../../src/lib/retrospective.js";
+} from "../../src/lib/utils/retrospective.js";
 import { createTestDir } from "../setup.js";
 
 describe("retrospective", () => {

@@ -5,13 +5,26 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import pc from "picocolors";
-import { AICallLogger } from "../lib/ai-call-logger.js";
-import { ConfigLoader } from "../lib/config-loader.js";
-import { VALIDATION_LIMITS } from "../lib/constants.js";
-import { LLMRequiredError } from "../lib/errors.js";
-import type { MCPContext } from "../lib/mcp-detector.js";
-import { UsageDisplay } from "../lib/usage-display.js";
+import { AICallLogger } from "@/lib/ai/ai-call-logger";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import { VALIDATION_LIMITS } from "@/lib/config/constants";
+import { LLMRequiredError } from "@/lib/core/errors";
+import type { MCPContext } from "@/lib/mcp/mcp-detector";
+import { Text } from "@/lib/ui/components";
+import { UsageDisplay } from "@/lib/utils/usage-display";
+import { LLMCache } from "@/llm/cache";
+import { CheckpointManager } from "@/llm/checkpoint-manager";
+import { ContextManager } from "@/llm/context-manager";
+import { CostTracker } from "@/llm/cost-tracker";
+import { type AIConfig, ProviderFactory } from "@/llm/factory";
+import { RateLimiter } from "@/llm/rate-limiter";
+import {
+	type BuiltPrompt,
+	type ContentBlock,
+	ContentManager,
+	type ContentOptions,
+	PromptBuilder,
+} from "../lib/content/index.js";
 import {
 	type LLMGenerationOptions,
 	type LLMGenerationResult,
@@ -19,12 +32,6 @@ import {
 	type LLMProvider,
 	Phase,
 } from "../llm/base.js";
-import { LLMCache } from "../llm/cache.js";
-import { CheckpointManager } from "../llm/checkpoint-manager.js";
-import { ContextManager } from "../llm/context-manager.js";
-import { CostTracker } from "../llm/cost-tracker.js";
-import { type AIConfig, ProviderFactory } from "../llm/factory.js";
-import { RateLimiter } from "../llm/rate-limiter.js";
 
 export interface CommandContext {
 	projectRoot: string;
@@ -51,6 +58,7 @@ export abstract class BaseCommand {
 	protected checkpointManager: CheckpointManager;
 	protected mcpContext: MCPContext;
 	protected aiLogger: AICallLogger;
+	protected promptBuilder: PromptBuilder;
 
 	// Commands that require LLM (set in subclasses)
 	protected requiresLLM: boolean = false;
@@ -69,6 +77,11 @@ export abstract class BaseCommand {
 		const debugEnabled = config?.debug ?? process.env.TASKFLOW_DEBUG === "true";
 		this.aiLogger = new AICallLogger(context.projectRoot, debugEnabled);
 
+		// Initialize mode-aware prompt builder
+		this.promptBuilder = new PromptBuilder(
+			this.mcpContext.isMCP ? "mcp" : "manual",
+		);
+
 		this.initializeLLMProvider();
 	}
 
@@ -77,6 +90,81 @@ export abstract class BaseCommand {
 	 */
 	getProjectRoot(): string {
 		return this.context.projectRoot;
+	}
+
+	/**
+	 * Get content options for mode-aware content delivery
+	 */
+	protected get contentOptions(): ContentOptions {
+		return {
+			mode: this.mcpContext.isMCP ? "mcp" : "manual",
+			context: {
+				projectRoot: this.context.projectRoot,
+				hasLLM: this.isLLMAvailable(),
+			},
+		};
+	}
+
+	/**
+	 * Get mode-aware content
+	 *
+	 * @example
+	 * const message = this.getContent('INIT.SUCCESS');
+	 * const steps = this.getContent('INIT.NEXT_STEPS');
+	 */
+	protected getContent(key: string): string {
+		return ContentManager.get(key, this.contentOptions);
+	}
+
+	/**
+	 * Get structured content block with mode-aware filtering
+	 *
+	 * @example
+	 * const block = this.getStructuredContent('PRD.CREATE.STEP_SUMMARY');
+	 */
+	protected getStructuredContent(key: string): ContentBlock {
+		return ContentManager.getStructured(key, this.contentOptions);
+	}
+
+	/**
+	 * Get content with variable interpolation
+	 *
+	 * @example
+	 * const message = this.interpolateContent('INIT.DIRECTORY_CREATED', { dir: '.taskflow' });
+	 */
+	protected interpolateContent(
+		key: string,
+		variables: Record<string, unknown>,
+	): string {
+		return ContentManager.interpolate(key, this.contentOptions, variables);
+	}
+
+	/**
+	 * Build mode-aware LLM prompt
+	 *
+	 * Automatically selects the correct prompt variant based on execution mode.
+	 * Manual mode prompts use strict formats for CLI parsing.
+	 * MCP mode prompts are natural and conversational for AI agent interaction.
+	 *
+	 * @example
+	 * const prompt = this.buildPrompt('PRD_QUESTION_GENERATION', {
+	 *   template: templateContent,
+	 *   summary: featureSummary,
+	 *   referencedFiles: files
+	 * });
+	 *
+	 * const result = await this.llmProvider.generate([
+	 *   { role: 'system', content: prompt.system },
+	 *   { role: 'user', content: prompt.user }
+	 * ]);
+	 *
+	 * // In manual mode, use parsing rules if provided:
+	 * if (prompt.parsingRules) {
+	 *   const parsed = this.parseWithRules(result.content, prompt.parsingRules);
+	 * }
+	 */
+	protected buildPrompt(key: string, context: unknown): BuiltPrompt {
+		return this.promptBuilder.build(key, context);
 	}
 
 	/**
@@ -192,6 +280,7 @@ For more info: https://github.com/krr2020/taskflow
 
 		const startTime = Date.now();
 		const timeoutMs = VALIDATION_LIMITS.LLM_GENERATION_TIMEOUT;
+		let timeoutHandle: NodeJS.Timeout | undefined;
 
 		try {
 			// Check cache first
@@ -202,18 +291,23 @@ For more info: https://github.com/krr2020/taskflow
 			}
 
 			// Call provider stream with timeout
-			const generator = Promise.race([
+			const generator = await Promise.race([
 				Promise.resolve(this.llmProvider.generateStream(messages, options)),
-				new Promise<never>((_, reject) =>
-					setTimeout(() => {
+				new Promise<never>((_, reject) => {
+					timeoutHandle = setTimeout(() => {
 						reject(
 							new Error(
 								`LLM generation timeout after ${timeoutMs / 1000}s. This may indicate a network issue or the LLM is taking longer than expected.`,
 							),
 						);
-					}, timeoutMs),
-				),
+					}, timeoutMs);
+				}),
 			]);
+
+			if (timeoutHandle) {
+				clearTimeout(timeoutHandle);
+				timeoutHandle = undefined;
+			}
 
 			let fullContent = "";
 
@@ -259,6 +353,9 @@ For more info: https://github.com/krr2020/taskflow
 
 			return fullContent;
 		} catch (error) {
+			if (timeoutHandle) {
+				clearTimeout(timeoutHandle);
+			}
 			this.logError(error, "generateStream failed");
 			throw error;
 		}
@@ -852,7 +949,7 @@ Be concise and actionable.`;
 			sections.push(separator);
 			sections.push(this.costTracker.getSummary());
 			if (this.costTracker.isOverBudget()) {
-				sections.push(pc.yellow("⚠️  Session budget exceeded"));
+				sections.push(Text.warning("⚠️  Session budget exceeded"));
 			}
 			sections.push("");
 		}
@@ -862,6 +959,10 @@ Be concise and actionable.`;
 
 	/**
 	 * Create a successful command result
+	 *
+	 * Automatically filters AI guidance based on execution mode.
+	 * In manual mode, AI guidance is removed to keep output clean for human users.
+	 * In MCP mode, AI guidance is included to help the AI agent.
 	 */
 	protected success(
 		output: string,
@@ -872,12 +973,19 @@ Be concise and actionable.`;
 			warnings?: string[];
 		},
 	): CommandResult {
-		return {
+		const result: CommandResult = {
 			success: true,
 			output,
 			nextSteps,
 			...options,
 		};
+
+		// Filter out AI guidance in manual mode
+		if (!this.mcpContext.isMCP && result.aiGuidance) {
+			delete result.aiGuidance;
+		}
+
+		return result;
 	}
 
 	/**

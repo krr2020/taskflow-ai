@@ -5,13 +5,16 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommandContext } from "../../src/commands/base.js";
-import { InitCommand } from "../../src/commands/init.js";
-import { PrdGenerateArchCommand } from "../../src/commands/prd/generate-arch.js";
-import { PrdUpdateArchCommand } from "../../src/commands/prd/update-arch.js";
-import { PrdUpdateStandardsCommand } from "../../src/commands/prd/update-standards.js";
-import type { MCPContext } from "../../src/lib/mcp-detector";
+import type { CommandContext } from "@/commands/base";
+import { InitCommand } from "@/commands/init";
+import { PrdGenerateArchCommand } from "@/commands/prd/generate-arch";
+import { PrdUpdateArchCommand } from "@/commands/prd/update-arch";
+import { PrdUpdateStandardsCommand } from "@/commands/prd/update-standards";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import type { MCPContext } from "@/lib/mcp/mcp-detector";
 import { createTestDir } from "../setup.js";
+
+const { existsSync, mkdirSync } = fs;
 
 describe("PRD Standards Integration", () => {
 	let testDir: string;
@@ -37,18 +40,28 @@ describe("PRD Standards Integration", () => {
 			const initCmd = new InitCommand(context);
 			await initCmd.execute("test-project");
 
-			// Try to generate without PRD file
+			// Try to generate without PRD file - command returns generic error
 			const cmd = new PrdGenerateArchCommand(context);
 			const result = await cmd.execute("");
 
 			expect(result.success).toBe(false);
-			expect(result.output).toContain("PRD file is required");
+			expect(result.output).toContain("No PRDs found");
 		});
 
 		it("should fail if PRD file does not exist", async () => {
 			// Initialize project first
 			const initCmd = new InitCommand(context);
 			await initCmd.execute("test-project");
+
+			// Create prds directory with at least one file so command can check for specific file
+			const configLoader = new ConfigLoader(testDir);
+			const paths = configLoader.getPaths();
+			const prdsDir = path.join(paths.tasksDir, "prds");
+			if (!existsSync(prdsDir)) {
+				mkdirSync(prdsDir, { recursive: true });
+			}
+			// Create a dummy PRD so the command proceeds to check for the requested file
+			fs.writeFileSync(path.join(prdsDir, "dummy.md"), "# Dummy PRD");
 
 			// Try to generate with non-existent PRD
 			const cmd = new PrdGenerateArchCommand(context);

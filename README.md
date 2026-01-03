@@ -17,10 +17,13 @@ cd your-project
 taskflow init
 
 # Create a feature specification (Interactive AI)
-taskflow prd create user-authentication
+taskflow prd create
 
 # Or analyze existing code
 taskflow prd detect
+
+# To create architecture files after prd document creation
+taskflow prd generate-arch
 
 # Generate tasks from the spec
 taskflow tasks generate tasks/prds/YYYY-MM-DD-user-authentication.md

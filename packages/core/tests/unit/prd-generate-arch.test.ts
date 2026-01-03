@@ -1,66 +1,126 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PrdGenerateArchCommand } from "../../src/commands/prd/generate-arch";
+import { PrdGenerateArchCommand } from "@/commands/prd/generate-arch";
 
-// Hoist mocks
+// Hoist mocks - create mock functions that can be accessed in tests
 const mocks = vi.hoisted(() => {
+	const configLoaderMocks = {
+		getPaths: vi.fn().mockReturnValue({
+			tasksDir: "/test/root/tasks",
+			refDir: "/test/root/.taskflow/ref",
+		}),
+		load: vi.fn().mockReturnValue({}),
+		exists: vi.fn().mockReturnValue(true),
+	};
+
+	const detectorMocks = {
+		detect: vi.fn().mockResolvedValue({
+			languages: [],
+			frameworks: [],
+			databases: [],
+			infrastructure: [],
+		}),
+		isGreenfield: vi.fn().mockReturnValue(true),
+	};
+
+	const suggesterMocks = {
+		suggest: vi.fn().mockResolvedValue([
+			{
+				id: "test-stack",
+				name: "Test Stack",
+				description: "Test Description",
+				technologies: {
+					frontend: [{ name: "React" }],
+					backend: [{ name: "Node.js" }],
+				},
+				pros: [],
+				cons: [],
+				bestFor: [],
+				recommended: true,
+			},
+		]),
+		suggestOptions: vi.fn().mockResolvedValue([]),
+	};
+
+	const generatorMocks = {
+		generate: vi.fn().mockResolvedValue({ generated: true }),
+	};
+
+	// Mock classes that use the mock functions
+	class MockConfigLoader {
+		getPaths() {
+			return configLoaderMocks.getPaths();
+		}
+		load() {
+			return configLoaderMocks.load();
+		}
+		exists() {
+			return configLoaderMocks.exists();
+		}
+	}
+
+	class MockTechStackDetector {
+		detect(...args: any[]) {
+			return detectorMocks.detect(...args);
+		}
+		isGreenfield() {
+			return detectorMocks.isGreenfield();
+		}
+		formatStack() {
+			return [];
+		}
+	}
+
+	class MockTechStackSuggester {
+		suggest(...args: any[]) {
+			return suggesterMocks.suggest(...args);
+		}
+		suggestOptions(...args: any[]) {
+			return suggesterMocks.suggestOptions(...args);
+		}
+	}
+
+	class MockTechStackGenerator {
+		generate(...args: any[]) {
+			return generatorMocks.generate(...args);
+		}
+	}
+
 	return {
-		configLoader: {
-			getPaths: vi.fn().mockReturnValue({
-				tasksDir: "/test/root/tasks",
-				refDir: "/test/root/.taskflow/ref",
-			}),
-			load: vi.fn(),
-			exists: vi.fn().mockReturnValue(true),
-		},
-		detector: {
-			detect: vi.fn(),
-		},
-		suggester: {
-			suggestOptions: vi.fn(),
-		},
-		generator: {
-			generate: vi.fn(),
-		},
+		MockConfigLoader,
+		MockTechStackDetector,
+		MockTechStackSuggester,
+		MockTechStackGenerator,
+		configLoader: configLoaderMocks,
+		detector: detectorMocks,
+		suggester: suggesterMocks,
+		generator: generatorMocks,
 	};
 });
 
 // Mock dependencies
 vi.mock("node:fs");
 
-vi.mock("../../src/lib/config-loader", () => {
-	return {
-		ConfigLoader: vi.fn().mockImplementation(() => mocks.configLoader),
-	};
-});
+vi.mock("@/lib/config-loader", () => ({
+	ConfigLoader: mocks.MockConfigLoader as any,
+}));
 
-vi.mock("../../src/lib/tech-stack-detector", () => {
-	return {
-		TechStackDetector: vi.fn().mockImplementation(() => mocks.detector),
-	};
-});
+vi.mock("@/lib/analysis/tech-stack-detector.js", () => ({
+	TechStackDetector: mocks.MockTechStackDetector as any,
+}));
 
-vi.mock("../../src/lib/tech-stack-suggester", () => {
-	return {
-		TechStackSuggester: vi.fn().mockImplementation(() => mocks.suggester),
-	};
-});
+vi.mock("@/lib/analysis/tech-stack-suggester", () => ({
+	TechStackSuggester: mocks.MockTechStackSuggester as any,
+}));
 
-vi.mock("../../src/lib/tech-stack-generator", () => {
-	return {
-		TechStackGenerator: vi.fn().mockImplementation(() => mocks.generator),
-	};
-});
-
-vi.mock("../../src/lib/terminal-formatter", () => ({
-	TerminalFormatter: {
-		header: (msg: string) => `[HEADER] ${msg}`,
-		section: (msg: string) => `[SECTION] ${msg}`,
-		info: (msg: string) => `[INFO] ${msg}`,
-		success: (msg: string) => `[SUCCESS] ${msg}`,
-		warning: (msg: string) => `[WARNING] ${msg}`,
-		listItem: (msg: string) => `[ITEM] ${msg}`,
+vi.mock("@/lib/input/index", () => ({
+	InteractiveSelect: {
+		single: vi.fn().mockResolvedValue(0),
 	},
+}));
+
+vi.mock("@/lib/tech-stack-generator", () => ({
+	TechStackGenerator: mocks.MockTechStackGenerator as any,
 }));
 
 describe("PrdGenerateArchCommand", () => {
@@ -68,10 +128,7 @@ describe("PrdGenerateArchCommand", () => {
 	let mockContext: any;
 
 	beforeEach(() => {
-		// Reset mocks
-		vi.clearAllMocks();
-
-		// Restore default return values
+		// Reset mocks (but not fs - we'll set those up again)
 		mocks.configLoader.getPaths.mockReturnValue({
 			tasksDir: "/test/root/tasks",
 			refDir: "/test/root/.taskflow/ref",
@@ -96,22 +153,50 @@ describe("PrdGenerateArchCommand", () => {
 				generateStream: vi.fn().mockImplementation(async function* () {
 					yield "chunk1";
 					yield "chunk2";
+					return {
+						model: "mock-model",
+						promptTokens: 10,
+						completionTokens: 20,
+						tokensUsed: 30,
+					};
 				}),
 				isConfigured: vi.fn().mockReturnValue(true),
 			},
 		};
 
-		// Mock fs
-		(fs.existsSync as any).mockReturnValue(true);
-		(fs.readFileSync as any).mockReturnValue("mock content");
-		(fs.writeFileSync as any).mockImplementation(() => {});
+		// Mock fs methods
+		const existsSyncSpy = vi.spyOn(fs, "existsSync");
+		existsSyncSpy.mockImplementation((path: any) => {
+			const pathStr = path.toString();
+			if (pathStr.includes("coding-standards.md")) return false;
+			if (pathStr.includes("architecture-rules.md")) return false;
+			if (pathStr.includes("tech-stack.md")) return false;
+			return true;
+		});
+		vi.spyOn(fs, "readFileSync").mockImplementation((path: any) => {
+			const pathStr = path.toString();
+			// Return valid JSON for config files
+			if (pathStr.includes("taskflow.config.json")) {
+				return JSON.stringify({
+					project: { name: "test", root: "." },
+					branching: { strategy: "per-story", base: "main", prefix: "story/" },
+					ai: { models: {} },
+				});
+			}
+			// Return mock content for other files
+			return "mock content" as any;
+		});
+		vi.spyOn(fs, "writeFileSync").mockImplementation(() => {});
+		vi.spyOn(fs, "readdirSync").mockReturnValue(["test.md"] as any);
 
 		// Spy on console.log
 		vi.spyOn(console, "log").mockImplementation(() => {});
+		vi.spyOn(console, "warn").mockImplementation(() => {});
 
 		command = new PrdGenerateArchCommand(mockContext);
 		// Inject mock LLM provider manually since BaseCommand initializes it from config
 		(command as any).llmProvider = mockContext.llmProvider;
+		(command as any).llmCache = { get: () => null, set: () => {} };
 	});
 
 	afterEach(() => {
@@ -141,11 +226,11 @@ describe("PrdGenerateArchCommand", () => {
 
 		// Check if correct header was logged
 		expect(console.log).toHaveBeenCalledWith(
-			expect.stringContaining("[HEADER] EXISTING TECH STACK"),
+			expect.stringContaining("EXISTING TECH STACK"),
 		);
 		expect(console.log).toHaveBeenCalledWith(
 			expect.stringContaining(
-				"[INFO] No existing tech stack detected (Greenfield project).",
+				"No existing tech stack detected (Greenfield project).",
 			),
 		);
 	});
@@ -162,17 +247,19 @@ describe("PrdGenerateArchCommand", () => {
 		await command.execute("test-prd.md");
 
 		// Check the calls to generateStream
-		expect(generateStreamSpy).toHaveBeenCalledTimes(2);
+		expect(generateStreamSpy).toHaveBeenCalledTimes(3);
 
 		const firstCallArgs = generateStreamSpy.mock.calls[0];
 		const secondCallArgs = generateStreamSpy.mock.calls[1];
+		const thirdCallArgs = generateStreamSpy.mock.calls[2];
 
-		if (!firstCallArgs || !secondCallArgs) {
-			throw new Error("Expected 2 calls to generateStream");
+		if (!firstCallArgs || !secondCallArgs || !thirdCallArgs) {
+			throw new Error("Expected 3 calls to generateStream");
 		}
 
 		// args[1] is options
 		expect((firstCallArgs[1] as any).maxTokens).toBe(8192);
 		expect((secondCallArgs[1] as any).maxTokens).toBe(8192);
+		expect((thirdCallArgs[1] as any).maxTokens).toBe(8192);
 	});
 });

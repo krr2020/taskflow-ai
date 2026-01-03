@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ToolParser } from "../../agent/parser.js";
+import { ToolParser } from "@/agent/parser";
 
 describe("ToolParser", () => {
 	it("should parse single tool call", () => {

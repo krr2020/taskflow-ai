@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { useProjectData } from "../hooks/useProjectData";
-import { getStatusColor, createSlug } from "../utils";
+import { createSlug, getStatusColor } from "../utils";
 
 export function FeatureListPage() {
 	const { data, error, loading } = useProjectData();
@@ -11,7 +11,10 @@ export function FeatureListPage() {
 	if (!data) return null;
 
 	return (
-		<Layout projectName={data.project.name} projectDescription={data.project.description}>
+		<Layout
+			projectName={data.project.name}
+			projectDescription={data.project.description}
+		>
 			<h2 className="text-2xl font-semibold mb-6 dark:text-white">Features</h2>
 			<div className="grid gap-4">
 				{data.features.map((feature) => (
@@ -23,15 +26,25 @@ export function FeatureListPage() {
 						<div className="flex justify-between items-start">
 							<div>
 								<div className="flex items-center gap-2 mb-2">
-									<span className="text-gray-400 text-sm font-mono dark:text-gray-500">Feature {feature.id}</span>
-									<h3 className="text-xl font-medium text-gray-900 dark:text-white">{feature.title}</h3>
+									<span className="text-gray-400 text-sm font-mono dark:text-gray-500">
+										Feature {feature.id}
+									</span>
+									<h3 className="text-xl font-medium text-gray-900 dark:text-white">
+										{feature.title}
+									</h3>
 								</div>
 								{feature.description && (
-									<p className="text-gray-600 mb-4 dark:text-gray-300 line-clamp-2">{feature.description}</p>
+									<p className="text-gray-600 mb-4 dark:text-gray-300 line-clamp-2">
+										{feature.description}
+									</p>
 								)}
 								<div className="text-sm text-gray-500 dark:text-gray-400">
 									{feature.stories?.length || 0} stories •{" "}
-									{feature.stories?.reduce((sum, s) => sum + (s.tasks?.length || 0), 0) || 0} tasks
+									{feature.stories?.reduce(
+										(sum, s) => sum + (s.tasks?.length || 0),
+										0,
+									) || 0}{" "}
+									tasks
 								</div>
 							</div>
 							<span

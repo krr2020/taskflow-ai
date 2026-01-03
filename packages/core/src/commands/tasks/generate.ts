@@ -4,25 +4,25 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import pc from "picocolors";
-import { ConfigLoader } from "../../lib/config-loader.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import { saveFeature, saveProjectIndex } from "@/lib/core/data-access";
+import { LLMRequiredError } from "@/lib/core/errors";
+import { Colors, Text } from "@/lib/ui/components";
+import { StreamDisplay } from "@/lib/utils/stream-display";
 import {
 	getRefFilePath,
 	getSkillFilePath,
 	REF_FILES,
 	SKILL_FILES,
-} from "../../lib/config-paths.js";
-import { saveFeature, saveProjectIndex } from "../../lib/data-access.js";
-import { LLMRequiredError } from "../../lib/errors.js";
-import { StreamDisplay } from "../../lib/stream-display.js";
-import { TerminalFormatter } from "../../lib/terminal-formatter.js";
+} from "../../lib/config/config-paths.js";
 import type {
 	Feature,
+	Story,
 	TaskflowConfig,
 	TaskRef,
 	TasksProgress,
-} from "../../lib/types.js";
-import { BaseCommand, type CommandResult } from "../base.js";
+} from "../../lib/core/types.js";
 
 export class TasksGenerateCommand extends BaseCommand {
 	protected override requiresLLM = true;
@@ -102,44 +102,48 @@ export class TasksGenerateCommand extends BaseCommand {
 		const outputParts: string[] = [];
 
 		if (availablePrds.length > 1 && !prdFile) {
-			outputParts.push(TerminalFormatter.header("AVAILABLE PRDs"));
+			outputParts.push(Text.heading("AVAILABLE PRDs"));
 
 			availablePrds.forEach((p, i) => {
 				const isGenerated = fs.existsSync(progressFilePath);
-				const status = isGenerated ? pc.green("(tasks generated ✓)") : "";
-				outputParts.push(TerminalFormatter.question(i + 1, `${p} ${status}`));
+				const status = isGenerated ? Text.success("(tasks generated ✓)") : "";
+				outputParts.push(Text.question(i + 1, `${p} ${status}`));
 			});
 
 			outputParts.push("");
-			outputParts.push(TerminalFormatter.section("DECISION NEEDED"));
-			outputParts.push(pc.dim("AI Agent should:"));
-			outputParts.push(pc.dim("  1. Analyze project context"));
+			outputParts.push(Text.section("DECISION NEEDED"));
+			outputParts.push(Text.muted("AI Agent should:"));
+			outputParts.push(Text.muted("  1. Analyze project context"));
 			outputParts.push(
-				pc.dim("  2. Determine which PRD(s) to generate tasks for"),
+				Text.muted("  2. Determine which PRD(s) to generate tasks for"),
 			);
 			outputParts.push(
-				pc.dim("  3. Consider: Is this adding features to existing project?"),
+				Text.muted(
+					"  3. Consider: Is this adding features to existing project?",
+				),
 			);
 			outputParts.push(
-				pc.dim("  4. Select appropriate PRD or combine multiple PRDs"),
+				Text.muted("  4. Select appropriate PRD or combine multiple PRDs"),
 			);
 
 			outputParts.push("");
-			outputParts.push(TerminalFormatter.section("OPTIONS"));
-			outputParts.push(pc.white("  • Generate tasks for specific PRD:"));
-			outputParts.push(pc.cyan("    taskflow tasks generate <filename>"));
+			outputParts.push(Text.section("OPTIONS"));
+			outputParts.push(Text.muted("  • Generate tasks for specific PRD:"));
 			outputParts.push(
-				pc.white("  • Generate for all ready PRDs (if appropriate)"),
+				Colors.primary("    taskflow tasks generate <filename>"),
 			);
 			outputParts.push(
-				pc.white("  • Combine related PRDs into one feature set"),
+				Text.muted("  • Generate for all ready PRDs (if appropriate)"),
+			);
+			outputParts.push(
+				Text.muted("  • Combine related PRDs into one feature set"),
 			);
 		} else if (prdFile) {
-			outputParts.push(TerminalFormatter.header(`PRD LOADED: ${prdFile}`));
+			outputParts.push(Text.heading(`PRD LOADED: ${prdFile}`));
 
 			if (!codingStandardsExist || !architectureRulesExist) {
 				outputParts.push(
-					TerminalFormatter.warning(
+					Text.warning(
 						"Architecture files missing - Run: taskflow prd generate-arch",
 					),
 				);
@@ -147,22 +151,24 @@ export class TasksGenerateCommand extends BaseCommand {
 
 			outputParts.push(
 				codingStandardsExist
-					? TerminalFormatter.success("coding-standards.md found")
-					: TerminalFormatter.warning("coding-standards.md missing"),
+					? Text.success("coding-standards.md found")
+					: Text.warning("coding-standards.md missing"),
 			);
 			outputParts.push(
 				architectureRulesExist
-					? TerminalFormatter.success("architecture-rules.md found")
-					: TerminalFormatter.warning("architecture-rules.md missing"),
+					? Text.success("architecture-rules.md found")
+					: Text.warning("architecture-rules.md missing"),
 			);
 
 			outputParts.push("");
-			outputParts.push(TerminalFormatter.section("TASK"));
+			outputParts.push(Text.section("TASK"));
 			outputParts.push(
-				pc.white("Generate a complete task breakdown from PRD."),
+				Text.muted("Generate a complete task breakdown from PRD."),
 			);
 			outputParts.push(
-				pc.dim("Create features, stories, and tasks with proper dependencies."),
+				Text.muted(
+					"Create features, stories, and tasks with proper dependencies.",
+				),
 			);
 		}
 
@@ -170,26 +176,26 @@ export class TasksGenerateCommand extends BaseCommand {
 		const existingTasks = fs.existsSync(progressFilePath);
 		if (existingTasks) {
 			outputParts.push("");
-			outputParts.push(TerminalFormatter.header("EXISTING TASKS DETECTED"));
-			outputParts.push(pc.yellow(`File: ${progressFilePath} exists`));
+			outputParts.push(Text.heading("EXISTING TASKS DETECTED"));
+			outputParts.push(Text.warning(`File: ${progressFilePath} exists`));
 			outputParts.push("");
 
-			outputParts.push(TerminalFormatter.section("OPTIONS"));
+			outputParts.push(Text.section("OPTIONS"));
 			outputParts.push(
-				pc.white("1. APPEND: Add new PRDs to existing structure"),
+				Text.muted("1. APPEND: Add new PRDs to existing structure"),
 			);
 			outputParts.push(
-				pc.white("2. MERGE: Combine new PRDs with existing tasks"),
+				Text.muted("2. MERGE: Combine new PRDs with existing tasks"),
 			);
 			outputParts.push(
-				pc.white(
+				Text.muted(
 					"3. RESET: Delete existing and regenerate (CAUTION: loses progress)",
 				),
 			);
-			outputParts.push(pc.white("4. SELECTIVE: Generate only specific PRDs"));
+			outputParts.push(Text.muted("4. SELECTIVE: Generate only specific PRDs"));
 			outputParts.push("");
 			outputParts.push(
-				pc.dim(
+				Text.muted(
 					"AI Agent should decide based on project state and user intent.",
 				),
 			);
@@ -441,7 +447,7 @@ export class TasksGenerateCommand extends BaseCommand {
 					'      "description": "Add unit tests",',
 					'      "status": "pending"',
 					"    }",
-					"  ],", 
+					"  ],",
 					'  "acceptanceCriteria": [',
 					'    "User table exists with required fields",',
 					'    "Migration runs without errors",',
@@ -565,13 +571,13 @@ export class TasksGenerateCommand extends BaseCommand {
 			throw new LLMRequiredError("LLM provider not available");
 		}
 
-		console.log(pc.cyan("📋 Starting task generation..."));
-		console.log(pc.dim(`   PRD: ${prdFile}`));
+		console.log(Text.info("📋 Starting task generation..."));
+		console.log(Text.muted(`   PRD: ${prdFile}`));
 
 		// Load existing tasks to support continuation
-		console.log(pc.dim("   Checking for existing tasks..."));
+		console.log(Text.muted("   Checking for existing tasks..."));
 		const progressFilePath = path.join(tasksDir, "tasks-progress.json");
-		let existingFeatures: any[] = [];
+		let existingFeatures: Feature[] = [];
 		let existingFeaturesSummary = "";
 
 		if (fs.existsSync(progressFilePath)) {
@@ -582,26 +588,31 @@ export class TasksGenerateCommand extends BaseCommand {
 				existingFeatures = existingData.features || [];
 
 				if (existingFeatures.length > 0) {
-					existingFeaturesSummary = "\n\n=== EXISTING FEATURES (ALREADY GENERATED) ===\n";
-					existingFeatures.forEach((f: any) => {
+					existingFeaturesSummary =
+						"\n\n=== EXISTING FEATURES (ALREADY GENERATED) ===\n";
+					existingFeatures.forEach((f: Feature) => {
 						existingFeaturesSummary += `\nFeature ${f.id}: ${f.title} (${f.status})\n`;
 						if (f.stories) {
-							f.stories.forEach((s: any) => {
+							f.stories.forEach((s: Story) => {
 								existingFeaturesSummary += `  Story ${s.id}: ${s.title} (${s.status}) - ${s.tasks?.length || 0} tasks\n`;
 							});
 						}
 					});
 					console.log(
-						pc.dim(`   Found ${existingFeatures.length} existing feature(s)`),
+						Text.muted(
+							`   Found ${existingFeatures.length} existing feature(s)`,
+						),
 					);
 				}
-			} catch (e) {
-				console.log(pc.dim("   Could not parse existing tasks, starting fresh"));
+			} catch (_e) {
+				console.log(
+					Text.muted("   Could not parse existing tasks, starting fresh"),
+				);
 			}
 		}
 
 		// Load context files
-		console.log(pc.dim("   Loading context files..."));
+		console.log(Text.muted("   Loading context files..."));
 		const contextFiles: { name: string; content: string }[] = [];
 
 		// Load task-generator.md
@@ -650,7 +661,7 @@ export class TasksGenerateCommand extends BaseCommand {
 		let featureLimitMessage = "";
 		if (maxFeatures && maxFeatures > 0) {
 			featureLimitMessage = `\n\nIMPORTANT: Limit your output to maximum ${maxFeatures} feature(s). Focus on the most critical and high-priority features first. You can generate tasks for remaining features later using the same PRD.`;
-			console.log(pc.dim(`   Limit: Maximum ${maxFeatures} feature(s)`));
+			console.log(Text.muted(`   Limit: Maximum ${maxFeatures} feature(s)`));
 		}
 
 		// If existing features exist, inform the LLM
@@ -662,7 +673,9 @@ export class TasksGenerateCommand extends BaseCommand {
 			}
 		}
 
-		console.log(pc.dim("   Analyzing PRD and generating task breakdown..."));
+		console.log(
+			Text.muted("   Analyzing PRD and generating task breakdown..."),
+		);
 
 		// Generate tasks JSON
 		const tasksData = await this.generateTasksJSON(
@@ -672,45 +685,10 @@ export class TasksGenerateCommand extends BaseCommand {
 			featureLimitMessage,
 		);
 
-		console.log(pc.dim("   Creating task file structure..."));
+		console.log(Text.muted("   Creating task file structure..."));
 
 		// Create task structure
 		await this.createTaskStructure(tasksDir, tasksData);
-
-		// Convert to TasksProgress for saving
-		const tasksProgress: TasksProgress = {
-			project: tasksData.project,
-			features: tasksData.features.map((f) => ({
-				...f,
-				status: f.status as
-					| "not-started"
-					| "in-progress"
-					| "completed"
-					| "blocked"
-					| "on-hold",
-				stories: f.stories.map((s) => ({
-					...s,
-					status: s.status as
-						| "not-started"
-						| "in-progress"
-						| "completed"
-						| "blocked"
-						| "on-hold",
-					tasks: s.tasks.map((t) => {
-						const {
-							description: _desc,
-							skill: _skill,
-							estimatedHours: _est,
-							context: _ctx,
-							subtasks: _sub,
-							acceptanceCriteria: _acc,
-							...taskRef
-						} = t;
-						return taskRef as TaskRef;
-					}),
-				})),
-			})),
-		};
 
 		// Write tasks progress
 		await this.writeTasksProgress(tasksDir, tasksData);
@@ -723,7 +701,7 @@ export class TasksGenerateCommand extends BaseCommand {
 		// Save project index (required for loading progress)
 		saveProjectIndex(tasksDir, finalProgress);
 
-		console.log(pc.green("✓ Task generation completed successfully!"));
+		console.log(Text.success("✓ Task generation completed successfully!"));
 
 		const totalFeatures = finalProgress.features.length;
 		const newFeatures = tasksData.features.length;
@@ -731,27 +709,29 @@ export class TasksGenerateCommand extends BaseCommand {
 
 		return this.success(
 			[
-				TerminalFormatter.success(
+				Text.success(
 					`${isNewRun ? "Generated" : "Generated additional"} task breakdown from ${prdFile}`,
 				),
 				"",
-				TerminalFormatter.section("TASK HIERARCHY"),
-				pc.white(`  Total Features: ${totalFeatures}`),
-				pc.white(`  Stories: ${finalProgress.features.reduce((sum, f) => sum + (f.stories?.length || 0), 0)}`),
-				pc.white(
-					`  Tasks: ${finalProgress.features.reduce((sum, f) => sum + (f.stories?.reduce((s: number, st: any) => s + (st.tasks?.length || 0), 0) || 0), 0)}`,
+				Text.section("TASK HIERARCHY"),
+				Text.muted(`  Total Features: ${totalFeatures}`),
+				Text.muted(
+					`  Stories: ${finalProgress.features.reduce((sum, f) => sum + (f.stories?.length || 0), 0)}`,
+				),
+				Text.muted(
+					`  Tasks: ${finalProgress.features.reduce((sum, f) => sum + (f.stories?.reduce((s: number, st) => s + (st.tasks?.length || 0), 0) || 0), 0)}`,
 				),
 				!isNewRun
 					? [
 							"",
-							TerminalFormatter.section("THIS SESSION"),
-							pc.white(`  New Features: ${newFeatures}`),
+							Text.section("THIS SESSION"),
+							Text.muted(`  New Features: ${newFeatures}`),
 						].join("\n")
 					: "",
 				"",
-				TerminalFormatter.section("FILES CREATED"),
-				pc.cyan(`  - ${path.join(tasksDir, "tasks-progress.json")}`),
-				pc.cyan(`  - Task files in ${tasksDir}/F*/S*/`),
+				Text.section("FILES CREATED"),
+				Colors.primary(`  - ${path.join(tasksDir, "tasks-progress.json")}`),
+				Colors.primary(`  - Task files in ${tasksDir}/F*/S*/`),
 			].join("\n"),
 			[
 				"Next steps:",
@@ -1029,8 +1009,10 @@ ${featureLimitMessage}`;
 				existingProgress = JSON.parse(
 					fs.readFileSync(progressFilePath, "utf-8"),
 				);
-			} catch (e) {
-				console.log(pc.dim("   Could not parse existing tasks, creating new file"));
+			} catch (_e) {
+				console.log(
+					Text.muted("   Could not parse existing tasks, creating new file"),
+				);
 			}
 		}
 
@@ -1042,7 +1024,7 @@ ${featureLimitMessage}`;
 				features: [...existingProgress.features, ...newTasksProgress.features],
 			};
 			console.log(
-				pc.dim(
+				Text.muted(
 					`   Merged ${newTasksProgress.features.length} new feature(s) with ${existingProgress.features.length} existing feature(s)`,
 				),
 			);

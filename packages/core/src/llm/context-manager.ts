@@ -3,7 +3,7 @@
  * Manages context window limits with priority-based truncation and summarization
  */
 
-import type { LLMMessage } from "./base.js";
+import type { LLMMessage } from "@/llm/base";
 
 /**
  * Context priority levels
@@ -49,6 +49,7 @@ export interface TokenEstimationOptions {
  */
 export class ContextManager {
 	private config: ContextWindowConfig;
+	private tokenCache: Map<string, number> = new Map();
 
 	constructor(config: ContextWindowConfig) {
 		this.config = config;
@@ -58,17 +59,54 @@ export class ContextManager {
 	 * Estimate token count for text
 	 * Uses a simple heuristic: ~4 characters per token
 	 * This is conservative and works across most models
+	 *
+	 * Enhanced with caching for better performance
 	 */
 	estimateTokens(text: string, options?: TokenEstimationOptions): number {
 		if (!text) {
 			return 0;
 		}
 
-		// Conservative estimate: 3.5 chars per token
-		// This accounts for code, which tends to have more tokens
-		const charsPerToken = options?.conservative ? 3.0 : 3.5;
+		// Check cache first (using content hash for cache key)
+		const cacheKey = this.getCacheKey(text);
+		const cached = this.tokenCache.get(cacheKey);
 
-		return Math.ceil(text.length / charsPerToken);
+		if (cached !== undefined) {
+			return cached;
+		}
+
+		// Calculate tokens
+		const charsPerToken = options?.conservative ? 3.0 : 3.5;
+		const tokens = Math.ceil(text.length / charsPerToken);
+
+		// Cache the result (limit cache size to prevent memory issues)
+		if (this.tokenCache.size < 1000) {
+			this.tokenCache.set(cacheKey, tokens);
+		} else {
+			// Clear cache when it gets too large
+			this.tokenCache.clear();
+			this.tokenCache.set(cacheKey, tokens);
+		}
+
+		return tokens;
+	}
+
+	/**
+	 * Generate cache key from text (simple hash)
+	 */
+	private getCacheKey(text: string): string {
+		// Use first 100 + last 100 chars + length for a reasonable cache key
+		// This is faster than hashing the entire content
+		const start = text.slice(0, 100);
+		const end = text.length > 100 ? text.slice(-100) : "";
+		return `${start}:${end}:${text.length}`;
+	}
+
+	/**
+	 * Clear the token cache
+	 */
+	clearTokenCache(): void {
+		this.tokenCache.clear();
 	}
 
 	/**

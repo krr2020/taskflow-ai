@@ -1,8 +1,12 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BaseCommand, type CommandResult } from "../../src/commands/base.js";
-import type { MCPContext } from "../../src/lib/mcp-detector";
-import { type LLMGenerationResult, LLMProvider } from "../../src/llm/base.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import type { MCPContext } from "@/lib/mcp/mcp-detector";
+import { type LLMGenerationResult, LLMProvider } from "@/llm/base";
+import { createMockConfigLoader } from "../helpers/mocks.js";
+
+vi.mock("@/lib/config/config-loader");
 
 // Mock implementation of BaseCommand for testing
 class TestCommand extends BaseCommand {
@@ -38,8 +42,18 @@ class MockProvider extends LLMProvider {
 		super("openai-compatible" as any, "test-model");
 	}
 
-	generate = vi.fn();
-	isConfigured = vi.fn().mockReturnValue(true);
+	generate = vi.fn(() =>
+		Promise.resolve({
+			content: "mock response",
+			model: "test-model",
+			promptTokens: 0,
+			completionTokens: 0,
+			tokensUsed: 0,
+		}),
+	);
+
+	isConfigured = vi.fn(() => true);
+
 	async *generateStream(): AsyncGenerator<
 		string,
 		LLMGenerationResult,
@@ -62,6 +76,13 @@ describe("Error Handling", () => {
 	const projectRoot = "/tmp/test-project";
 
 	beforeEach(() => {
+		// Mock ConfigLoader as a constructor function
+		vi.mocked(ConfigLoader).mockImplementation(function (this: any) {
+			const mock = createMockConfigLoader();
+			Object.assign(this, mock);
+			return this;
+		} as any);
+
 		// Mock fs
 		vi.spyOn(fs, "existsSync").mockReturnValue(true);
 		vi.spyOn(fs, "mkdirSync").mockImplementation(() => undefined);
@@ -108,6 +129,9 @@ describe("Error Handling", () => {
 			mockProvider.generate.mockResolvedValue({
 				content: "pong",
 				model: "test",
+				promptTokens: 1,
+				completionTokens: 1,
+				tokensUsed: 2,
 			});
 			const result = await command.testVerifyLLMConfiguration(true);
 			expect(result.valid).toBe(true);

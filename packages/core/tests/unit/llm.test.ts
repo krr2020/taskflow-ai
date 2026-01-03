@@ -3,12 +3,12 @@
  */
 
 import { describe, expect, it, vi } from "vitest";
-import { LLMProviderType, Phase } from "../../src/llm/base.js";
-import { ProviderFactory } from "../../src/llm/factory.js";
-import { ModelSelector } from "../../src/llm/model-selector.js";
-import { AnthropicProvider } from "../../src/llm/providers/anthropic.js";
-import { OllamaProvider } from "../../src/llm/providers/ollama.js";
-import { OpenAICompatibleProvider } from "../../src/llm/providers/openai-compatible.js";
+import { LLMProviderType, Phase } from "@/llm/base";
+import { ProviderFactory } from "@/llm/factory";
+import { ModelSelector } from "@/llm/model-selector";
+import { AnthropicProvider } from "@/llm/providers/anthropic";
+import { OllamaProvider } from "@/llm/providers/ollama";
+import { OpenAICompatibleProvider } from "@/llm/providers/openai-compatible";
 
 describe("LLM Providers", () => {
 	describe("OpenAI-compatible Provider", () => {

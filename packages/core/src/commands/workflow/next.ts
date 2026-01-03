@@ -2,15 +2,15 @@
  * Next command - Find to next available task
  */
 
-import { ConfigLoader } from "../../lib/config-loader.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import { Text } from "@/lib/ui/components";
 import {
 	calculateProgressStats,
 	findActiveTask,
 	findNextAvailableTask,
 	loadTasksProgress,
-} from "../../lib/data-access.js";
-import { TerminalFormatter } from "../../lib/terminal-formatter.js";
-import { BaseCommand, type CommandResult } from "../base.js";
+} from "../../lib/core/data-access.js";
 
 export class NextCommand extends BaseCommand {
 	async execute(): Promise<CommandResult> {
@@ -32,9 +32,9 @@ export class NextCommand extends BaseCommand {
 
 			return this.success(
 				[
-					TerminalFormatter.success("🎉 All tasks completed!"),
+					Text.success("🎉 All tasks completed!"),
 					"",
-					TerminalFormatter.section("PROGRESS"),
+					Text.section("PROGRESS"),
 					`Features: ${stats.completedFeatures}/${stats.totalFeatures} completed`,
 					`Stories:  ${stats.completedStories}/${stats.totalStories} completed`,
 					`Tasks:    ${stats.completedTasks}/${stats.totalTasks} completed`,
@@ -83,7 +83,7 @@ export class NextCommand extends BaseCommand {
 			if (nextTask.isIntermittent) {
 				return this.success(
 					[
-						TerminalFormatter.header("NEXT AVAILABLE TASK (Side Task)"),
+						Text.heading("NEXT AVAILABLE TASK (Side Task)"),
 						`Task:    T${task.id} - ${task.title} 🔄`,
 						`Story:   S${story.id} - ${story.title}`,
 						`Feature: F${feature.id} - ${feature.title}`,
@@ -142,7 +142,7 @@ export class NextCommand extends BaseCommand {
 			// Non-intermittent task
 			return this.success(
 				[
-					TerminalFormatter.header("NEXT AVAILABLE TASK"),
+					Text.heading("NEXT AVAILABLE TASK"),
 					`Task:    T${task.id} - ${task.title}`,
 					`Story:   S${story.id} - ${story.title}`,
 					`Feature: F${feature.id} - ${feature.title}`,
@@ -219,7 +219,7 @@ export class NextCommand extends BaseCommand {
 			return this.success(
 				"Active Task Found",
 				[
-					TerminalFormatter.header("CURRENT TASK"),
+					Text.heading("CURRENT TASK"),
 					`Task:    T${activeTask.taskId}`,
 					`Status:  ${activeTask.content.status}`,
 					`Title:   ${activeTask.content.title}`,

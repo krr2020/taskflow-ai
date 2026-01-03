@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { BaseCommand, type CommandResult } from "../../src/commands/base";
-import type { MCPContext } from "../../src/lib/mcp-detector";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import type { MCPContext } from "@/lib/mcp/mcp-detector";
 
 // Concrete implementation for testing
 class TestCommand extends BaseCommand {

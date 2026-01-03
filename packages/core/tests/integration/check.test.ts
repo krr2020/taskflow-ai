@@ -6,14 +6,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommandContext } from "../../src/commands/base.js";
-import { CheckCommand } from "../../src/commands/workflow/check.js";
-import { StartCommand } from "../../src/commands/workflow/start.js";
-import type { MCPContext } from "../../src/lib/mcp-detector";
+import type { CommandContext } from "@/commands/base";
+import { CheckCommand } from "@/commands/workflow/check";
+import { StartCommand } from "@/commands/workflow/start";
+import type { MCPContext } from "@/lib/mcp/mcp-detector";
 import { createTestDir } from "../setup.js";
 
 // Mock git operations
-vi.mock("../../src/lib/git.js", () => ({
+vi.mock("@/lib/git/git", () => ({
 	verifyBranch: vi.fn(),
 	getCurrentBranch: vi.fn(() => "main"),
 	branchExists: vi.fn(() => true),

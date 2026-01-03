@@ -10,7 +10,7 @@ import {
 	getLastValidationStatus,
 	saveValidationStatus,
 	type ValidationSummary,
-} from "../../src/lib/validation.js";
+} from "../../src/lib/utils/validation.js";
 import { createTestDir } from "../setup.js";
 
 describe("validation", () => {

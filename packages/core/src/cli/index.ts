@@ -4,39 +4,39 @@
 
 import process from "node:process";
 import { Command } from "commander";
-import type { CommandContext, CommandResult } from "../commands/base.js";
+import type { CommandContext, CommandResult } from "@/commands/base";
 // Import commands
-import { ConfigureAICommand } from "../commands/configure.js";
-import { InitCommand } from "../commands/init.js";
-import { PrdCreateCommand } from "../commands/prd/create.js";
-import { PrdGenerateArchCommand } from "../commands/prd/generate-arch.js";
-import { PrdUpdateArchCommand } from "../commands/prd/update-arch.js";
-import { PrdUpdateStandardsCommand } from "../commands/prd/update-standards.js";
-import { RetroAddCommand } from "../commands/retro/add.js";
-import { RetroListCommand } from "../commands/retro/list.js";
-import { TasksAddCommand } from "../commands/tasks/add.js";
-import { TaskCreateCommand } from "../commands/tasks/create.js";
-import { TasksGenerateCommand } from "../commands/tasks/generate.js";
-import { TasksRefineCommand } from "../commands/tasks/refine.js";
-import { UiCommand } from "../commands/ui.js";
-import { UpgradeCommand } from "../commands/upgrade.js";
-import { CheckCommand } from "../commands/workflow/check.js";
-import { CommitCommand } from "../commands/workflow/commit.js";
-import { DoCommand } from "../commands/workflow/do.js";
-import { NextCommand } from "../commands/workflow/next.js";
-import { ResumeCommand } from "../commands/workflow/resume.js";
-import { SkipCommand } from "../commands/workflow/skip.js";
-import { StartCommand } from "../commands/workflow/start.js";
-import { StatusCommand } from "../commands/workflow/status.js";
-// Import errors
-import { formatError, TaskflowError } from "../lib/errors.js";
-import { MCPDetector } from "../lib/mcp-detector.js";
+import { ConfigureAICommand } from "@/commands/configure";
+import { InitCommand } from "@/commands/init";
+import { PrdCreateCommand } from "@/commands/prd/create";
+import { PrdGenerateArchCommand } from "@/commands/prd/generate-arch";
+import { PrdUpdateArchCommand } from "@/commands/prd/update-arch";
+import { PrdUpdateStandardsCommand } from "@/commands/prd/update-standards";
+import { RetroAddCommand } from "@/commands/retro/add";
+import { RetroListCommand } from "@/commands/retro/list";
+import { TasksAddCommand } from "@/commands/tasks/add";
+import { TaskCreateCommand } from "@/commands/tasks/create";
+import { TasksGenerateCommand } from "@/commands/tasks/generate";
+import { TasksRefineCommand } from "@/commands/tasks/refine";
+import { UiCommand } from "@/commands/ui";
+import { UpgradeCommand } from "@/commands/upgrade";
+import { CheckCommand } from "@/commands/workflow/check";
+import { CommitCommand } from "@/commands/workflow/commit";
+import { DoCommand } from "@/commands/workflow/do";
+import { NextCommand } from "@/commands/workflow/next";
+import { ResumeCommand } from "@/commands/workflow/resume";
+import { SkipCommand } from "@/commands/workflow/skip";
+import { StartCommand } from "@/commands/workflow/start";
+import { StatusCommand } from "@/commands/workflow/status";
+import { formatError, TaskflowError } from "@/lib/core/errors";
+import { MCPDetector } from "@/lib/mcp/mcp-detector";
 import {
 	consoleOutput,
 	formatFailure,
 	formatSuccess,
 	printLine,
-} from "../lib/output.js";
+} from "../lib/core/output.js";
+// Import errors
 
 export async function runCLI() {
 	const program = new Command();
@@ -340,7 +340,7 @@ export async function runCLI() {
 		.action(
 			async (
 				featureName: string | undefined,
-				options: {
+				_options: {
 					description?: string;
 					title?: string;
 					interactive?: boolean;
@@ -348,12 +348,7 @@ export async function runCLI() {
 			) => {
 				try {
 					const cmd = new PrdCreateCommand(context);
-					const result = await cmd.execute(
-						featureName || "",
-						options.description,
-						options.title,
-						options.interactive,
-					);
+					const result = await cmd.execute(featureName);
 					console.log(formatSuccess(result));
 					process.exit(0);
 				} catch (error) {
@@ -615,14 +610,14 @@ export async function runCLI() {
 			try {
 				const path = await import("node:path");
 				// Resolve project root if path is provided
-				const resolvedProjectRoot = projectPath 
-					? path.resolve(process.cwd(), projectPath) 
+				const resolvedProjectRoot = projectPath
+					? path.resolve(process.cwd(), projectPath)
 					: context.projectRoot;
 
 				// Create a new context with the resolved project root
 				const cmdContext: CommandContext = {
 					...context,
-					projectRoot: resolvedProjectRoot
+					projectRoot: resolvedProjectRoot,
 				};
 
 				const cmd = new UiCommand(cmdContext);

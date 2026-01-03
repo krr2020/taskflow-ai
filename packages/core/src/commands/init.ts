@@ -4,21 +4,20 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import pc from "picocolors";
-import { ConfigLoader } from "../lib/config-loader.js";
-import { getProjectPaths, TEMPLATE_FILES } from "../lib/config-paths.js";
-import { VERSIONS } from "../lib/constants.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { ConfigLoader } from "@/lib/config/config-loader";
+import { getProjectPaths, TEMPLATE_FILES } from "@/lib/config/config-paths";
+import { VERSIONS } from "@/lib/config/constants";
+import { Text } from "@/lib/ui/components";
+import { ensureAllDirs } from "@/lib/utils/path-utils";
+import { getTemplateDir } from "@/lib/utils/template-utils";
 import {
 	copyFile,
 	ensureDir,
 	exists,
 	readJson,
 	writeJson,
-} from "../lib/file-utils.js";
-import { ensureAllDirs } from "../lib/path-utils.js";
-import { getTemplateDir } from "../lib/template-utils.js";
-import { TerminalFormatter } from "../lib/terminal-formatter.js";
-import { BaseCommand, type CommandResult } from "./base.js";
+} from "../lib/utils/file-utils.js";
 
 interface VersionInfo {
 	templateVersion: string;
@@ -38,7 +37,7 @@ export class InitCommand extends BaseCommand {
 		// Check if already initialized
 		if (configLoader.exists()) {
 			return this.failure(
-				"Taskflow is already initialized in this project.",
+				this.getContent("INIT.ALREADY_INITIALIZED"),
 				[
 					"Configuration file already exists at: " +
 						configLoader.getConfigPath(),
@@ -265,126 +264,57 @@ export class InitCommand extends BaseCommand {
 
 		// Build output message with file details
 		const outputLines = [
-			TerminalFormatter.success("Created taskflow.config.json"),
-			TerminalFormatter.success("Created tasks/ directory"),
-			TerminalFormatter.success("Created .taskflow/ref/ directory"),
-			TerminalFormatter.success("Created .taskflow/logs/ directory"),
+			Text.success("Created taskflow.config.json"),
+			Text.success("Created tasks/ directory"),
+			Text.success("Created .taskflow/ref/ directory"),
+			Text.success("Created .taskflow/logs/ directory"),
 			exists(packageJsonPath)
-				? TerminalFormatter.success("Added 'task' script to package.json")
+				? Text.success("Added 'task' script to package.json")
 				: "",
 		].filter(Boolean);
 
 		// Add template file details if any files were copied
 		if (fileDetails.length > 0) {
 			outputLines.push("");
-			outputLines.push(
-				TerminalFormatter.section(`Template Files (${copiedFiles})`),
-			);
+			outputLines.push(Text.section(`Template Files (${copiedFiles})`));
 			outputLines.push(...fileDetails);
 		}
 
-		// Add context-specific guidance
-		if (this.mcpContext.isMCP) {
-			outputLines.push("");
-			outputLines.push(
-				TerminalFormatter.info("Running in MCP mode (AI-assisted)"),
-			);
-		} else {
-			outputLines.push("");
-			outputLines.push(TerminalFormatter.info("Running in direct CLI mode"));
-			outputLines.push(pc.dim("Configure AI provider for generate commands:"));
-			outputLines.push(
-				pc.cyan(
-					"   taskflow configure ai --provider <provider> --apiKey <key> --model <model>",
-				),
-			);
+		// Add mode-specific output message
+		outputLines.push("");
+		outputLines.push(Text.success(this.getContent("INIT.SUCCESS")));
+
+		// Get next steps and filter based on whether package.json exists
+		const rawNextSteps = this.getContent("INIT.NEXT_STEPS");
+		const nextStepsArray = Array.isArray(rawNextSteps)
+			? rawNextSteps
+			: [rawNextSteps];
+		const nextSteps = nextStepsArray.filter((step) => {
+			// Remove pnpm/npm commands if package.json doesn't exist
+			if (!exists(packageJsonPath)) {
+				return !step.includes("pnpm") && !step.includes("npm");
+			}
+			return true;
+		});
+
+		// Get AI guidance (will be filtered out automatically in manual mode)
+		const aiGuidance = this.getContent("INIT.AI_GUIDANCE");
+		const aiGuidanceStr =
+			typeof aiGuidance === "string" ? aiGuidance : undefined;
+
+		const options: { contextFiles: string[]; aiGuidance?: string } = {
+			contextFiles: [
+				".taskflow/ref/ai-protocol.md - Core AI operating discipline",
+				".taskflow/ref/prd-generator.md - PRD creation guidelines",
+				".taskflow/ref/task-generator.md - Task breakdown guidelines",
+				".taskflow/ref/retrospective.md - Known error patterns",
+			],
+		};
+
+		if (aiGuidanceStr) {
+			options.aiGuidance = aiGuidanceStr;
 		}
 
-		return this.success(
-			outputLines.join("\n"),
-			[
-				"1. Create a PRD (Product Requirements Document):",
-				"   Run: taskflow prd create <feature-name>",
-				"   or:  pnpm task prd create <feature-name>",
-				"",
-				"2. Generate architecture (tech stack & coding standards):",
-				"   Run: taskflow prd generate-arch <prd-file>",
-				"   or:  pnpm task prd generate-arch <prd-file>",
-				"   This creates coding-standards.md and architecture-rules.md",
-				"",
-				"3. Generate tasks from PRD (uses tech stack & standards):",
-				"   Run: taskflow tasks generate <prd-file>",
-				"   or:  pnpm task tasks generate <prd-file>",
-				"",
-				"4. Start working on tasks:",
-				"   Run: taskflow next  (to find the next task)",
-				"   Run: taskflow start <task-id>",
-				"   or:  pnpm task next",
-				"   or:  pnpm task start <task-id>",
-			].join("\n"),
-			{
-				aiGuidance: [
-					"You have initialized TaskFlow in this project.",
-					"",
-					"COMMAND USAGE:",
-					"──────────────",
-					"You can run taskflow commands in two ways:",
-					"",
-					"1. Direct command:",
-					"   taskflow <command> <args>",
-					"",
-					"2. Via npm script (if package.json has 'task' script):",
-					"   pnpm task <command> <args>",
-					"   npm run task -- <command> <args>",
-					"",
-					"AI CONFIGURATION:",
-					"─────────────────",
-					"Some commands require AI for content generation:",
-					"  - taskflow prd generate-arch: Generates coding-standards.md and architecture-rules.md",
-					"  - taskflow tasks generate: Generates task breakdown from PRD",
-					"",
-					"If running via MCP/Factory AI:",
-					"  → AI agent will automatically handle generation",
-					"",
-					"If running manually (CLI):",
-					"  → You MUST configure an AI provider first:",
-					"    taskflow configure ai --provider <provider> --apiKey <key> --model <model>",
-					"",
-					"WORKFLOW:",
-					"─────────",
-					"After initialization, follow this sequence:",
-					"",
-					"1. Create a PRD:",
-					"   taskflow prd create <feature-name>",
-					"",
-					"2. Generate architecture (tech stack & coding standards):",
-					"   taskflow prd generate-arch <prd-file>",
-					"   This is REQUIRED before generating tasks, as tasks depend on",
-					"   the tech stack and coding standards defined here.",
-					"",
-					"3. Generate tasks from PRD:",
-					"   taskflow tasks generate <prd-file>",
-					"   Tasks will be tailored to your tech stack and coding standards.",
-					"",
-					"4. Execute tasks:",
-					"   taskflow start <task-id>",
-					"   taskflow do",
-					"   taskflow check",
-					"   taskflow commit",
-				].join("\n"),
-				contextFiles: [
-					".taskflow/ref/ai-protocol.md - Core AI operating discipline",
-					".taskflow/ref/prd-generator.md - PRD creation guidelines",
-					".taskflow/ref/task-generator.md - Task breakdown guidelines",
-					".taskflow/ref/retrospective.md - Known error patterns",
-				],
-				warnings: [
-					"NEVER edit files in .taskflow/ or tasks/ directories directly",
-					"ALWAYS use taskflow commands for task management",
-					"Read ai-protocol.md before starting any task",
-					"If running CLI manually, configure AI before using generate commands",
-				],
-			},
-		);
+		return this.success(outputLines.join("\n"), nextSteps.join("\n"), options);
 	}
 }

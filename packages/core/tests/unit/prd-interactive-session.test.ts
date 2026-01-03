@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BaseCommand } from "../../src/commands/base.js";
-import { PRDInteractiveSession } from "../../src/lib/prd-interactive-session.js";
+import { BaseCommand } from "@/commands/base";
+import { PRDInteractiveSession } from "@/lib/session/prd-interactive-session";
 
 // Mock BaseCommand
 class MockCommand extends BaseCommand {

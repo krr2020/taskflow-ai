@@ -5,10 +5,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { CommandContext } from "../../src/commands/base.js";
-import { InitCommand } from "../../src/commands/init.js";
-import { StatusCommand } from "../../src/commands/workflow/status.js";
-import type { MCPContext } from "../../src/lib/mcp-detector";
+import type { CommandContext } from "@/commands/base";
+import { InitCommand } from "@/commands/init";
+import { StatusCommand } from "@/commands/workflow/status";
+import type { MCPContext } from "@/lib/mcp/mcp-detector";
 import { createTestDir } from "../setup.js";
 
 describe("Init Workflow Integration", () => {
@@ -45,9 +45,8 @@ describe("Init Workflow Integration", () => {
 		const aiProtocol = path.join(testDir, ".taskflow", "ref", "ai-protocol.md");
 		expect(fs.existsSync(aiProtocol)).toBe(true);
 
-		// Should provide AI guidance
-		expect(result.aiGuidance).toBeDefined();
-		expect(result.aiGuidance).toContain("PRD");
+		// Manual mode should not have AI guidance
+		expect(result.aiGuidance).toBeUndefined();
 	});
 
 	it("should fail if already initialized", async () => {

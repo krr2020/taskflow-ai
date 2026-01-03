@@ -1,14 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
-import { CodebaseScanner } from "../../lib/codebase-scanner.js";
-import { GapAnalyzer } from "../../lib/gap-analyzer.js";
-import { PRDMatcher } from "../../lib/prd-matcher.js";
+import { BaseCommand, type CommandResult } from "@/commands/base";
+import { CodebaseScanner } from "@/lib/analysis/codebase-scanner";
+import { GapAnalyzer } from "@/lib/analysis/gap-analyzer";
+import { PRDMatcher } from "@/lib/analysis/prd-matcher";
 import type {
 	DiscoveredFeature,
 	GapAnalysis,
 	MigrationPlan,
-} from "../../lib/types.js";
-import { BaseCommand, type CommandResult } from "../base.js";
+} from "../../lib/core/types.js";
 
 export class PrdAnalyzeBrownfieldCommand extends BaseCommand {
 	async execute(
