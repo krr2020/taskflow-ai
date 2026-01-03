@@ -8,8 +8,8 @@ import os from "node:os";
 import path from "node:path";
 import { execaSync } from "execa";
 import { describe, expect, it } from "vitest";
-import { MESSAGES } from "@/lib/config/constants";
-import { getCurrentBranch } from "@/lib/git/git";
+import { MESSAGES } from "../../src/lib/config/constants.js";
+import { getCurrentBranch } from "../../src/lib/git/git.js";
 import {
 	deleteDir,
 	deleteFile,

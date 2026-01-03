@@ -2,13 +2,8 @@
  * Do command - Get instructions for current status
  */
 
-import { AgentRunner } from "@/agent/runner";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { NoActiveSessionError } from "@/lib/core/errors";
-import { colors, icons } from "@/lib/core/output";
-import type { ActiveStatus, TaskFileContent } from "@/lib/core/types";
-import { parseTaskId } from "@/lib/core/types";
+import { AgentRunner } from "../../agent/runner.js";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
 import {
 	getRefFilePath,
 	getSkillFilePath,
@@ -20,6 +15,11 @@ import {
 	loadReferenceFile,
 	loadTasksProgress,
 } from "../../lib/core/data-access.js";
+import { NoActiveSessionError } from "../../lib/core/errors.js";
+import { colors, icons } from "../../lib/core/output.js";
+import type { ActiveStatus, TaskFileContent } from "../../lib/core/types.js";
+import { parseTaskId } from "../../lib/core/types.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class DoCommand extends BaseCommand {
 	async execute(options?: { guide?: boolean }): Promise<CommandResult> {

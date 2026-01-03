@@ -1,5 +1,5 @@
-import { Colors, Separator, Text } from "@/lib/ui/components";
-import type { ModelUsage, SessionUsage } from "@/llm/cost-tracker";
+import type { ModelUsage, SessionUsage } from "../../llm/cost-tracker.js";
+import { Colors, Separator, Text } from "../ui/components.js";
 
 /**
  * Create a progress bar for visual token usage representation

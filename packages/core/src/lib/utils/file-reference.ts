@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { InteractiveSelect } from "@/lib/input/index";
+import { InteractiveSelect } from "../input/index.js";
 
 export interface FileReference {
 	path: string;

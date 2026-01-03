@@ -5,13 +5,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommandContext } from "@/commands/base";
-import { InitCommand } from "@/commands/init";
-import { PrdGenerateArchCommand } from "@/commands/prd/generate-arch";
-import { PrdUpdateArchCommand } from "@/commands/prd/update-arch";
-import { PrdUpdateStandardsCommand } from "@/commands/prd/update-standards";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import type { MCPContext } from "@/lib/mcp/mcp-detector";
+import type { CommandContext } from "../../src/commands/base.js";
+import { InitCommand } from "../../src/commands/init.js";
+import { PrdGenerateArchCommand } from "../../src/commands/prd/generate-arch.js";
+import { PrdUpdateArchCommand } from "../../src/commands/prd/update-arch.js";
+import { PrdUpdateStandardsCommand } from "../../src/commands/prd/update-standards.js";
+import { ConfigLoader } from "../../src/lib/config/config-loader.js";
+import type { MCPContext } from "../../src/lib/mcp/mcp-detector.js";
 import { createTestDir } from "../setup.js";
 
 const { existsSync, mkdirSync } = fs;

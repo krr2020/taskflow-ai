@@ -5,7 +5,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { consoleOutput } from "@/lib/core/output";
+import { consoleOutput } from "../core/output.js";
 
 // ============================================================================
 // Read Operations

@@ -12,13 +12,13 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { MarkdownDisplay, ProgressDisplay } from "@/lib/display/index";
-import { ConversationSession } from "@/lib/input/conversation";
-import { InteractiveSelect } from "@/lib/input/index";
-import { MultilineInput } from "@/lib/input/multiline";
-import { Separator, Text } from "@/lib/ui/components";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
+import { MarkdownDisplay, ProgressDisplay } from "../../lib/display/index.js";
+import { ConversationSession } from "../../lib/input/conversation.js";
+import { InteractiveSelect } from "../../lib/input/index.js";
+import { MultilineInput } from "../../lib/input/multiline.js";
+import { Separator, Text } from "../../lib/ui/components.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class PrdRefineCommand extends BaseCommand {
 	protected override requiresLLM = true;

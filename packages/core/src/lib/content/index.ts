@@ -5,16 +5,16 @@
  * Handles messages, prompts, and templates with automatic mode filtering.
  */
 
-import { MESSAGES } from "@/lib/content/messages";
+import { MESSAGES } from "./messages.js";
 import type {
 	ContentBlock,
 	ContentOptions,
 	ModeAwareContent,
 } from "./types.js";
 
-export { MESSAGES } from "@/lib/content/messages";
-export { LLM_PROMPTS, TEMPLATE_SOURCES } from "@/lib/content/prompts";
+export { MESSAGES } from "./messages.js";
 export * from "./prompt-builder.js";
+export { LLM_PROMPTS, TEMPLATE_SOURCES } from "./prompts.js";
 export * from "./templates.js";
 export * from "./types.js";
 

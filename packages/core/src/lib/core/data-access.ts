@@ -4,7 +4,6 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { consoleOutput } from "@/lib/core/output";
 import {
 	getFeatureFilePath,
 	getProjectIndexPath,
@@ -23,6 +22,7 @@ import {
 	InvalidFileFormatError,
 	TaskflowError,
 } from "./errors.js";
+import { consoleOutput } from "./output.js";
 import type {
 	ActiveTask,
 	Feature,

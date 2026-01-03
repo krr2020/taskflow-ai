@@ -3,12 +3,7 @@
  * Factory for creating LLM providers and model selectors
  */
 
-import { LLMError } from "@/lib/core/errors";
-import { type AIConfig, ModelSelector } from "@/llm/model-selector";
-import { AnthropicProvider } from "@/llm/providers/anthropic";
-import { MockLLMProvider } from "@/llm/providers/mock";
-import { OllamaProvider } from "@/llm/providers/ollama";
-import { OpenAICompatibleProvider } from "@/llm/providers/openai-compatible";
+import { LLMError } from "../lib/core/errors.js";
 import {
 	type LLMGenerationOptions,
 	type LLMGenerationResult,
@@ -16,10 +11,15 @@ import {
 	type LLMProvider,
 	LLMProviderType,
 } from "./base.js";
+import { type AIConfig, ModelSelector } from "./model-selector.js";
+import { AnthropicProvider } from "./providers/anthropic.js";
+import { MockLLMProvider } from "./providers/mock.js";
+import { OllamaProvider } from "./providers/ollama.js";
+import { OpenAICompatibleProvider } from "./providers/openai-compatible.js";
 
 export type { LLMMessage, LLMGenerationOptions, LLMGenerationResult };
-export { LLMProvider, LLMProviderType } from "@/llm/base";
-export { type AIConfig, ModelSelector } from "@/llm/model-selector";
+export { LLMProvider, LLMProviderType } from "./base.js";
+export { type AIConfig, ModelSelector } from "./model-selector.js";
 export {
 	AnthropicProvider,
 	OllamaProvider,

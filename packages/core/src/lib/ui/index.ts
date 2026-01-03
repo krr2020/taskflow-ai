@@ -4,8 +4,6 @@
  * Comprehensive UI component library for TaskFlow CLI
  */
 
-// Spinner Component
-export { LoadingSpinner, type SpinnerOptions } from "@/lib/ui/spinner";
 // Design System Components
 export {
 	Box,
@@ -23,3 +21,5 @@ export {
 	truncate,
 	wrapText,
 } from "./components.js";
+// Spinner Component
+export { LoadingSpinner, type SpinnerOptions } from "./spinner.js";

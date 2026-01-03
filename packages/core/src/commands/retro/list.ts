@@ -3,9 +3,9 @@
  */
 
 import fs from "node:fs";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { getRefFilePath, REF_FILES } from "@/lib/config/config-paths";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
+import { getRefFilePath, REF_FILES } from "../../lib/config/config-paths.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 interface RetroEntry {
 	id: string;

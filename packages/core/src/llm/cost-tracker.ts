@@ -3,7 +3,7 @@
  * Tracks token usage and calculates costs across different models and sessions
  */
 
-import type { LLMGenerationResult } from "@/llm/base";
+import type { LLMGenerationResult } from "./base.js";
 
 /**
  * Pricing per 1M tokens for common models

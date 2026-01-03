@@ -2,15 +2,15 @@
  * Next command - Find to next available task
  */
 
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { Text } from "@/lib/ui/components";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
 import {
 	calculateProgressStats,
 	findActiveTask,
 	findNextAvailableTask,
 	loadTasksProgress,
 } from "../../lib/core/data-access.js";
+import { Text } from "../../lib/ui/components.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class NextCommand extends BaseCommand {
 	async execute(): Promise<CommandResult> {

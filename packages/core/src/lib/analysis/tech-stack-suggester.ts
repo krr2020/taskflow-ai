@@ -1,7 +1,7 @@
-import type { AICallLogger } from "@/lib/ai/ai-call-logger";
-import { DependencyCompatibilityChecker } from "@/lib/utils/dependency-compatibility";
-import type { PackageValidator } from "@/lib/utils/package-validator";
-import type { LLMProvider } from "@/llm/base";
+import type { LLMProvider } from "../../llm/base.js";
+import type { AICallLogger } from "../ai/ai-call-logger.js";
+import { DependencyCompatibilityChecker } from "../utils/dependency-compatibility.js";
+import type { PackageValidator } from "../utils/package-validator.js";
 
 export interface TechItem {
 	name: string;

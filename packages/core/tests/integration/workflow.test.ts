@@ -4,10 +4,10 @@
 
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommandContext } from "@/commands/base";
-import { InitCommand } from "@/commands/init";
-import { PrdCreateCommand } from "@/commands/prd/create";
-import { TasksGenerateCommand } from "@/commands/tasks/generate";
+import type { CommandContext } from "../../src/commands/base.js";
+import { InitCommand } from "../../src/commands/init.js";
+import { PrdCreateCommand } from "../../src/commands/prd/create.js";
+import { TasksGenerateCommand } from "../../src/commands/tasks/generate.js";
 import {
 	type MCPContext,
 	MCPDetector,

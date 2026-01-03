@@ -10,11 +10,11 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { ProgressDisplay } from "@/lib/display/index";
-import { EnhancedPRDSession } from "@/lib/prd/index";
-import { Text } from "@/lib/ui/components";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
+import { ProgressDisplay } from "../../lib/display/index.js";
+import { EnhancedPRDSession } from "../../lib/prd/index.js";
+import { Text } from "../../lib/ui/components.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class PrdCreateCommand extends BaseCommand {
 	protected override requiresLLM = true;

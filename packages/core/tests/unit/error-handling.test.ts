@@ -1,9 +1,9 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import type { MCPContext } from "@/lib/mcp/mcp-detector";
-import { type LLMGenerationResult, LLMProvider } from "@/llm/base";
+import { BaseCommand, type CommandResult } from "../../src/commands/base.js";
+import { ConfigLoader } from "../../src/lib/config/config-loader.js";
+import type { MCPContext } from "../../src/lib/mcp/mcp-detector.js";
+import { type LLMGenerationResult, LLMProvider } from "../../src/llm/base.js";
 import { createMockConfigLoader } from "../helpers/mocks.js";
 
 vi.mock("@/lib/config/config-loader");

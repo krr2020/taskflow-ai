@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { GapAnalyzer } from "@/lib/analysis/gap-analyzer";
-import type { RequirementMatch } from "@/lib/core/types";
+import { GapAnalyzer } from "../../src/lib/analysis/gap-analyzer.js";
+import type { RequirementMatch } from "../../src/lib/core/types.js";
 
 describe("GapAnalyzer", () => {
 	const analyzer = new GapAnalyzer();

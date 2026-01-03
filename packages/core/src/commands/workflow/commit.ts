@@ -2,10 +2,7 @@
  * Commit command - Commit changes and complete task
  */
 
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { consoleOutput } from "@/lib/core/output";
-import { parseTaskId } from "@/lib/core/types";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
 import {
 	findActiveTask,
 	findNextAvailableTask,
@@ -17,6 +14,8 @@ import {
 	InvalidWorkflowStateError,
 	NoActiveSessionError,
 } from "../../lib/core/errors.js";
+import { consoleOutput } from "../../lib/core/output.js";
+import { parseTaskId } from "../../lib/core/types.js";
 import {
 	buildCommitMessage,
 	gitAdd,
@@ -24,6 +23,7 @@ import {
 	gitPush,
 	hasUncommittedChanges,
 } from "../../lib/git/git.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class CommitCommand extends BaseCommand {
 	async execute(bulletPoints: string): Promise<CommandResult> {

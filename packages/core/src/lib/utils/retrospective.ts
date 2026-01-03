@@ -3,10 +3,10 @@
  */
 
 import fs from "node:fs";
-import type { ParsedError } from "@/lib/analysis/log-parser";
-import { getRefFilePath, REF_FILES } from "@/lib/config/config-paths";
-import { TaskflowError } from "@/lib/core/errors";
-import { colors, icons } from "@/lib/core/output";
+import type { ParsedError } from "../analysis/log-parser.js";
+import { getRefFilePath, REF_FILES } from "../config/config-paths.js";
+import { TaskflowError } from "../core/errors.js";
+import { colors, icons } from "../core/output.js";
 import type {
 	Criticality,
 	ErrorCategory,

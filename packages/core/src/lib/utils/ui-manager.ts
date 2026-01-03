@@ -2,8 +2,8 @@ import fs from "node:fs";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { getProjectPaths } from "@/lib/config/config-paths";
-import { consoleOutput } from "@/lib/core/output";
+import { getProjectPaths } from "../config/config-paths.js";
+import { consoleOutput } from "../core/output.js";
 
 interface UiLock {
 	pid: number;

@@ -5,7 +5,7 @@
  *
  * @example
  * ```typescript
- * import { Box, Separator, Menu } from '@/lib/ui/ui/components';
+ * import { Box, Separator, Menu } from './ui/components.js';
  *
  * console.log(Box.info('Important message'));
  * console.log(Separator.section());

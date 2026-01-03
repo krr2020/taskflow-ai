@@ -3,7 +3,7 @@
  * Supports: OpenAI, Azure OpenAI, Together AI, Groq, DeepSeek, and any OpenAI-compatible API
  */
 
-import { LLMError } from "@/lib/core/errors";
+import { LLMError } from "../../lib/core/errors.js";
 import {
 	type LLMGenerationOptions,
 	type LLMGenerationResult,

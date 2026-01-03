@@ -22,7 +22,7 @@
 		"templates"
 	],
 	"scripts": {
-		"build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json --resolve-full-paths && node -e \"fs.cpSync('templates', 'dist/templates', {recursive: true})\"",
+		"build": "tsc",
 		"test": "vitest run",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",

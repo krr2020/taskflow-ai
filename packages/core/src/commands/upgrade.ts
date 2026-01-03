@@ -4,12 +4,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { CommandResult } from "@/commands/base";
-import { BaseCommand } from "@/commands/base";
-import { TEMPLATE_FILES } from "@/lib/config/config-paths";
-import { VERSIONS } from "@/lib/config/constants";
-import { colors, consoleOutput, icons } from "@/lib/core/output";
-import { getTemplateDir } from "@/lib/utils/template-utils";
+import { TEMPLATE_FILES } from "../lib/config/config-paths.js";
+import { VERSIONS } from "../lib/config/constants.js";
+import { colors, consoleOutput, icons } from "../lib/core/output.js";
 import {
 	copyDir,
 	ensureDir as ensureFileDir,
@@ -24,6 +21,9 @@ import {
 	getRefDir,
 	getTaskflowDir,
 } from "../lib/utils/path-utils.js";
+import { getTemplateDir } from "../lib/utils/template-utils.js";
+import type { CommandResult } from "./base.js";
+import { BaseCommand } from "./base.js";
 
 interface VersionInfo {
 	templateVersion: string;

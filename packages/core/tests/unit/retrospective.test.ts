@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { ParsedError } from "@/lib/analysis/log-parser";
+import type { ParsedError } from "../../src/lib/analysis/log-parser.js";
 import {
 	appendNewPatternsToRetrospective,
 	extractNewPatterns,

@@ -3,7 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { BaseCommand, type CommandContext } from "@/commands/base";
+import { BaseCommand, type CommandContext } from "../../src/commands/base.js";
 
 // Create a test command that requires LLM
 class TestCommandWithLLM extends BaseCommand {

@@ -4,10 +4,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { LLMRequiredError } from "@/lib/core/errors";
-import type { TasksProgress } from "@/lib/core/types";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
+import { LLMRequiredError } from "../../lib/core/errors.js";
+import type { TasksProgress } from "../../lib/core/types.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class TasksRefineCommand extends BaseCommand {
 	async execute(instructions: string): Promise<CommandResult> {

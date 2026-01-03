@@ -6,7 +6,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach } from "vitest";
-import type { TaskFileContent, TasksProgress } from "@/lib/core/types";
+import type { TaskFileContent, TasksProgress } from "../src/lib/core/types.js";
 
 // Global test state
 let testDir: string | null = null;

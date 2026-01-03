@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { PrdGenerateArchCommand } from "@/commands/prd/generate-arch";
+import { PrdGenerateArchCommand } from "../../src/commands/prd/generate-arch.js";
 
 // Hoist mocks - create mock functions that can be accessed in tests
 const mocks = vi.hoisted(() => {

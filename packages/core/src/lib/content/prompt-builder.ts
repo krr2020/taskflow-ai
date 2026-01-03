@@ -5,7 +5,7 @@
  * Automatically selects correct prompt variant based on execution mode.
  */
 
-import { LLM_PROMPTS } from "@/lib/content/prompts";
+import { LLM_PROMPTS } from "./prompts.js";
 import type {
 	BuiltPrompt,
 	ExecutionMode,

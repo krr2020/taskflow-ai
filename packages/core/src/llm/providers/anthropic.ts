@@ -3,7 +3,7 @@
  * Supports Claude models via Anthropic API
  */
 
-import { LLMError } from "@/lib/core/errors";
+import { LLMError } from "../../lib/core/errors.js";
 import {
 	type LLMGenerationOptions,
 	type LLMGenerationResult,

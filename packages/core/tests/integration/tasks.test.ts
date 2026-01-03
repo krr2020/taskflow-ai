@@ -5,12 +5,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CommandContext } from "@/commands/base";
-import { InitCommand } from "@/commands/init";
-import { TasksAddCommand } from "@/commands/tasks/add";
-import { TasksGenerateCommand } from "@/commands/tasks/generate";
-import { TasksRefineCommand } from "@/commands/tasks/refine";
-import type { MCPContext } from "@/lib/mcp/mcp-detector";
+import type { CommandContext } from "../../src/commands/base.js";
+import { InitCommand } from "../../src/commands/init.js";
+import { TasksAddCommand } from "../../src/commands/tasks/add.js";
+import { TasksGenerateCommand } from "../../src/commands/tasks/generate.js";
+import { TasksRefineCommand } from "../../src/commands/tasks/refine.js";
+import type { MCPContext } from "../../src/lib/mcp/mcp-detector.js";
 import { createTestDir } from "../setup.js";
 
 describe("Task Commands Integration", () => {

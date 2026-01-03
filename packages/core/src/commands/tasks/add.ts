@@ -4,9 +4,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { LLMRequiredError } from "@/lib/core/errors";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
+import { LLMRequiredError } from "../../lib/core/errors.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 interface ProgressTask {
 	id: string;

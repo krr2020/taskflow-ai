@@ -2,11 +2,11 @@
  * Retrospective Add command - Add a new error pattern to retrospective
  */
 
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { getRefFilePath, REF_FILES } from "@/lib/config/config-paths";
-import type { ErrorCategory } from "@/lib/core/types";
-import { addRetrospectiveEntry } from "@/lib/utils/retrospective";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
+import { getRefFilePath, REF_FILES } from "../../lib/config/config-paths.js";
+import type { ErrorCategory } from "../../lib/core/types.js";
+import { addRetrospectiveEntry } from "../../lib/utils/retrospective.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class RetroAddCommand extends BaseCommand {
 	async execute(

@@ -6,7 +6,7 @@
  */
 
 import * as fs from "node:fs";
-import type { TemplateSource } from "@/lib/content/types";
+import type { TemplateSource } from "./types.js";
 
 interface CachedTemplate {
 	content: string;

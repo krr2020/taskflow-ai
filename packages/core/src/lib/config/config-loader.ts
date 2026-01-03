@@ -4,10 +4,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { CONFIG_FILE, getProjectPaths } from "@/lib/config/config-paths";
-import { TaskflowError } from "@/lib/core/errors";
-import type { TaskflowConfig } from "@/lib/core/types";
-import { validateTaskflowConfig } from "@/lib/core/types";
+import { TaskflowError } from "../core/errors.js";
+import type { TaskflowConfig } from "../core/types.js";
+import { validateTaskflowConfig } from "../core/types.js";
+import { CONFIG_FILE, getProjectPaths } from "./config-paths.js";
 
 export class ConfigLoader {
 	private configPath: string;

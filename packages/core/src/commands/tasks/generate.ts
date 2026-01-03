@@ -4,18 +4,15 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { saveFeature, saveProjectIndex } from "@/lib/core/data-access";
-import { LLMRequiredError } from "@/lib/core/errors";
-import { Colors, Text } from "@/lib/ui/components";
-import { StreamDisplay } from "@/lib/utils/stream-display";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
 import {
 	getRefFilePath,
 	getSkillFilePath,
 	REF_FILES,
 	SKILL_FILES,
 } from "../../lib/config/config-paths.js";
+import { saveFeature, saveProjectIndex } from "../../lib/core/data-access.js";
+import { LLMRequiredError } from "../../lib/core/errors.js";
 import type {
 	Feature,
 	Story,
@@ -23,6 +20,9 @@ import type {
 	TaskRef,
 	TasksProgress,
 } from "../../lib/core/types.js";
+import { Colors, Text } from "../../lib/ui/components.js";
+import { StreamDisplay } from "../../lib/utils/stream-display.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class TasksGenerateCommand extends BaseCommand {
 	protected override requiresLLM = true;

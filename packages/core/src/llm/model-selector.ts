@@ -3,12 +3,12 @@
  * Selects the appropriate model for each phase (planning, execution, analysis)
  */
 
-import { LLMError } from "@/lib/core/errors";
-import { type LLMProvider, LLMProviderType, Phase } from "@/llm/base";
-import { AnthropicProvider } from "@/llm/providers/anthropic";
-import { MockLLMProvider } from "@/llm/providers/mock";
-import { OllamaProvider } from "@/llm/providers/ollama";
-import { OpenAICompatibleProvider } from "@/llm/providers/openai-compatible";
+import { LLMError } from "../lib/core/errors.js";
+import { type LLMProvider, LLMProviderType, Phase } from "./base.js";
+import { AnthropicProvider } from "./providers/anthropic.js";
+import { MockLLMProvider } from "./providers/mock.js";
+import { OllamaProvider } from "./providers/ollama.js";
+import { OpenAICompatibleProvider } from "./providers/openai-compatible.js";
 
 export interface ModelSelection {
 	planning: LLMProvider;
@@ -16,7 +16,7 @@ export interface ModelSelection {
 	analysis: LLMProvider;
 }
 
-import type { ModelDefinition, ModelUsage } from "@/lib/core/types";
+import type { ModelDefinition, ModelUsage } from "../lib/core/types.js";
 
 export interface AIConfig {
 	enabled: boolean;

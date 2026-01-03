@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PrdAnalyzeBrownfieldCommand } from "@/commands/prd/analyze-brownfield";
-import { ConfigLoader } from "@/lib/config/config-loader";
+import { PrdAnalyzeBrownfieldCommand } from "../../src/commands/prd/analyze-brownfield.js";
+import { ConfigLoader } from "../../src/lib/config/config-loader.js";
 import { createMockConfigLoader } from "../helpers/mocks.js";
 
 vi.mock("node:fs");

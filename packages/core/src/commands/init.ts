@@ -4,13 +4,10 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { getProjectPaths, TEMPLATE_FILES } from "@/lib/config/config-paths";
-import { VERSIONS } from "@/lib/config/constants";
-import { Text } from "@/lib/ui/components";
-import { ensureAllDirs } from "@/lib/utils/path-utils";
-import { getTemplateDir } from "@/lib/utils/template-utils";
+import { ConfigLoader } from "../lib/config/config-loader.js";
+import { getProjectPaths, TEMPLATE_FILES } from "../lib/config/config-paths.js";
+import { VERSIONS } from "../lib/config/constants.js";
+import { Text } from "../lib/ui/components.js";
 import {
 	copyFile,
 	ensureDir,
@@ -18,6 +15,9 @@ import {
 	readJson,
 	writeJson,
 } from "../lib/utils/file-utils.js";
+import { ensureAllDirs } from "../lib/utils/path-utils.js";
+import { getTemplateDir } from "../lib/utils/template-utils.js";
+import { BaseCommand, type CommandResult } from "./base.js";
 
 interface VersionInfo {
 	templateVersion: string;

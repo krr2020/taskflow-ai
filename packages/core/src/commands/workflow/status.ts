@@ -2,9 +2,7 @@
  * Status command - Display project/feature/story status
  */
 
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { Colors, Text } from "@/lib/ui/components";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
 import {
 	calculateProgressStats,
 	findActiveTask,
@@ -18,6 +16,8 @@ import type {
 	TaskRef,
 	TasksProgress,
 } from "../../lib/core/types.js";
+import { Colors, Text } from "../../lib/ui/components.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class StatusCommand extends BaseCommand {
 	async execute(id?: string): Promise<CommandResult> {

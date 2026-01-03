@@ -2,7 +2,7 @@
  * Shared test mocks and utilities
  */
 
-import type { TaskflowConfig } from "@/lib/core/types";
+import type { TaskflowConfig } from "../../src/lib/core/types.js";
 
 /**
  * Create a mock ConfigLoader instance

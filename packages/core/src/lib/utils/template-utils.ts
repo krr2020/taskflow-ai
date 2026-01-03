@@ -6,8 +6,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { TaskflowError } from "@/lib/core/errors";
-import { consoleOutput } from "@/lib/core/output";
+import { TaskflowError } from "../core/errors.js";
+import { consoleOutput } from "../core/output.js";
 
 // ES module equivalent of __dirname
 const __filename = fileURLToPath(import.meta.url);

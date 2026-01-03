@@ -4,11 +4,7 @@
  */
 
 import path from "node:path";
-import {
-	DIR_NAMES,
-	FILE_NAMES,
-	VALIDATION_LIMITS,
-} from "@/lib/config/constants";
+import { DIR_NAMES, FILE_NAMES, VALIDATION_LIMITS } from "./constants.js";
 
 // ============================================================================
 // Path Helpers (relative to user's project root)

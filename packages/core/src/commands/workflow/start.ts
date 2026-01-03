@@ -2,11 +2,7 @@
  * Start command - Start working on a task
  */
 
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { consoleOutput, icons } from "@/lib/core/output";
-import { verifyBranch } from "@/lib/git/git";
-import { Text } from "@/lib/ui/components";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
 import {
 	getRefFilePath,
 	getSkillFilePath,
@@ -29,6 +25,10 @@ import {
 	TaskAlreadyCompletedError,
 	TaskNotFoundError,
 } from "../../lib/core/errors.js";
+import { consoleOutput, icons } from "../../lib/core/output.js";
+import { verifyBranch } from "../../lib/git/git.js";
+import { Text } from "../../lib/ui/components.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class StartCommand extends BaseCommand {
 	async execute(taskIdInput?: string): Promise<CommandResult> {

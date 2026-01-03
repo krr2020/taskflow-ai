@@ -5,13 +5,13 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { getProjectPaths } from "@/lib/config/config-paths";
-import { consoleOutput } from "@/lib/core/output";
+import { getProjectPaths } from "../config/config-paths.js";
 import {
 	getTaskFilePath,
 	loadTaskFile,
 	loadTasksProgress,
 } from "../core/data-access.js";
+import { consoleOutput } from "../core/output.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

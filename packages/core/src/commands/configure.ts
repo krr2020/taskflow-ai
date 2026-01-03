@@ -5,8 +5,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ProviderFactory } from "@/llm/factory";
+import { ProviderFactory } from "../llm/factory.js";
+import { BaseCommand, type CommandResult } from "./base.js";
 
 export class ConfigureAICommand extends BaseCommand {
 	async execute(options: {

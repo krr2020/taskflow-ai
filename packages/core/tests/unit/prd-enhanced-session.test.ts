@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { PromptBuilder } from "@/lib/content/prompt-builder";
-import { EnhancedPRDSession } from "@/lib/prd/interactive-session";
-import type { LLMProvider } from "@/llm/base";
+import { PromptBuilder } from "../../src/lib/content/prompt-builder.js";
+import { EnhancedPRDSession } from "../../src/lib/prd/interactive-session.js";
+import type { LLMProvider } from "../../src/llm/base.js";
 
 // Mock input handling to prevent readline hanging
 vi.mock("@/lib/input/index", () => {

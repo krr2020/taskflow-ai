@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BackupManager, Sandbox } from "@/agent/safety";
+import { BackupManager, Sandbox } from "../../agent/safety.js";
 
 describe("Sandbox", () => {
 	const projectRoot = "/test/project";

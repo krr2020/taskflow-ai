@@ -5,7 +5,7 @@
  * Each message can have mode-specific variants (manual vs mcp).
  */
 
-import type { ModeAwareContent } from "@/lib/content/types";
+import type { ModeAwareContent } from "./types.js";
 
 export const MESSAGES = {
 	/**

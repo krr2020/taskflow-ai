@@ -5,7 +5,7 @@
  */
 
 import ora, { type Ora } from "ora";
-import { Colors } from "@/lib/ui/components";
+import { Colors } from "./components.js";
 
 export interface SpinnerOptions {
 	/**

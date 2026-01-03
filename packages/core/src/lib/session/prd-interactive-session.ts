@@ -4,8 +4,8 @@
  * Creates a conversational interface for gathering PRD information.
  */
 
-import type { BaseCommand } from "@/commands/base";
-import { Text } from "@/lib/ui/components";
+import type { BaseCommand } from "../../commands/base.js";
+import { Text } from "../ui/components.js";
 import {
 	InteractiveSession,
 	type SessionConfig,

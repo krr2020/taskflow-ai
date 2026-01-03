@@ -2,10 +2,7 @@
  * Resume command - Resume a blocked or on-hold task
  */
 
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { NoActiveSessionError, TaskflowError } from "@/lib/core/errors";
-import type { TaskStatus } from "@/lib/core/types";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
 import {
 	getRefFilePath,
 	getSkillFilePath,
@@ -18,6 +15,9 @@ import {
 	loadTasksProgress,
 	updateTaskStatus,
 } from "../../lib/core/data-access.js";
+import { NoActiveSessionError, TaskflowError } from "../../lib/core/errors.js";
+import type { TaskStatus } from "../../lib/core/types.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class ResumeCommand extends BaseCommand {
 	async execute(resumeStatus?: string): Promise<CommandResult> {

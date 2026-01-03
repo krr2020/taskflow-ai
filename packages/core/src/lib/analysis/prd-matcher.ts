@@ -1,4 +1,4 @@
-import type { LLMProvider } from "@/llm/base";
+import type { LLMProvider } from "../../llm/base.js";
 import type {
 	DiscoveredFeature,
 	Requirement,

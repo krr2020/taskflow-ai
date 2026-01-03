@@ -3,7 +3,7 @@
  * Manages context window limits with priority-based truncation and summarization
  */
 
-import type { LLMMessage } from "@/llm/base";
+import type { LLMMessage } from "./base.js";
 
 /**
  * Context priority levels

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { CodebaseScanner } from "@/lib/analysis/codebase-scanner";
+import { CodebaseScanner } from "../../src/lib/analysis/codebase-scanner.js";
 
 vi.mock("node:fs", () => ({
 	default: {

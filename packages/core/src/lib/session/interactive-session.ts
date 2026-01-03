@@ -7,14 +7,14 @@
  */
 
 import readline from "node:readline";
-import type { BaseCommand } from "@/commands/base";
-import { SessionManager } from "@/lib/session/session-manager";
-import { Colors, Text } from "@/lib/ui/components";
+import type { BaseCommand } from "../../commands/base.js";
+import { Colors, Text } from "../ui/components.js";
 import {
 	createMenuResult,
 	type MenuResult,
 	NavigationManager,
 } from "./navigation.js";
+import { SessionManager } from "./session-manager.js";
 
 /**
  * Result of a prompt

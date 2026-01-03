@@ -4,7 +4,7 @@
  */
 
 import { readFile } from "node:fs/promises";
-import type { LLMMessage, LLMProvider } from "@/llm/base";
+import type { LLMMessage, LLMProvider } from "../../llm/base.js";
 
 export interface ValidationResult {
 	/**

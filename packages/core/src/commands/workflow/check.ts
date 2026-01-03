@@ -5,14 +5,9 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
 import { execaSync } from "execa";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { LogParser, type ParsedError } from "@/lib/analysis/log-parser";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { getRefFilePath, REF_FILES } from "@/lib/config/config-paths";
-import { Text } from "@/lib/ui/components";
-import { runValidations } from "@/lib/utils/validation";
-import { Phase } from "@/llm/base";
-import { ProviderFactory } from "@/llm/factory";
+import { LogParser, type ParsedError } from "../../lib/analysis/log-parser.js";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
+import { getRefFilePath, REF_FILES } from "../../lib/config/config-paths.js";
 import {
 	findActiveTask,
 	loadTasksProgress,
@@ -27,6 +22,7 @@ import type {
 	TaskFileContent,
 	TasksProgress,
 } from "../../lib/core/types.js";
+import { Text } from "../../lib/ui/components.js";
 import {
 	FileValidator,
 	type ValidationResult,
@@ -36,6 +32,10 @@ import {
 	formatNewPatternForDisplay,
 	processValidationOutput,
 } from "../../lib/utils/retrospective.js";
+import { runValidations } from "../../lib/utils/validation.js";
+import { Phase } from "../../llm/base.js";
+import { ProviderFactory } from "../../llm/factory.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class CheckCommand extends BaseCommand {
 	async execute(): Promise<CommandResult> {

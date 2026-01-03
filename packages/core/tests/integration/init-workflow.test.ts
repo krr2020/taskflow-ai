@@ -5,10 +5,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { CommandContext } from "@/commands/base";
-import { InitCommand } from "@/commands/init";
-import { StatusCommand } from "@/commands/workflow/status";
-import type { MCPContext } from "@/lib/mcp/mcp-detector";
+import type { CommandContext } from "../../src/commands/base.js";
+import { InitCommand } from "../../src/commands/init.js";
+import { StatusCommand } from "../../src/commands/workflow/status.js";
+import type { MCPContext } from "../../src/lib/mcp/mcp-detector.js";
 import { createTestDir } from "../setup.js";
 
 describe("Init Workflow Integration", () => {

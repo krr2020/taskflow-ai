@@ -1,6 +1,6 @@
-import type { AICallLogger } from "@/lib/ai/ai-call-logger";
-import type { TechStackOption } from "@/lib/analysis/tech-stack-suggester";
-import type { LLMProvider } from "@/llm/base";
+import type { LLMProvider } from "../../llm/base.js";
+import type { AICallLogger } from "../ai/ai-call-logger.js";
+import type { TechStackOption } from "./tech-stack-suggester.js";
 
 export class TechStackGenerator {
 	constructor(

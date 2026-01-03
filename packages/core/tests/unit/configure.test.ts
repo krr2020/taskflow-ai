@@ -12,9 +12,9 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ConfigureAICommand } from "@/commands/configure";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import type { MCPContext } from "@/lib/mcp/mcp-detector";
+import { ConfigureAICommand } from "../../src/commands/configure.js";
+import { ConfigLoader } from "../../src/lib/config/config-loader.js";
+import type { MCPContext } from "../../src/lib/mcp/mcp-detector.js";
 
 describe("ConfigureAICommand", () => {
 	const testProjectRoot = join(process.cwd(), "test-project-config");

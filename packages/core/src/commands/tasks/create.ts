@@ -4,9 +4,8 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import { BaseCommand, type CommandResult } from "@/commands/base";
-import { ConfigLoader } from "@/lib/config/config-loader";
-import { type ProjectPaths, slugify } from "@/lib/config/config-paths";
+import { ConfigLoader } from "../../lib/config/config-loader.js";
+import { type ProjectPaths, slugify } from "../../lib/config/config-paths.js";
 import {
 	type Feature,
 	loadTasksProgress,
@@ -17,6 +16,7 @@ import {
 	type TaskStatus,
 	type TasksProgress,
 } from "../../lib/core/data-access.js";
+import { BaseCommand, type CommandResult } from "../base.js";
 
 export class TaskCreateCommand extends BaseCommand {
 	async execute(

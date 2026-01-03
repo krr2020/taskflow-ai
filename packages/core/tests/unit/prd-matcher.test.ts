@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { PRDMatcher } from "@/lib/analysis/prd-matcher";
-import type { DiscoveredFeature } from "@/lib/core/types";
+import { PRDMatcher } from "../../src/lib/analysis/prd-matcher.js";
+import type { DiscoveredFeature } from "../../src/lib/core/types.js";
 
 describe("PRDMatcher", () => {
 	const mockFeatures: DiscoveredFeature[] = [

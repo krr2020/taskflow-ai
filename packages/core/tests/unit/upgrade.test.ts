@@ -6,9 +6,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import type { CommandContext } from "@/commands/base";
-import { UpgradeCommand } from "@/commands/upgrade";
-import type { MCPContext } from "@/lib/mcp/mcp-detector";
+import type { CommandContext } from "../../src/commands/base.js";
+import { UpgradeCommand } from "../../src/commands/upgrade.js";
+import type { MCPContext } from "../../src/lib/mcp/mcp-detector.js";
 import { createTestDir } from "../setup.js";
 
 describe("UpgradeCommand", () => {

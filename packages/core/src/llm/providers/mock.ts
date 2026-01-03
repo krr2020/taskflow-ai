@@ -3,7 +3,7 @@
  * Provides deterministic responses without making actual API calls
  */
 
-import { LLMError } from "@/lib/core/errors";
+import { LLMError } from "../../lib/core/errors.js";
 import {
 	type LLMGenerationOptions,
 	type LLMGenerationResult,

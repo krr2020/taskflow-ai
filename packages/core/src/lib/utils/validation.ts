@@ -4,11 +4,11 @@
 
 import fs from "node:fs";
 import { execaSync } from "execa";
-import { getLogFilePath, MAX_OUTPUT_BUFFER } from "@/lib/config/config-paths";
-import { saveLogFile } from "@/lib/core/data-access";
-import { ValidationFailedError } from "@/lib/core/errors";
-import { colors, extractErrorSummary } from "@/lib/core/output";
-import type { ValidationResult } from "@/lib/core/types";
+import { getLogFilePath, MAX_OUTPUT_BUFFER } from "../config/config-paths.js";
+import { saveLogFile } from "../core/data-access.js";
+import { ValidationFailedError } from "../core/errors.js";
+import { colors, extractErrorSummary } from "../core/output.js";
+import type { ValidationResult } from "../core/types.js";
 
 // ============================================================================
 // Validation Status Persistence

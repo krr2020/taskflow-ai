@@ -14,7 +14,7 @@
  * - Iterative refinement (agent can call tools multiple times)
  */
 
-import type { ModeAwarePrompt } from "@/lib/content/types";
+import type { ModeAwarePrompt } from "./types.js";
 
 export const LLM_PROMPTS: Record<string, ModeAwarePrompt> = {
 	/**

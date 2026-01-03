@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TechStackSuggester } from "@/lib/analysis/tech-stack-suggester";
-import type { LLMGenerationResult, LLMProvider } from "@/llm/base";
+import { TechStackSuggester } from "../../src/lib/analysis/tech-stack-suggester.js";
+import type { LLMGenerationResult, LLMProvider } from "../../src/llm/base.js";
 
 describe("TechStackSuggester", () => {
 	let mockLLMProvider: LLMProvider;
